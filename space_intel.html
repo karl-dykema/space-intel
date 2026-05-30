@@ -849,7 +849,7 @@ function connect(key) {
     clearTimeout(timeout);
     ws.send(JSON.stringify({
       APIKey:key, BoundingBoxes:[[[-90,-180],[90,180]]],
-      MMSI:KNOWN_MMSIS.map(Number), FilterMessageTypes:['PositionReport','ShipStaticData'],
+      FiltersShipMMSI:KNOWN_MMSIS, FilterMessageTypes:['PositionReport','ShipStaticData'],
     }));
     S.ws=ws; btn.textContent='DISCONNECT'; btn.disabled=false; btn.classList.add('on');
     setDot('on','● LIVE — '+KNOWN_MMSIS.length+' vessels globally');
