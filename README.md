@@ -133,6 +133,32 @@ Best approach: poll FAA TFR feed for airspace restrictions near known launch coo
 
 Integration would require: a second data source alongside AIS, a way to display aircraft icons on the same Leaflet map (different icon shape, altitude label), and registration-to-callsign resolution. The OpenSky API returns lat/lon/altitude/velocity and is REST-based — could poll every 15–30s for the known registrations.
 
+### Mobile / Responsive Layout
+
+Current layout is three-column desktop-only. Options if we ever tackle this:
+
+**Option A — CSS media queries** (~1hr, low effort)
+- At ≤768px: hide left fleet panel, map full-width, right panel collapses to bottom drawer
+- Header wraps/collapses
+- Still feels like a squished desktop app but functional
+
+**Option B — Bottom tab navigation** (3–4hrs, recommended)
+- Map always full-screen
+- Bottom nav bar: `MAP | FLEET | EVENTS`
+- Each tab is full-screen; vessel detail slides up as an overlay
+- Clean native-app feel, similar to MarineTraffic mobile
+
+**Option C — Bottom sheet / pull-up drawer** (most polished, most work)
+- Map always full-screen
+- Swipe up from bottom reveals fleet roster or events panel
+- This is the pattern used by MarineTraffic, VesselFinder, etc.
+
+**Common work regardless of approach:**
+- Header needs to collapse (hamburger or icon-only strip)
+- Leaflet tap targets need to be larger for touch
+- Missions panel and modals need full-screen treatment on mobile
+- Share/suggest modals need to be scrollable at small heights
+
 ---
 
 ## MMSI Verification
