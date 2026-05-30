@@ -160,7 +160,7 @@ button{font-family:var(--f);cursor:pointer;}
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.15</span></div>
+      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.16</span></div>
       <div class="hs">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -445,7 +445,7 @@ const VESSEL_DB = {
     notes:'ULA fairing recovery vessel. [? MMSI — verify at marinetraffic.com]',
   },
   // ── Test vessel ───────────────────────────────────────────────
-  '636092398': {
+  '353136000': {
     name:'Ever Given', abbr:'Ever Given',
     operator:'TEST', role:'AIS Test Vessel',
     color:'#556677', homePort:'Panama',
@@ -454,10 +454,9 @@ const VESSEL_DB = {
     history:[
       'Operated by Evergreen Marine Corp; built by Imabari Shipbuilding',
       'Blocked Suez Canal for 6 days in March 2021 causing global shipping disruption',
-      'Included here as a test vessel — always transmitting AIS globally',
-      'Remove from fleet once space industry vessel tracking is confirmed working',
+      'One of the most-tracked vessels in the world; reliable AIS test target',
     ],
-    notes:'AIS test vessel — remove from VESSEL_DB once real vessel tracking is confirmed.',
+    notes:'AIS test vessel. [✓ MMSI confirmed]',
   },
 };
 
