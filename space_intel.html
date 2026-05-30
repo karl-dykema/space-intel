@@ -279,104 +279,200 @@ button{font-family:var(--f);cursor:pointer;}
 'use strict';
 
 // ── Vessel Database ──────────────────────────────────────────
-// MMSIs: [✓] verified  [?] unverified — check marinetraffic.com or space-offshore.com
 const VESSEL_DB = {
   // ── SpaceX ──────────────────────────────────────────────────
   '368219910': {
     name:'A Shortfall of Gravitas', abbr:'ASOG',
-    operator:'SpaceX', role:'Drone Ship (ASDS)',
-    color:'#00d4ff', homePort:'Port Canaveral',
+    operator:'SpaceX', role:'Autonomous Spaceport Drone Ship',
+    color:'#00d4ff', homePort:'Port Canaveral, FL',
+    imo:'9869052', flag:'USA', built:2020, verified:true,
+    specs:{ length:'91m', beam:'52m', type:'Self-propelled barge (ASDS)', propulsion:'4 diesel thrusters' },
+    history:[
+      'Converted 2020 from Marmac 304; replaced OCISLY on East Coast',
+      'Primary Atlantic/Gulf ASDS for LC-39A and SLC-40 launches',
+      'Hosts autonomous landing system + catch arm hardware for Starship program',
+      'Named after a ship in Iain M. Banks\' Culture novel series',
+      'Can hold position within meters in open ocean using GPS + thruster control',
+    ],
     notes:'Primary Atlantic/Gulf ASDS. Falcon 9 & Heavy recoveries. [✓ MMSI]',
-    verified:true,
   },
   '368219920': {
     name:'Just Read the Instructions', abbr:'JRTI',
-    operator:'SpaceX', role:'Drone Ship → Starship ops',
-    color:'#00d4ff', homePort:'Boca Chica',
+    operator:'SpaceX', role:'Drone Ship / Starship Support',
+    color:'#00d4ff', homePort:'Boca Chica, TX',
+    flag:'USA', built:2015, verified:true,
+    specs:{ length:'91m', beam:'52m', type:'Self-propelled barge (ASDS)', propulsion:'4 diesel thrusters' },
+    history:[
+      'Originally operated in Pacific for Vandenberg launches; relocated to Gulf in 2020',
+      'Transitioned to Starship program support at Starbase, Boca Chica, TX',
+      'Named after a ship in Iain M. Banks\' Culture novel series',
+      'Will serve as offshore Starship landing platform for Mechazilla backup and ocean tests',
+      'Converted 2015 from Marmac 303 barge',
+    ],
     notes:'Transitioning from Falcon to Starship program support as of 2026. [✓ MMSI]',
-    verified:true,
   },
-  '338234631': {
+  '368351350': {
     name:'Of Course I Still Love You', abbr:'OCISLY',
-    operator:'SpaceX', role:'Drone Ship (ASDS)',
-    color:'#00d4ff', homePort:'Vandenberg SFB',
-    notes:'Pacific ASDS for Vandenberg launches. [? MMSI — confirm at marinetraffic.com]',
-    verified:false,
+    operator:'SpaceX', role:'Autonomous Spaceport Drone Ship',
+    color:'#00d4ff', homePort:'Port Hueneme, CA',
+    flag:'USA', built:2015, verified:true,
+    specs:{ length:'91m', beam:'52m', type:'Self-propelled barge (ASDS)', propulsion:'4 diesel thrusters' },
+    history:[
+      'Pacific ASDS for all Vandenberg SFB (SLC-4E) Falcon 9 launches',
+      'First Falcon 9 booster landing at sea: April 8 2016 (CRS-8)',
+      'Named after a ship in Iain M. Banks\' Culture novel series',
+      'Converted from Marmac 302 barge in 2015',
+      'Operates 300–700km off Baja California coast for Pacific recovery zone',
+    ],
+    notes:'Pacific ASDS for Vandenberg SFB launches. MMSI confirmed by user. [✓ MMSI]',
   },
   '366584000': {
     name:'Megan', abbr:'Megan',
     operator:'SpaceX', role:'Dragon Capsule Recovery',
-    color:'#00d4ff', homePort:'Port Canaveral',
-    notes:'Ex-GO Searcher, renamed 2022 for Megan McArthur (NASA). IMO 9591648. [✓ MMSI]',
-    verified:true,
+    color:'#00d4ff', homePort:'Port Canaveral, FL',
+    imo:'9591648', flag:'USA', built:2011, verified:true,
+    specs:{ length:'74m', beam:'14m', type:'Offshore supply vessel', speed:'~12 kn' },
+    history:[
+      'Ex-GO Searcher, originally operated by Edison Chouest Offshore',
+      'Renamed Megan in 2022 honoring NASA astronaut Megan McArthur',
+      'Deployed 6–12 hours before Dragon splashdown off Florida coast',
+      'Equipped with fast rescue boats and medical team for crew recovery',
+      'Also retrieves the nose cone of Dragon after parachute descent',
+    ],
+    notes:'Ex-GO Searcher. Named for NASA astronaut Megan McArthur. [✓ MMSI]',
   },
   '367550000': {
     name:'Shannon', abbr:'Shannon',
     operator:'SpaceX', role:'Dragon Capsule Recovery',
-    color:'#00d4ff', homePort:'Port Canaveral',
-    notes:'Ex-GO Navigator. IMO 9566887. [✓ MMSI]',
-    verified:true,
+    color:'#00d4ff', homePort:'Port Canaveral, FL',
+    imo:'9566887', flag:'USA', built:2010, verified:true,
+    specs:{ length:'74m', beam:'14m', type:'Offshore supply vessel', speed:'~12 kn' },
+    history:[
+      'Ex-GO Navigator, originally operated by Edison Chouest Offshore',
+      'Renamed Shannon in 2022 honoring NASA astronaut Shannon Walker',
+      'Works in tandem with Megan during crew Dragon recoveries',
+      'Patrols exclusion zone and assists with capsule towing to shore',
+    ],
+    notes:'Ex-GO Navigator. Named for NASA astronaut Shannon Walker. [✓ MMSI]',
   },
-  '338422869': {
-    name:'Hawk', abbr:'Hawk',
-    operator:'SpaceX', role:'Support Vessel',
-    color:'#00d4ff', homePort:'Port Canaveral',
-    notes:'SpaceX fast support boat, used for range safety and crew support during launches. [? MMSI — verify at marinetraffic.com]',
-    verified:false,
+  '368456000': {
+    name:'Bob', abbr:'Bob',
+    operator:'SpaceX', role:'Fairing Recovery / Support',
+    color:'#00d4ff', homePort:'Port Canaveral, FL',
+    imo:'9529695', flag:'USA', built:2010, verified:true,
+    specs:{ length:'85m', beam:'14m', type:'Offshore support vessel', speed:'~12 kn' },
+    history:[
+      'Named for NASA astronaut Bob Behnken (Demo-2, 2020)',
+      'Ex-Ella G; converted and outfitted by SpaceX at Edison Chouest shipyard in 2021',
+      'Recovers Falcon 9 fairing halves after Atlantic launches using crane and deck storage',
+      'Also tows ASOG drone ship to and from recovery positions',
+      'Replaced GO Quest as primary East Coast support vessel in 2023',
+    ],
+    notes:'Active East Coast fairing recovery + ASDS support. [✓ MMSI]',
   },
-  '366873580': {
-    name:'GO Quest', abbr:'GO Quest',
-    operator:'SpaceX', role:'Support Vessel',
-    color:'#00d4ff', homePort:'Port Canaveral',
-    notes:'Multi-role support vessel chartered by SpaceX for crew Dragon operations and fairing recovery. [? MMSI — verify at marinetraffic.com]',
-    verified:false,
+  '368485000': {
+    name:'Doug', abbr:'Doug',
+    operator:'SpaceX', role:'Fairing Recovery / Support',
+    color:'#00d4ff', homePort:'Port Canaveral, FL',
+    imo:'9529889', flag:'USA', built:2010, verified:true,
+    specs:{ length:'85m', beam:'14m', type:'Offshore support vessel', speed:'~12 kn' },
+    history:[
+      'Named for NASA astronaut Doug Hurley (Demo-2, 2020)',
+      'Ex-Ingrid; converted alongside Bob at Edison Chouest shipyard in 2021',
+      'Works in tandem with Bob — two vessels for simultaneous fairing half recovery',
+      'Can store and transport four complete fairing halves on deck',
+      'Replaced NRC Quest after SpaceX retired net-catch approach in favor of water recovery',
+    ],
+    notes:'Active East Coast fairing recovery + ASDS support. [✓ MMSI]',
   },
-  '367732580': {
-    name:'NRC Quest', abbr:'NRC Quest',
-    operator:'SpaceX', role:'Fairing Recovery',
-    color:'#00d4ff', homePort:'Port Canaveral',
-    notes:'Net-equipped vessel for Falcon 9 fairing recovery. Part of SpaceX recovery fleet. [? MMSI — verify at marinetraffic.com]',
-    verified:false,
+  '367564890': {
+    name:'GO Beyond', abbr:'GO Beyond',
+    operator:'SpaceX', role:'Fairing Recovery / OCISLY Support',
+    color:'#00d4ff', homePort:'Port of Long Beach, CA',
+    flag:'USA', built:2015, verified:false,
+    specs:{ length:'62m', beam:'14m', type:'Offshore support vessel' },
+    history:[
+      'West Coast support vessel replacing GO Quest and NRC Quest (both retired 2023)',
+      'Based at Port of Long Beach; supports OCISLY and Vandenberg SFB launches',
+      'Equipped with A-frame stern gear to haul fairing halves from the Pacific',
+      'Can carry at least one complete Falcon 9 fairing on deck',
+      'Has crew-transfer capability to board OCISLY while at sea',
+    ],
+    notes:'Active West Coast fairing recovery + OCISLY support. [? MMSI — verify at marinetraffic.com]',
   },
   // ── Blue Origin ──────────────────────────────────────────────
   '368368960': {
-    name:'Jacklyn (LPV-1)', abbr:'Jacklyn',
-    operator:'Blue Origin', role:'Drone Ship',
-    color:'#4477ff', homePort:'Port Canaveral',
-    notes:'New Glenn first-stage recovery barge. IMO 9998676. First catch Nov 13 2025. [✓ MMSI]',
-    verified:true,
+    name:'Jacklyn', abbr:'Jacklyn',
+    operator:'Blue Origin', role:'New Glenn Landing Platform (LPV-1)',
+    color:'#4477ff', homePort:'Port Canaveral, FL',
+    imo:'9998676', flag:'USA', built:2024, verified:true,
+    specs:{ length:'116m', beam:'46m', grossTonnage:'13,818 GT', type:'Landing Platform Vessel', propulsion:'Dynamic positioning thrusters' },
+    history:[
+      'Designated LPV-1; Blue Origin\'s first autonomous booster landing platform',
+      'Named after Jacklyn Gise Bezos, Jeff Bezos\' mother',
+      'First successful New Glenn booster landing: January 16 2025 (NG-1)',
+      'First booster catch (with catch arms): November 13 2025 (NG-3)',
+      'Operates ~450km downrange in Atlantic from LC-36, Cape Canaveral SFS',
+      'Towed to position by Harvey Stone; does not self-propel to sea',
+    ],
+    notes:'New Glenn first-stage landing platform. [✓ MMSI]',
   },
   '338422137': {
     name:'Harvey Stone', abbr:'Harvey Stone',
     operator:'Blue Origin', role:'Support Tug',
-    color:'#4477ff', homePort:'Port Canaveral',
-    notes:'Tug supporting Jacklyn drone ship operations for New Glenn recoveries. [? MMSI — verify at marinetraffic.com]',
-    verified:false,
+    color:'#4477ff', homePort:'Port Canaveral, FL',
+    flag:'USA', verified:false,
+    specs:{ type:'Harbor/ocean tug' },
+    history:[
+      'Primary tug for Jacklyn drone ship towing and positioning',
+      'Escorts Jacklyn to and from recovery zone for each New Glenn launch',
+      'Named after Blue Origin engineer Harvey Stone',
+    ],
+    notes:'Support tug for Jacklyn. [? MMSI — verify at marinetraffic.com]',
   },
   // ── Rocket Lab ───────────────────────────────────────────────
   '512012345': {
     name:'Seaworker', abbr:'Seaworker',
-    operator:'Rocket Lab', role:'Electron Recovery',
-    color:'#ff3355', homePort:'Māhia, NZ',
-    notes:'Support vessel for Electron stage recovery operations near LC-1 Māhia. [? MMSI — verify at marinetraffic.com]',
-    verified:false,
-  },
-  // Return On Investment: Neutron ASDS, under construction at Bollinger Shipyards — MMSI not yet assigned
-  // ── TEST — always active, remove when real vessels appear ────
-  '636092398': {
-    name:'Ever Given', abbr:'Ever Given',
-    operator:'TEST', role:'Container Ship (AIS test vessel)',
-    color:'#888888', homePort:'Panama',
-    notes:'Famous container ship — included as a test vessel to verify AIS connection is working. Remove once SpaceX/Blue Origin vessels appear. [✓ MMSI]',
-    verified:true,
+    operator:'Rocket Lab', role:'Electron Recovery Vessel',
+    color:'#ff3355', homePort:'Māhia Peninsula, NZ',
+    flag:'New Zealand', verified:false,
+    specs:{ type:'Offshore support vessel' },
+    history:[
+      'Deployed for Electron first-stage recovery missions at sea',
+      'Positions in recovery zone east of Māhia Peninsula, New Zealand',
+      'Rocket Lab reuses Electron first stages to reduce launch costs',
+      'Has supported multiple successful booster recoveries since 2022',
+    ],
+    notes:'Electron booster recovery vessel. [? MMSI — verify at marinetraffic.com]',
   },
   // ── ULA ──────────────────────────────────────────────────────
   '367532790': {
     name:'R/V Retrieval', abbr:'Retrieval',
     operator:'ULA', role:'Fairing Recovery',
-    color:'#ff9900', homePort:'Cape Canaveral',
-    notes:'ULA fairing recovery vessel for Atlas V and Vulcan Centaur. [? MMSI — verify at marinetraffic.com]',
-    verified:false,
+    color:'#ff9900', homePort:'Cape Canaveral, FL',
+    flag:'USA', verified:false,
+    specs:{ type:'Research/recovery vessel' },
+    history:[
+      'Deployed to recover Atlas V and Vulcan Centaur payload fairings',
+      'ULA began fairing recovery program to reduce hardware costs',
+      'Operates in Atlantic downrange from Cape Canaveral SFS',
+    ],
+    notes:'ULA fairing recovery vessel. [? MMSI — verify at marinetraffic.com]',
+  },
+  // ── Test vessel ───────────────────────────────────────────────
+  '636092398': {
+    name:'Ever Given', abbr:'Ever Given',
+    operator:'TEST', role:'AIS Test Vessel',
+    color:'#556677', homePort:'Panama',
+    imo:'9811000', flag:'Panama', built:2018, verified:true,
+    specs:{ length:'400m', beam:'59m', type:'Ultra-large container ship (ULCS)', capacity:'20,124 TEU' },
+    history:[
+      'Operated by Evergreen Marine Corp; built by Imabari Shipbuilding',
+      'Blocked Suez Canal for 6 days in March 2021 causing global shipping disruption',
+      'Included here as a test vessel — always transmitting AIS globally',
+      'Remove from fleet once space industry vessel tracking is confirmed working',
+    ],
+    notes:'AIS test vessel — remove from VESSEL_DB once real vessel tracking is confirmed.',
   },
 };
 
@@ -650,6 +746,7 @@ function updateSBStatus() {
 
 // ── App state ─────────────────────────────────────────────────
 const S = { ws:null, vessels:{}, selected:null, tab:'events' };
+let missionsCache = []; // populated when MISSIONS panel loads
 const prevZones={};
 let map=null, layers=null, zoneLayer=null;
 const markers={}, tracks={};
@@ -826,8 +923,7 @@ function selectVessel(mmsi) {
   if(v?.lat&&v?.lon&&map) map.setView([v.lat,v.lon],7);
   Object.values(S.vessels).forEach(vv=>{if(vv.lat)updateMarker(vv);});
   renderFleet();
-  if(S.tab!=='events') setTab('vessel');
-  else renderRight();
+  setTab('vessel');
 }
 
 // ── WebSocket ─────────────────────────────────────────────────
@@ -948,10 +1044,9 @@ function renderOpLegend(){
 function renderFleet(){
   const lc=Object.values(S.vessels).filter(v=>v.lat&&!v._historical).length;
   document.getElementById('lhdr').textContent=S.ws?`FLEET · ${lc} LIVE`:'FLEET ROSTER';
-  const rows=Object.values(S.vessels);
-  document.getElementById('fleet').innerHTML=rows.length
-    ?rows.map(buildVesselRow).join('')
-    :'<div style="padding:20px 13px;color:var(--t4);font-size:12px">Connect to see live status…</div>';
+  // Always show every vessel from VESSEL_DB, with live data overlaid where available
+  const rows=KNOWN_MMSIS.map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true});
+  document.getElementById('fleet').innerHTML=rows.map(buildVesselRow).join('');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
 }
 
@@ -960,8 +1055,9 @@ function buildVesselRow(v){
   const isLive=!!v.lat&&!!v.ts&&!v._historical&&(Date.now()-v.ts<600000);
   const isHist=v._historical;
   const stale=!!v.lat&&!isLive&&!isHist;
-  const dotCol=isLive?'#00ff88':isHist?'#4477ff55':stale?'#ffcc00':'#2a4a5a';
-  const status=isLive?'LIVE':isHist?'HIST':stale?'STALE':'OFFLINE';
+  const isOffline=v._offline||(!v.lat&&!isHist);
+  const dotCol=isLive?'#00ff88':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
+  const status=isLive?'LIVE':isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
   return `<div class="vrow${sel?' sel':''}" data-mmsi="${esc(v.mmsi)}"
     style="border-left-color:${isLive?col:isHist?col+'44':'transparent'}${sel?';background:var(--bg4)':''}">
     <div class="vn" style="color:${sel?col:isHist?col+'88':'var(--t2)'}">${esc(v.abbr||v.name)}</div>
@@ -992,7 +1088,7 @@ function setTab(t){
 function renderRight(){
   const el=document.getElementById('rpanel');
   if(S.tab==='events')  el.innerHTML=buildEventFeed();
-  if(S.tab==='vessel')  el.innerHTML=buildVesselDetail();
+  if(S.tab==='vessel')  { el.innerHTML=buildVesselDetail(); startCountdowns(); }
   if(S.tab==='history') el.innerHTML=buildHistoryTab();
   if(S.tab==='log')     el.innerHTML=buildLogTab();
 }
@@ -1032,42 +1128,83 @@ function clearEvents(){events=[];saveLS();renderRight();}
 // ── Vessel detail ─────────────────────────────────────────────
 function buildVesselDetail(){
   const mmsi=S.selected;
-  if(!mmsi||!S.vessels[mmsi]) return`<div class="empty">← Select a vessel from the fleet list.</div>`;
-  const v=S.vessels[mmsi], col=opColor(v.operator), h=history[mmsi];
+  const db=VESSEL_DB[mmsi];
+  if(!mmsi||!db) return`<div class="empty">← Select a vessel from the fleet list.</div>`;
+  const live=S.vessels[mmsi];
+  const v=live||{mmsi,...db,_offline:true};
+  const col=opColor(db.operator), h=history[mmsi];
+
+  // Upcoming missions involving this vessel
+  const upcomingMissions=missionsCache.filter(l=>{
+    const op=Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
+    const pad=l.pad?.name||'';
+    const hints=vesselHintsForLaunch(op,pad);
+    return hints.includes(mmsi);
+  }).slice(0,3);
+
   return`
     <div class="dhdr" style="border-left:4px solid ${col}">
-      <div class="dname" style="color:${col}">${esc(v.name||v.abbr)}</div>
-      <div style="font-size:11px;color:var(--t5)">${esc(v.operator)} · ${esc(v.role)}</div>
+      <div class="dname" style="color:${col}">${esc(db.name)}</div>
+      <div style="font-size:12px;color:var(--t5);margin-top:2px">${esc(db.operator)} · ${esc(db.role)}</div>
+      ${db.homePort?`<div style="font-size:12px;color:var(--t4);margin-top:2px">📍 ${esc(db.homePort)}</div>`:''}
     </div>
     <div class="tbody">
-      ${!v.verified?`<div class="warn-box">⚠ MMSI ${esc(v.mmsi)} unverified — confirm at marinetraffic.com</div>`:''}
-      ${v._historical?`<div class="hist-box">📡 Showing last known position from Supabase history (${ageStr(v.ts)}). Connect AIS for live data.</div>`:''}
-      <div class="sec">IDENTITY</div>
-      ${frows([['MMSI',v.mmsi],['IMO',v.imo||'—'],['CALLSIGN',v.cs||'—'],['AIS NAME',v.aisName||'—'],['HOME PORT',v.homePort||'—']])}
-      <div class="sec" style="margin-top:10px">CURRENT</div>
+      ${!db.verified?`<div class="warn-box">⚠ MMSI ${esc(mmsi)} unverified — confirm at marinetraffic.com</div>`:''}
+      ${v._historical?`<div class="hist-box">📡 Showing last known position (${ageStr(v.ts)}). Connect AIS for live data.</div>`:''}
+      ${v._offline?`<div style="background:rgba(0,0,0,.15);border:1px solid var(--bdr);padding:8px 11px;font-size:12px;color:var(--t4);margin-bottom:6px">IN PORT — no AIS signal. Will appear on map when underway.</div>`:''}
+
+      ${upcomingMissions.length?`
+        <div class="sec">UPCOMING MISSIONS</div>
+        ${upcomingMissions.map(l=>{
+          const net=l.net?new Date(l.net).getTime():null;
+          const col2=opColor(Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'');
+          return`<div style="padding:8px 0;border-bottom:1px solid var(--bdr2)">
+            <div style="font-size:13px;font-weight:600;color:${col2}">${esc(l.name||'')}</div>
+            <div style="font-size:12px;color:var(--t5)">${esc(l.rocket?.configuration?.name||'')} · ${esc(l.pad?.location?.name||'')}</div>
+            ${net?`<div style="font-family:var(--fm);font-size:13px;color:${col2};margin-top:3px" data-net="${net}">calculating…</div>`:''}
+          </div>`;
+        }).join('')}
+      `:''}
+
+      <div class="sec">LIVE STATUS</div>
       ${frows([
         ['POSITION', v.lat?`${v.lat.toFixed(4)}°  ${v.lon.toFixed(4)}°`:'—'],
-        ['SPEED',    v.sog!=null&&!v._historical?v.sog.toFixed(1)+' kn':'—'],
-        ['COURSE',   v.cog!=null&&!v._historical?Math.round(v.cog)+'°':'—'],
-        ['DRAUGHT',  v.draught?v.draught+'m':'—'],
-        ['LAST FIX', v.ts?ageStr(v.ts):'—'],
+        ['SPEED',    v.sog!=null&&!v._historical&&!v._offline?v.sog.toFixed(1)+' kn':'—'],
+        ['COURSE',   v.cog!=null&&!v._historical&&!v._offline?Math.round(v.cog)+'°':'—'],
+        ['DESTINATION',v.dest||'—'],
+        ['ETA',      v.eta||'—'],
+        ['LAST FIX', v.ts?ageStr(v.ts):'never'],
       ])}
-      ${h?`<div class="sec" style="margin-top:10px">TRACKED HISTORY</div>
+
+      <div class="sec">VESSEL IDENTITY</div>
+      ${frows([
+        ['MMSI',     mmsi],
+        ['IMO',      db.imo||v.imo||'—'],
+        ['CALLSIGN', v.cs||'—'],
+        ['FLAG',     db.flag||'—'],
+        ['BUILT',    db.built||'—'],
+        ['AIS NAME', v.aisName||'—'],
+      ])}
+
+      ${db.specs?`<div class="sec">SPECIFICATIONS</div>
+        ${frows(Object.entries(db.specs).map(([k,val])=>[k.toUpperCase(),val]))}`:''}
+
+      ${h?`<div class="sec">TRACKED HISTORY</div>
         ${frows([
-          ['FIRST SEEN',   tsStr(h.firstSeen)],
-          ['LAST SEEN',    tsStr(h.lastSeen)],
-          ['POSITIONS',    h.positions.length+' recorded'+(SB.ready?' (+ Supabase)':'')],
+          ['FIRST SEEN', tsStr(h.firstSeen)],
+          ['LAST SEEN',  tsStr(h.lastSeen)],
+          ['POSITIONS',  h.positions.length+' recorded'+(SB.ready?' + Supabase':'')],
         ])}`:''}
-      <div class="sec" style="margin-top:10px">VOYAGE</div>
-      ${frows([['DESTINATION',v.dest||'—'],['ETA',v.eta||'—']])}
-      <div class="sec" style="margin-top:10px">NOTES</div>
-      <div class="abox">${esc(v.notes||'—')}</div>
-      <div class="sec" style="margin-top:12px">EXTERNAL LOOKUPS</div>
+
+      ${db.history?.length?`<div class="sec">BACKGROUND</div>
+        <div class="abox">${db.history.map(l=>`• ${esc(l)}`).join('<br>')}</div>`:''}
+
+      <div class="sec">LOOKUPS</div>
       ${[
-        ['MarineTraffic',`https://www.marinetraffic.com/en/ais/details/ships/mmsi:${v.mmsi}`],
-        ['VesselFinder', `https://www.vesselfinder.com/?mmsi=${v.mmsi}`],
+        ['MarineTraffic', `https://www.marinetraffic.com/en/ais/details/ships/mmsi:${mmsi}`],
+        ['VesselFinder',  `https://www.vesselfinder.com/?mmsi=${mmsi}`],
         ['space-offshore.com','https://space-offshore.com'],
-        ['Google News',  `https://news.google.com/search?q=${encodeURIComponent((v.abbr||v.name)+' rocket')}`],
+        ['Google News',   `https://news.google.com/search?q=${encodeURIComponent((db.abbr||db.name)+' SpaceX')}`],
       ].map(([l,u])=>`<div class="fr" style="cursor:pointer" onclick="window.open('${u}','_blank')">
         <span class="fk">${l}</span><span class="fv" style="color:#4488bb">↗</span></div>`).join('')}
     </div>`;
@@ -1255,7 +1392,7 @@ const OPERATOR_MATCH = {
 const VESSEL_HINTS = {
   'SpaceX': {
     drone: { 'SLC-40':'368219910', 'LC-39A':'368219910', 'LC-39B':'368219910',
-             'SLC-4E':'338234631', 'Starbase':'368219920' },
+             'SLC-4E':'368351350', 'Starbase':'368219920' },
     recovery: ['366584000','367550000'],
   },
   'Blue Origin': { drone: { default:'368368960' } },
@@ -1341,6 +1478,21 @@ function startCountdowns() {
   }, 1000);
 }
 
+async function fetchMissionsBackground() {
+  try {
+    const base = 'https://ll.thespacedevs.com/2.3.0/launches/';
+    const [upResp] = await Promise.all([fetch(`${base}upcoming/?limit=30&ordering=net`)]);
+    if(!upResp.ok) return;
+    const upData = await upResp.json();
+    const filterFn = l => Object.keys(OPERATOR_MATCH).some(k=>(l.launch_service_provider?.name||'').includes(k));
+    missionsCache = (upData.results||[]).filter(filterFn);
+    addLog(`Missions cache: ${missionsCache.length} upcoming loaded`, 'sys');
+    if(S.tab==='vessel') renderRight(); // refresh vessel detail if open
+  } catch(e) {
+    addLog(`Missions background fetch failed: ${e.message}`, 'err');
+  }
+}
+
 async function showMissions() {
   const panel = document.getElementById('missions-panel');
   panel.style.display = 'block';
@@ -1364,6 +1516,8 @@ async function showMissions() {
     };
     const upcoming = (upData.results||[]).filter(filterFn);
     const past     = (pastData.results||[]).filter(filterFn);
+
+    missionsCache = upcoming; // makes vessel profiles show upcoming missions
 
     addLog(`Missions: ${upcoming.length} upcoming, ${past.length} recent past`, 'sys');
     document.getElementById('missions-src').textContent =
@@ -1486,6 +1640,9 @@ window.onload=()=>{
 
   // Load Supabase history in background
   loadSBData();
+
+  // Pre-fetch missions so vessel profiles have upcoming mission data immediately
+  fetchMissionsBackground();
 
   // Show settings if no AIS key
   if(!localStorage.getItem(LS.KEY)) showSettings();
