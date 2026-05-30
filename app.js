@@ -591,10 +591,12 @@ function renderFleet(){
       const rank=v=>{
         const isLive=!!v.lat&&!!v.ts&&!v._historical&&(Date.now()-v.ts<600000);
         const shareHist=SHARE_MODE&&v._historical&&!!v.lat;
-        if((isLive||shareHist)&&isCarryingBooster(v.mmsi)) return 0;
+        const carrying=!!isCarryingBooster(v.mmsi);
+        if(carrying&&isLive) return 0;
         if(isLive) return 1;
-        if(v._historical) return 2;
-        return 3;
+        if(carrying) return 2;          // no AIS lock but booster aboard — above historical
+        if(v._historical||shareHist) return 3;
+        return 4;
       };
       return rank(a)-rank(b);
     });
@@ -609,9 +611,9 @@ function buildVesselRow(v){
   const shareHist=SHARE_MODE&&isHist&&!!v.lat;
   const stale=!!v.lat&&!isLive&&!isHist;
   const isOffline=v._offline||(!v.lat&&!isHist);
-  const carrying=(isLive||shareHist)?isCarryingBooster(v.mmsi):null;
-  const dotCol=isLive?'#00ff88':shareHist?'#4477ff':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
-  const status=isLive?'LIVE':shareHist?ageStr(v.ts):isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
+  const carrying=isCarryingBooster(v.mmsi);
+  const dotCol=isLive?'#00ff88':carrying?'#ff8c00':shareHist?'#4477ff':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
+  const status=isLive?'LIVE':carrying&&!isLive?'NO AIS LOCK':shareHist?ageStr(v.ts):isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
   const nameCol=isLive||shareHist?col:isHist?col+'66':'var(--t3)';
   const roleCol=isLive||shareHist?col+'99':col+'33';
   const bg=isLive||shareHist?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):sel?'var(--bg4)':'';
