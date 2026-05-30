@@ -382,7 +382,7 @@ setInterval(()=>{
 
 // ── Map ───────────────────────────────────────────────────────
 function initMap() {
-  map=L.map('map',{zoomControl:true,attributionControl:true});
+  map=L.map('map',{zoomControl:true,attributionControl:true,maxBounds:[[-85,-180],[85,180]],maxBoundsViscosity:1.0});
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
     attribution:'© CARTO © OSM',subdomains:'abcd',maxZoom:19,
   }).addTo(map);
