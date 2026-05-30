@@ -1153,6 +1153,16 @@ function openVesselFromMission(mmsi) {
 }
 
 // ── Source comparison (VesselAPI) ─────────────────────────────
+const VAPI_PROXY = 'http://localhost:8768';
+
+async function vapiProxyFetch(mmsi, key, sat=false) {
+  const url = `${VAPI_PROXY}/vapi?mmsi=${mmsi}&sat=${sat}&key=${encodeURIComponent(key)}`;
+  const res = await fetch(url);
+  if(!res.ok) return null;
+  const j = await res.json();
+  return j?.vesselPosition || null;
+}
+
 async function showCompare() {
   const panel = document.getElementById('compare-panel');
   const content = document.getElementById('compare-content');
@@ -1165,7 +1175,23 @@ async function showCompare() {
     return;
   }
 
-  content.innerHTML = `<div style="padding:20px;color:var(--t4)">Fetching ${KNOWN_MMSIS.length} vessels from VesselAPI… (may take ~30s)</div>`;
+  // Check proxy is reachable (VesselAPI blocks direct browser fetches via CORS)
+  content.innerHTML = `<div style="padding:20px;color:var(--t4)">Checking proxy…</div>`;
+  try {
+    await fetch(`${VAPI_PROXY}/status`, {signal: AbortSignal.timeout(2000)});
+  } catch(e) {
+    content.innerHTML = `<div style="padding:20px">
+      <div style="color:var(--hi);font-weight:700;margin-bottom:8px">Local proxy not running</div>
+      <div style="color:var(--t3);font-size:12px;line-height:1.7">
+        VesselAPI blocks direct browser requests (CORS).<br>
+        Run the proxy first, then click COMPARE SOURCES again:<br><br>
+        <code style="color:var(--acc)">node space_proxy.js YOUR_AISSTREAM_KEY</code>
+      </div>
+    </div>`;
+    return;
+  }
+
+  content.innerHTML = `<div style="padding:20px;color:var(--t4)">Fetching ${KNOWN_MMSIS.length} vessels from VesselAPI via proxy… (may take ~30s)</div>`;
   status.textContent = '';
 
   const results = [];
@@ -1173,22 +1199,17 @@ async function showCompare() {
 
   for(const mmsi of KNOWN_MMSIS) {
     try {
-      // fetch both terrestrial and satellite
-      const [tRes, sRes] = await Promise.all([
-        fetch(`https://api.vesselapi.com/v1/vessel/${mmsi}/position?filter.idType=mmsi`,
-          {headers:{Authorization:`Bearer ${key}`}}),
-        fetch(`https://api.vesselapi.com/v1/vessel/${mmsi}/position?filter.idType=mmsi&filter.sat=true`,
-          {headers:{Authorization:`Bearer ${key}`}}),
+      const [t, s] = await Promise.all([
+        vapiProxyFetch(mmsi, key, false),
+        vapiProxyFetch(mmsi, key, true),
       ]);
-      const tData = tRes.ok ? await tRes.json() : null;
-      const sData = sRes.ok ? await sRes.json() : null;
-      results.push({ mmsi, t: tData?.vesselPosition||null, s: sData?.vesselPosition||null });
+      results.push({ mmsi, t, s });
     } catch(e) {
       results.push({ mmsi, t:null, s:null, err:e.message });
     }
     done++;
     status.textContent = `${done}/${KNOWN_MMSIS.length}`;
-    await new Promise(r=>setTimeout(r,300)); // gentle rate limiting
+    await new Promise(r=>setTimeout(r,300));
   }
 
   status.textContent = 'Done';
