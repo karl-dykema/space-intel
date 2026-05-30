@@ -556,6 +556,8 @@ function showSettings() {
   document.getElementById('sb-url-input').value=localStorage.getItem(LS.SB_URL)||'';
   const sk=localStorage.getItem(LS.SB_AKEY)||'';
   document.getElementById('sb-key-input').value=sk?'•'.repeat(20):'';
+  const vk=localStorage.getItem(LS.VAPI_KEY)||'';
+  document.getElementById('vapi-key-input').value=vk?'•'.repeat(20):'';
   document.getElementById('settings-msg').textContent='';
   loadSuggestions();
 }
@@ -568,6 +570,8 @@ function saveSettings() {
   if(keyVal   &&!keyVal.startsWith('•'))    localStorage.setItem(LS.KEY,    keyVal);
   if(sbUrl)                                  localStorage.setItem(LS.SB_URL, sbUrl);
   if(sbKeyVal &&!sbKeyVal.startsWith('•'))  localStorage.setItem(LS.SB_AKEY,sbKeyVal);
+  const vapiKeyVal=document.getElementById('vapi-key-input').value.trim();
+  if(vapiKeyVal&&!vapiKeyVal.startsWith('•')) localStorage.setItem(LS.VAPI_KEY,vapiKeyVal);
 
   document.getElementById('settings-msg').textContent='Saved ✓';
   setTimeout(closeSettings,600);
@@ -1146,6 +1150,131 @@ function buildMissionCard(l, isPast=false) {
 function openVesselFromMission(mmsi) {
   document.getElementById('missions-panel').style.display='none';
   selectVessel(mmsi);
+}
+
+// ── Source comparison (VesselAPI) ─────────────────────────────
+async function showCompare() {
+  const panel = document.getElementById('compare-panel');
+  const content = document.getElementById('compare-content');
+  const status = document.getElementById('compare-status');
+  panel.style.display = 'block';
+
+  const key = localStorage.getItem(LS.VAPI_KEY);
+  if(!key) {
+    content.innerHTML = `<div style="padding:20px;color:var(--hi)">No VesselAPI key — add one in ⚙ SETTINGS first.</div>`;
+    return;
+  }
+
+  content.innerHTML = `<div style="padding:20px;color:var(--t4)">Fetching ${KNOWN_MMSIS.length} vessels from VesselAPI… (may take ~30s)</div>`;
+  status.textContent = '';
+
+  const results = [];
+  let done = 0;
+
+  for(const mmsi of KNOWN_MMSIS) {
+    try {
+      // fetch both terrestrial and satellite
+      const [tRes, sRes] = await Promise.all([
+        fetch(`https://api.vesselapi.com/v1/vessel/${mmsi}/position?filter.idType=mmsi`,
+          {headers:{Authorization:`Bearer ${key}`}}),
+        fetch(`https://api.vesselapi.com/v1/vessel/${mmsi}/position?filter.idType=mmsi&filter.sat=true`,
+          {headers:{Authorization:`Bearer ${key}`}}),
+      ]);
+      const tData = tRes.ok ? await tRes.json() : null;
+      const sData = sRes.ok ? await sRes.json() : null;
+      results.push({ mmsi, t: tData?.vesselPosition||null, s: sData?.vesselPosition||null });
+    } catch(e) {
+      results.push({ mmsi, t:null, s:null, err:e.message });
+    }
+    done++;
+    status.textContent = `${done}/${KNOWN_MMSIS.length}`;
+    await new Promise(r=>setTimeout(r,300)); // gentle rate limiting
+  }
+
+  status.textContent = 'Done';
+  content.innerHTML = buildCompareTable(results);
+}
+
+function buildCompareTable(results) {
+  const now = Date.now();
+
+  const distNm = (lat1,lon1,lat2,lon2) => {
+    const R=3440.07, dLat=(lat2-lat1)*Math.PI/180, dLon=(lon2-lon1)*Math.PI/180;
+    const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return (R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))).toFixed(1);
+  };
+
+  const rows = results.map(({mmsi, t, s, err}) => {
+    const db = VESSEL_DB[mmsi];
+    const ours = S.vessels[mmsi];
+    const col = opColor(db?.operator);
+    const name = db?.abbr||db?.name||mmsi;
+
+    // determine best VesselAPI position (prefer terrestrial, fall back to sat)
+    const vp = t || s;
+    const isSat = !t && !!s;
+
+    // freshness
+    const ourAge  = ours?.ts ? Math.round((now-ours.ts)/60000) : null;
+    const vapiTs  = vp?.timestamp ? new Date(vp.timestamp).getTime() : null;
+    const vapiAge = vapiTs ? Math.round((now-vapiTs)/60000) : null;
+
+    // position delta
+    let delta = null;
+    if(ours?.lat && vp?.latitude) delta = distNm(ours.lat, ours.lon, vp.latitude, vp.longitude);
+
+    // status flags
+    const onlyUs   = ours?.lat && !vp;
+    const onlyThem = !ours?.lat && vp;
+    const both     = ours?.lat && vp;
+    const neither  = !ours?.lat && !vp;
+
+    const statusColor = onlyThem?'#00ff88':onlyUs?'#ff8800':both?'#00d4ff':neither?'#334455':'#888';
+    const statusLabel = onlyThem?'VAPI ONLY':onlyUs?'OURS ONLY':both?'BOTH':neither?'NEITHER':'?';
+
+    return `<div style="padding:12px 16px;border-bottom:1px solid var(--bdr2)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-family:var(--fh);font-size:13px;font-weight:700;color:${col}">${esc(name)}</span>
+        <span style="font-size:9px;font-weight:700;color:${statusColor};border:1px solid ${statusColor}44;padding:1px 6px">${statusLabel}</span>
+        ${isSat?`<span style="font-size:9px;color:#aabb00;border:1px solid #aabb0044;padding:1px 6px">SAT</span>`:''}
+        ${err?`<span style="font-size:9px;color:var(--hi)">ERR: ${esc(err)}</span>`:''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11px">
+        <div style="background:var(--bg3);padding:8px;border:1px solid var(--bdr2)">
+          <div style="color:var(--t4);font-weight:600;letter-spacing:.05em;margin-bottom:4px">AISSTREAM (OURS)</div>
+          ${ours?.lat
+            ? `<div style="color:var(--t2)">${ours.lat.toFixed(4)}, ${ours.lon.toFixed(4)}</div>
+               <div style="color:var(--t4)">${ours.sog?.toFixed(1)||'—'} kn · ${ourAge!=null?ourAge+'m ago':'—'}</div>`
+            : `<div style="color:var(--t5)">No position</div>`}
+        </div>
+        <div style="background:var(--bg3);padding:8px;border:1px solid var(--bdr2)">
+          <div style="color:var(--t4);font-weight:600;letter-spacing:.05em;margin-bottom:4px">VESSELAPI${isSat?' (SAT)':''}</div>
+          ${vp
+            ? `<div style="color:var(--t2)">${vp.latitude?.toFixed(4)}, ${vp.longitude?.toFixed(4)}</div>
+               <div style="color:var(--t4)">${vp.sog?.toFixed(1)||'—'} kn · ${vapiAge!=null?vapiAge+'m ago':'—'}</div>`
+            : `<div style="color:var(--t5)">No position</div>`}
+        </div>
+      </div>
+      ${delta!=null?`<div style="font-size:11px;color:${parseFloat(delta)>5?'#ff8800':'#00ff88'};margin-top:5px">
+        Δ ${delta} nm apart · age diff ${Math.abs((ourAge||0)-(vapiAge||0))}m</div>`:''}
+    </div>`;
+  });
+
+  // summary stats
+  const both    = results.filter(r=>(S.vessels[r.mmsi]?.lat) && (r.t||r.s)).length;
+  const onlyUs  = results.filter(r=>(S.vessels[r.mmsi]?.lat) && !(r.t||r.s)).length;
+  const onlyThem= results.filter(r=>!(S.vessels[r.mmsi]?.lat) && (r.t||r.s)).length;
+  const neither = results.filter(r=>!(S.vessels[r.mmsi]?.lat) && !(r.t||r.s)).length;
+  const satOnly = results.filter(r=>!r.t&&r.s).length;
+
+  return `<div style="padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--bdr);font-size:12px;display:flex;gap:20px;flex-wrap:wrap">
+    <span style="color:#00d4ff">Both: <b>${both}</b></span>
+    <span style="color:#ff8800">Ours only: <b>${onlyUs}</b></span>
+    <span style="color:#00ff88">VesselAPI only: <b>${onlyThem}</b></span>
+    <span style="color:var(--t4)">Neither: <b>${neither}</b></span>
+    <span style="color:#aabb00">SAT fallback: <b>${satOnly}</b></span>
+    <span style="color:var(--t4);margin-left:auto">${new Date().toLocaleTimeString()}</span>
+  </div>` + rows.join('');
 }
 
 // ── Suggestions ───────────────────────────────────────────────

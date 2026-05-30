@@ -26,7 +26,7 @@
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE VESSEL INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.24</span></div>
+      <div class="ht">SPACE VESSEL INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.25</span></div>
       <div class="hs" id="hsubtitle">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -48,6 +48,7 @@
     <button class="cbtn" onclick="showMissions()">MISSIONS</button>
     <button class="cbtn admin-only" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS</button>
     <button class="cbtn admin-only" onclick="clearEvents()" style="color:var(--t4);margin-left:auto">CLEAR EVENTS</button>
+    <button class="cbtn admin-only" onclick="showCompare()" style="color:#aabb00;border-color:#aabb0044">COMPARE SOURCES</button>
     <button class="cbtn share-only" onclick="showSuggestModal()" style="margin-left:auto;color:var(--grn);border-color:var(--grn)33">+ SUGGEST VESSEL</button>
   </div>
 
@@ -101,6 +102,10 @@
     <input class="modal-input" id="sb-url-input"  type="text"     placeholder="https://xxxxxxxxxxxx.supabase.co"/>
     <input class="modal-input" id="sb-key-input"  type="password" placeholder="Supabase anon (public) key…"/>
 
+    <div class="modal-sec">VESSELAPI — POSITION COMPARISON <span style="color:var(--t4);font-weight:400">(optional)</span></div>
+    <div class="modal-desc">Free REST API for comparing positions and satellite AIS coverage. Get a key at <b style="color:var(--acc)">vesselapi.com</b></div>
+    <input class="modal-input" id="vapi-key-input" type="password" placeholder="VesselAPI Bearer key…"/>
+
     <div class="modal-sec">SHARE LINK</div>
     <div class="modal-desc">Share a read-only view with friends. The link embeds your Supabase read key — safe to share (anon key is read-only by design).</div>
     <div style="display:flex;gap:8px;align-items:center">
@@ -117,6 +122,18 @@
     <div class="modal-sec" style="margin-top:28px">PENDING SUGGESTIONS <span id="sg-count" style="color:var(--t4);font-weight:400"></span></div>
     <div id="sg-list"><div style="font-size:12px;color:var(--t4)">Loading…</div></div>
   </div>
+</div>
+
+<!-- Source comparison panel -->
+<div id="compare-panel" style="display:none;position:fixed;top:0;right:0;width:620px;height:100vh;background:var(--bg2);border-left:1px solid var(--bdr);overflow-y:auto;z-index:9000;box-shadow:-4px 0 24px rgba(0,0,0,.6)">
+  <div class="panel-hdr">
+    <div class="panel-title" style="color:#aabb00">SOURCE COMPARISON — aisstream vs VesselAPI</div>
+    <div style="display:flex;gap:8px;margin-left:auto;align-items:center">
+      <span id="compare-status" style="font-size:11px;color:var(--t4)"></span>
+      <button class="panel-close" onclick="document.getElementById('compare-panel').style.display='none'">✕</button>
+    </div>
+  </div>
+  <div id="compare-content"><div style="padding:24px;color:var(--t4)">Click COMPARE SOURCES to fetch VesselAPI positions for all fleet vessels.</div></div>
 </div>
 
 <!-- Suggest vessel modal -->
