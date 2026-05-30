@@ -1313,25 +1313,37 @@ async function fetchNews(){
       renderNewsArticles(_allNewsArticles);
   }
 
-  // Space-relevance filter — title or desc must contain at least one of these
-  const SPACE_TERMS = /spacex|rocket|launch|falcon|starship|booster|drone\s*ship|landing|fairing|orbit|payload|starlink|blue\s*origin|new\s*glenn|rocket\s*lab|electron|vulcan|ula|nasa|spacecraft|splashdown|recovery\s*vessel|cape\s*canaveral|vandenberg|boca\s*chica/i;
+  // Search by topic (operator + space context) rather than generic vessel names.
+  // Vessel names like "Megan", "Shannon", "Bob", "Doug" are too common — searching
+  // by name pulls celebrity/sports results. Only ASDS names are space-specific enough.
+  const NEWS_QUERIES = [
+    // SpaceX — unique ASDS names are safe to search directly
+    { query:'"Of Course I Still Love You" SpaceX', label:'OCISLY (SpaceX)', mmsi:'368351350' },
+    { query:'"A Shortfall of Gravitas" SpaceX',    label:'ASOG (SpaceX)',   mmsi:'368219910' },
+    { query:'"Just Read the Instructions" SpaceX', label:'JRTI (SpaceX)',   mmsi:'368219920' },
+    // SpaceX recovery ships — search by topic, tag to primary vessel
+    { query:'SpaceX fairing recovery ship "GO Megan" OR "GO Shannon"', label:'SpaceX fairing ships', mmsi:'366584000' },
+    { query:'SpaceX "Bob" OR "Doug" recovery vessel booster', label:'SpaceX recovery ships', mmsi:'368456000' },
+    // SpaceX general launch news
+    { query:'SpaceX Falcon 9 drone ship landing booster', label:'SpaceX launches', mmsi:'368219910' },
+    { query:'SpaceX Starship launch booster catch',       label:'SpaceX Starship', mmsi:'368219920' },
+    // Blue Origin
+    { query:'"New Glenn" Blue Origin landing "Jacklyn"',  label:'Jacklyn (Blue Origin)', mmsi:'368368960' },
+    { query:'Blue Origin New Glenn launch landing ship',  label:'Blue Origin launches',  mmsi:'368368960' },
+    // Rocket Lab
+    { query:'Rocket Lab Electron booster recovery vessel catch', label:'Rocket Lab recovery', mmsi:'512012345' },
+    // ULA
+    { query:'ULA Vulcan Centaur fairing recovery ship',   label:'ULA fairing recovery', mmsi:'367532790' },
+  ];
 
-  // Always scan full VESSEL_DB — no live connection required
-  const vessels=Object.entries(VESSEL_DB)
-    .filter(([,v])=>v.operator!=='TEST')
-    .map(([mmsi,v])=>({
-      name: v.abbr||v.name,
-      operator: v.operator,
-      mmsi,
-      color: opColor(v.operator),
-      // Build a tight search query: vessel name + operator so "Megan" → "Megan SpaceX"
-      query: `"${v.abbr||v.name}" "${v.operator}"`,
-    }));
+  // Space-relevance filter — reject anything that slipped through without space context
+  const SPACE_TERMS = /spacex|rocket|launch|falcon|starship|booster|drone\s*ship|landing|fairing|orbit|payload|starlink|blue\s*origin|new\s*glenn|rocket\s*lab|electron|vulcan|ula|nasa|spacecraft|splashdown|recovery|cape\s*canaveral|vandenberg|boca\s*chica|jacklyn|gravitas|instructions|still\s*love/i;
 
   const fresh=[];
-  for(const v of vessels) {
-    const q=encodeURIComponent(v.query);
-    const rss=encodeURIComponent(`https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`);
+  for(const q of NEWS_QUERIES) {
+    const enc=encodeURIComponent(q.query);
+    const rss=encodeURIComponent(`https://news.google.com/rss/search?q=${enc}&hl=en-US&gl=US&ceid=US:en`);
+    const vinfo=VESSEL_DB[q.mmsi]||{};
     try {
       const resp=await fetch(`https://api.allorigins.win/get?url=${rss}`);
       const data=await resp.json();
@@ -1347,13 +1359,14 @@ async function fetchNews(){
         const link=get('link')||(/<link[^>]*>([^<]+)<\/link>/.exec(b)||[])[1]?.trim()||'';
         const desc=stripHTML(get('description'));
         const date=get('pubDate');
-        // Reject articles with no space-industry relevance
         if(!title||(!SPACE_TERMS.test(title)&&!SPACE_TERMS.test(desc))) continue;
-        fresh.push({title,link,desc,date,vessel:v.name,mmsi:v.mmsi,color:v.color});
+        // Deduplicate by link
+        if(fresh.some(a=>a.link===link)) continue;
+        fresh.push({title,link,desc,date,vessel:q.label,mmsi:q.mmsi,color:opColor(vinfo.operator)});
       }
-    }catch(e){console.warn('[news]',v.name,e.message);addLog(`News ERR ${v.name}: ${e.message}`,'err');}
-    addLog(`News: ${v.name} — ${fresh.filter(a=>a.vessel===v.name).length} articles found`,'news');
-    if(fresh.length>=30) break;
+    }catch(e){addLog(`News ERR ${q.label}: ${e.message}`,'err');}
+    addLog(`News: ${q.label} — ${fresh.filter(a=>a.vessel===q.label).length} articles`,'news');
+    if(fresh.length>=40) break;
   }
 
   fresh.sort((a,b)=>new Date(b.date)-new Date(a.date));
