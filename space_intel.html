@@ -170,7 +170,7 @@ button{font-family:var(--f);cursor:pointer;}
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.9</span></div>
+      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.10</span></div>
       <div class="hs">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -1347,7 +1347,8 @@ async function fetchNews(){
     const rss=encodeURIComponent(`https://news.google.com/rss/search?q=${enc}&hl=en-US&gl=US&ceid=US:en`);
     const vinfo=VESSEL_DB[q.mmsi]||{};
     try {
-      const resp=await fetch(`https://api.allorigins.win/get?url=${rss}`);
+      let resp=await fetch(`https://api.allorigins.win/get?url=${rss}`);
+      if(!resp.ok){await new Promise(r=>setTimeout(r,2000));resp=await fetch(`https://api.allorigins.win/get?url=${rss}`);}
       const data=await resp.json();
       const xml=data.contents||'';
       const rx=/<item>([\s\S]*?)<\/item>/g; let m;
@@ -1369,6 +1370,7 @@ async function fetchNews(){
     }catch(e){addLog(`News ERR ${q.label}: ${e.message}`,'err');}
     addLog(`News: ${q.label} — ${fresh.filter(a=>a.vessel===q.label).length} articles`,'news');
     if(fresh.length>=40) break;
+    await new Promise(r=>setTimeout(r,800)); // avoid rate-limiting allorigins.win
   }
 
   fresh.sort((a,b)=>new Date(b.date)-new Date(a.date));
