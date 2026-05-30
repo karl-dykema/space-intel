@@ -235,7 +235,7 @@ function findActiveMission(mmsi) {
     const net = l.net ? new Date(l.net).getTime() : null;
     if(!net || Math.abs(now - net) > 12 * 3600000) return false;
     const op = Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
-    return vesselHintsForLaunch(op, l.pad?.name||'').includes(mmsi);
+    return vesselHintsForLaunch(op, l.pad?.name||'', l.pad?.location?.name||'').includes(mmsi);
   }) || null;
 }
 
@@ -717,7 +717,7 @@ function buildVesselDetail(){
   const upcomingMissions=missionsCache.filter(l=>{
     const op=Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
     const pad=l.pad?.name||'';
-    const hints=vesselHintsForLaunch(op,pad);
+    const hints=vesselHintsForLaunch(op,pad,l.pad?.location?.name||'');
     return hints.includes(mmsi);
   }).slice(0,3);
 
@@ -956,7 +956,7 @@ function buildMissionCard(l, isPast=false) {
   const vehicle  = l.rocket?.configuration?.name||'';
   const missionType = l.mission?.type||'';
   const desc     = l.mission?.description||'';
-  const vessels  = vesselHintsForLaunch(op, pad);
+  const vessels  = vesselHintsForLaunch(op, pad, loc);
   const timeline = timelineForVehicle(vehicle);
   const uncertain= !l.net || /TBD|NET|No Earlier/i.test(l.net_precision?.name||'');
 

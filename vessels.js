@@ -338,8 +338,13 @@ const OPERATOR_MATCH = {
 
 const VESSEL_HINTS = {
   'SpaceX': {
-    drone: { 'SLC-40':'368219910', 'LC-39A':'368219910', 'LC-39B':'368219910',
-             'SLC-4E':'368351350', 'Starbase':'368219920' },
+    drone: {
+      'SLC-40':'368219910', 'Space Launch Complex 40':'368219910',
+      'LC-39A':'368219910', 'Launch Complex 39A':'368219910',
+      'LC-39B':'368219910', 'Launch Complex 39B':'368219910',
+      'SLC-4E':'368351350', 'Space Launch Complex 4E':'368351350', 'Vandenberg':'368351350',
+      'Starbase':'368219920', 'Orbital Launch Mount':'368219920', 'Boca Chica':'368219920',
+    },
     recovery: ['366584000','367550000'],
   },
   'Blue Origin': { drone: { default:'368368960' } },
@@ -396,11 +401,12 @@ function timelineForVehicle(vehicleName) {
   return Object.entries(VEHICLE_TIMELINES).find(([k])=>vehicleName&&vehicleName.includes(k))?.[1] || null;
 }
 
-function vesselHintsForLaunch(op, padName) {
+function vesselHintsForLaunch(op, padName, locName='') {
   const h = VESSEL_HINTS[op]; if(!h) return [];
+  const search = `${padName} ${locName}`;
   const out = [];
   if(h.drone) {
-    const match = Object.entries(h.drone).find(([k])=>padName&&padName.includes(k));
+    const match = Object.entries(h.drone).find(([k])=>k!=='default'&&search.includes(k));
     if(match) out.push(match[1]);
     else if(h.drone.default) out.push(h.drone.default);
   }
