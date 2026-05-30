@@ -346,16 +346,18 @@ const VESSEL_DB = {
 const KNOWN_MMSIS = Object.keys(VESSEL_DB);
 
 // ── Geo-fences ────────────────────────────────────────────────
+// roles: if set, ZONE_ENTER/EXIT only fires for vessels whose role contains one of these strings.
+// silent: zone is used for map display only, never generates events.
 const ZONES = [
-  { id:'canaveral',    name:'Cape Canaveral / KSC',    minLat:28.3,  maxLat:28.7,  minLon:-81.0, maxLon:-80.3  },
-  { id:'port_can',     name:'Port Canaveral',          minLat:28.38, maxLat:28.45, minLon:-80.65,maxLon:-80.55 },
-  { id:'boca_chica',   name:'Starbase / Boca Chica',   minLat:25.9,  maxLat:26.2,  minLon:-97.4, maxLon:-97.0  },
-  { id:'vandenberg',   name:'Vandenberg SFB',          minLat:34.5,  maxLat:34.9,  minLon:-120.9,maxLon:-120.4 },
+  { id:'canaveral',    name:'Cape Canaveral / KSC',    minLat:28.3,  maxLat:28.7,  minLon:-81.0, maxLon:-80.3,  roles:['drone','asds','recovery','support tug'] },
+  { id:'port_can',     name:'Port Canaveral',          minLat:28.38, maxLat:28.45, minLon:-80.65,maxLon:-80.55, silent:true },
+  { id:'boca_chica',   name:'Starbase / Boca Chica',   minLat:25.9,  maxLat:26.2,  minLon:-97.4, maxLon:-97.0,  roles:['drone','asds','starship'] },
+  { id:'vandenberg',   name:'Vandenberg SFB',          minLat:34.5,  maxLat:34.9,  minLon:-120.9,maxLon:-120.4, roles:['drone','asds','recovery'] },
   { id:'wallops',      name:'Wallops Island',          minLat:37.7,  maxLat:37.95, minLon:-75.6, maxLon:-75.3  },
-  { id:'lc1_nz',       name:'LC-1 Māhia (Rocket Lab)', minLat:-39.4, maxLat:-39.0, minLon:177.7, maxLon:178.2  },
-  { id:'atl_recovery', name:'Atlantic Recovery Zone',  minLat:26.0,  maxLat:31.0,  minLon:-80.5, maxLon:-72.0  },
-  { id:'pac_recovery', name:'Pacific Recovery Zone',   minLat:28.0,  maxLat:35.0,  minLon:-123.0,maxLon:-114.0 },
-  { id:'gulf_ops',     name:'Gulf Ops Zone',           minLat:25.0,  maxLat:29.0,  minLon:-97.5, maxLon:-88.0  },
+  { id:'lc1_nz',       name:'LC-1 Māhia (Rocket Lab)', minLat:-39.4, maxLat:-39.0, minLon:177.7, maxLon:178.2,  roles:['recovery'] },
+  { id:'atl_recovery', name:'Atlantic Recovery Zone',  minLat:26.0,  maxLat:31.0,  minLon:-80.5, maxLon:-72.0,  roles:['drone','asds','recovery','fast recovery'] },
+  { id:'pac_recovery', name:'Pacific Recovery Zone',   minLat:30.0,  maxLat:35.0,  minLon:-122.0,maxLon:-116.0, roles:['drone','asds','recovery'] },
+  { id:'gulf_ops',     name:'Gulf Ops Zone',           minLat:25.0,  maxLat:29.0,  minLon:-97.5, maxLon:-88.0,  roles:['drone','asds','starship'] },
 ];
 function detectZones(lat, lon) {
   return ZONES.filter(z=>lat>=z.minLat&&lat<=z.maxLat&&lon>=z.minLon&&lon<=z.maxLon).map(z=>z.id);
