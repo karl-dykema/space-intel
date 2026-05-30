@@ -125,6 +125,13 @@ button{font-family:var(--f);cursor:pointer;}
 /* ── News panel ── */
 #news-panel{display:none;position:fixed;top:0;right:0;width:480px;height:100vh;background:var(--bg2);border-left:1px solid var(--bdr);overflow-y:auto;z-index:9000;box-shadow:-4px 0 24px rgba(0,0,0,.6);}
 
+/* ── Log panel ── */
+.log-line{padding:3px 13px;border-bottom:1px solid var(--bdr2);font-size:11px;display:flex;gap:8px;align-items:baseline;line-height:1.5;}
+.log-line:hover{background:rgba(0,200,255,.02);}
+.log-ts{color:var(--t4);font-size:10px;flex-shrink:0;font-family:var(--f);}
+.log-msg{flex:1;word-break:break-all;}
+.log-badge{font-size:9px;background:var(--hi);color:#fff;border-radius:2px;padding:0 4px;margin-left:4px;vertical-align:middle;display:inline-block;}
+
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.15;}}
 </style>
 </head>
@@ -178,6 +185,7 @@ button{font-family:var(--f);cursor:pointer;}
         <button class="rtab act" id="rtab-events"  onclick="setTab('events')">EVENTS</button>
         <button class="rtab"     id="rtab-vessel"  onclick="setTab('vessel')">VESSEL</button>
         <button class="rtab"     id="rtab-history" onclick="setTab('history')">HISTORY</button>
+        <button class="rtab"     id="rtab-log"     onclick="setTab('log')">LOG<span id="log-badge" class="log-badge" style="display:none">0</span></button>
       </div>
       <div id="rpanel"></div>
     </div>
@@ -373,6 +381,55 @@ const MAX_POS    = 3000;
 let history = {};
 let events  = [];
 
+// ── Activity log ──────────────────────────────────────────────
+const logLines = [];
+const MAX_LOG  = 500;
+let   logUnread = 0;
+
+const LOG_COLORS = {
+  ais:   '#00d4ff',
+  db:    '#4477ff',
+  news:  '#ff8800',
+  sys:   '#567fa0',
+  event: '#00ff88',
+  err:   '#ff4444',
+};
+
+function addLog(msg, type='sys') {
+  const entry = { ts: Date.now(), msg, type };
+  logLines.unshift(entry);
+  if (logLines.length > MAX_LOG) logLines.pop();
+  if (S.tab === 'log') {
+    prependLogLine(entry);
+  } else {
+    logUnread++;
+    const badge = document.getElementById('log-badge');
+    if (badge) { badge.textContent = logUnread > 99 ? '99+' : logUnread; badge.style.display=''; }
+  }
+}
+
+function prependLogLine(entry) {
+  const panel = document.getElementById('rpanel');
+  if (S.tab !== 'log' || !panel) return;
+  const existing = panel.querySelector('.log-line');
+  const div = document.createElement('div');
+  div.className = 'log-line';
+  div.innerHTML = `<span class="log-ts">${new Date(entry.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>` +
+    `<span class="log-msg" style="color:${LOG_COLORS[entry.type]||'#888'}">${esc(entry.msg)}</span>`;
+  if (existing) panel.insertBefore(div, panel.firstChild);
+  else panel.innerHTML = '';
+  panel.insertBefore(div, panel.firstChild);
+  while (panel.querySelectorAll('.log-line').length > MAX_LOG) panel.removeChild(panel.lastChild);
+}
+
+function buildLogTab() {
+  if (!logLines.length) return `<div class="empty">Activity log — AIS messages, DB reads/writes, and system events appear here.</div>`;
+  return logLines.map(e =>
+    `<div class="log-line"><span class="log-ts">${new Date(e.ts).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>` +
+    `<span class="log-msg" style="color:${LOG_COLORS[e.type]||'#888'}">${esc(e.msg)}</span></div>`
+  ).join('');
+}
+
 function loadLS() {
   try { history = JSON.parse(localStorage.getItem(LS.HISTORY)||'{}'); } catch(e){history={};}
   try { events  = JSON.parse(localStorage.getItem(LS.EVENTS )||'[]'); } catch(e){events=[];}
@@ -415,7 +472,11 @@ const SB = {
       await fetch(`${this.url}/rest/v1/${table}`, {
         method:'POST', headers:this._h({'Prefer':'return=minimal'}), body:JSON.stringify(row),
       });
-    } catch(e) { console.warn(`[sb] insert ${table}:`,e.message); }
+      const info = table==='positions'?` ${VESSEL_DB[row.mmsi]?.abbr||row.mmsi} → ${row.lat?.toFixed(3)},${row.lon?.toFixed(3)}`
+                 : table==='events'   ?` [${row.type}] ${row.vessel_name||row.mmsi}`
+                 : ` ${row.vessel_name||''} "${(row.title||'').slice(0,40)}"`;
+      addLog(`DB ← ${table}${info}`, 'db');
+    } catch(e) { console.warn(`[sb] insert ${table}:`,e.message); addLog(`DB ERR insert ${table}: ${e.message}`, 'err'); }
   },
 
   async select(table, params) {
@@ -425,8 +486,10 @@ const SB = {
         .map(([k,v])=>`${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');
       const r = await fetch(`${this.url}/rest/v1/${table}${qs?'?'+qs:''}`, { headers:this._h({}) });
       if(!r.ok) throw new Error(`HTTP ${r.status}`);
-      return await r.json();
-    } catch(e) { console.warn(`[sb] select ${table}:`,e.message); return null; }
+      const data = await r.json();
+      addLog(`DB → ${table} — ${data?.length??0} rows`, 'db');
+      return data;
+    } catch(e) { console.warn(`[sb] select ${table}:`,e.message); addLog(`DB ERR select ${table}: ${e.message}`, 'err'); return null; }
   },
 };
 
@@ -451,8 +514,8 @@ function sbWriteEvent(ev) {
 let sbNewsCache = [];
 
 async function loadSBData() {
-  if(!SB.init()) { console.log('[sb] Not configured'); return; }
-  console.log('[sb] Loading history…');
+  if(!SB.init()) { addLog('Supabase not configured — enter URL + key in ⚙ SETTINGS', 'sys'); return; }
+  addLog('Supabase: loading history…', 'db');
 
   // Recent events (7 days)
   const since7  = new Date(Date.now()-7*86400000).toISOString();
@@ -471,7 +534,7 @@ async function loadSBData() {
       });
     });
     events.sort((a,b)=>b.ts-a.ts);
-    console.log(`[sb] ${sbEvs.length} events`);
+    addLog(`Supabase: loaded ${sbEvs.length} events (last 7 days)`, 'db');
     if(S.tab==='events'||S.tab==='history') renderRight();
   }
 
@@ -508,15 +571,15 @@ async function loadSBData() {
         updateMarker(S.vessels[mmsi]);
       }
     }
-    console.log(`[sb] ${pos.length} positions for ${VESSEL_DB[mmsi]?.abbr||mmsi}`);
   }
 
   // Cached news (30 days)
   const sbNews = await SB.select('news_articles', {
     fetched_at:`gte.${since30}`, order:'fetched_at.desc', limit:'100',
   });
-  if(sbNews?.length) { sbNewsCache=sbNews; console.log(`[sb] ${sbNews.length} news cached`); }
+  if(sbNews?.length) { sbNewsCache=sbNews; addLog(`Supabase: ${sbNews.length} cached news articles`, 'db'); }
 
+  addLog('Supabase: history load complete', 'db');
   renderFleet();
   updateHeaderStats();
   updateSBStatus();
@@ -559,6 +622,7 @@ function addEvent(mmsi, type, detail, lat, lon) {
   events.unshift(ev);
   if(events.length>MAX_EVENTS*2) events.pop();
   sbWriteEvent(ev);
+  addLog(`EVT [${type}] ${info.abbr||mmsi} — ${detail}`, 'event');
   if(S.tab==='events') prependEventRow(ev);
   return ev;
 }
@@ -582,6 +646,7 @@ function handleAIS(msg) {
       const wasStopped=!prev||prev.sog<=0.5;
       v.lat=lat; v.lon=lon; v.sog=pr.Sog??0; v.cog=pr.Cog??0;
       v.navStatus=pr.NavigationalStatus; v.ts=now; v._historical=false;
+      addLog(`AIS pos  ${info.abbr||mmsi}  ${lat.toFixed(4)}, ${lon.toFixed(4)}  ${v.sog.toFixed(1)} kn  COG ${Math.round(v.cog)}°`, 'ais');
 
       if(!history[mmsi]) {
         history[mmsi]={positions:[],firstSeen:now,lastSeen:now};
@@ -616,7 +681,7 @@ function handleAIS(msg) {
 
   if(sd) {
     const n=(sd.Name||m.ShipName||'').trim().replace(/@+$/,'');
-    if(n) v.aisName=n;
+    if(n){ v.aisName=n; addLog(`AIS static ${info.abbr||mmsi}  name="${n}"${sd.Destination?' dest='+sd.Destination.trim().replace(/@+$/,''):''}`, 'ais'); }
     if(sd.Destination) {
       const dest=(sd.Destination||'').trim().replace(/@+$/,'');
       if(dest&&dest!==v.dest) {
@@ -729,9 +794,10 @@ function toggleConnect() {
 
 function connect(key) {
   setDot('connecting','Connecting to aisstream.io…');
+  addLog('Connecting to aisstream.io…', 'sys');
   const btn=document.getElementById('cbtn');
   btn.textContent='…'; btn.disabled=true;
-  const timeout=setTimeout(()=>setDot('off','Timeout — check key & network'),8000);
+  const timeout=setTimeout(()=>{setDot('off','Timeout — check key & network');addLog('Connection timeout','err');},8000);
   const ws=new WebSocket('wss://stream.aisstream.io/v0/stream');
   ws.onopen=()=>{
     clearTimeout(timeout);
@@ -741,14 +807,17 @@ function connect(key) {
     }));
     S.ws=ws; btn.textContent='DISCONNECT'; btn.disabled=false; btn.classList.add('on');
     setDot('on','● LIVE — '+KNOWN_MMSIS.length+' vessels globally');
+    addLog(`AIS connected — subscribed to ${KNOWN_MMSIS.length} MMSIs globally`, 'ais');
   };
   ws.onmessage=ev=>{try{handleAIS(JSON.parse(ev.data));}catch(e){}};
   ws.onclose=ev=>{
     clearTimeout(timeout);
     S.ws=null; btn.textContent='CONNECT'; btn.disabled=false; btn.classList.remove('on');
+    const msg=ev.code===4001||ev.code===4003?'Invalid API key':'Disconnected';
     setDot('off',ev.code===4001||ev.code===4003?'Invalid API key — check ⚙ SETTINGS':`Disconnected (${ev.code})`);
+    addLog(`AIS ${msg} (code ${ev.code})`, ev.code===4001||ev.code===4003?'err':'sys');
   };
-  ws.onerror=()=>{clearTimeout(timeout);setDot('off','Connection error');};
+  ws.onerror=()=>{clearTimeout(timeout);setDot('off','Connection error');addLog('AIS WebSocket error','err');};
 }
 
 function disconnect() {
@@ -864,9 +933,14 @@ function buildVesselRow(v){
 // ── Right panel tabs ──────────────────────────────────────────
 function setTab(t){
   S.tab=t;
-  ['events','vessel','history'].forEach(id=>{
+  ['events','vessel','history','log'].forEach(id=>{
     document.getElementById('rtab-'+id).classList.toggle('act',id===t);
   });
+  if(t==='log'){
+    logUnread=0;
+    const badge=document.getElementById('log-badge');
+    if(badge) badge.style.display='none';
+  }
   renderRight();
 }
 function renderRight(){
@@ -874,6 +948,7 @@ function renderRight(){
   if(S.tab==='events')  el.innerHTML=buildEventFeed();
   if(S.tab==='vessel')  el.innerHTML=buildVesselDetail();
   if(S.tab==='history') el.innerHTML=buildHistoryTab();
+  if(S.tab==='log')     el.innerHTML=buildLogTab();
 }
 
 // ── Event feed ────────────────────────────────────────────────
@@ -978,6 +1053,7 @@ function frows(arr){return arr.map(([k,v])=>`<div class="fr"><span class="fk">${
 
 // ── News (allorigins CORS proxy + Supabase cache) ─────────────
 async function fetchNews(){
+  addLog('News: scanning Google News RSS for all fleet vessels…', 'news');
   const panel=document.getElementById('news-panel');
   const content=document.getElementById('news-content');
   panel.style.display='block';
@@ -1018,12 +1094,14 @@ async function fetchNews(){
         const date=get('pubDate');
         if(title) fresh.push({title,link,desc,date,vessel:v.name,mmsi:v.mmsi,color:v.color});
       }
-    }catch(e){console.warn('[news]',v.name,e.message);}
+    }catch(e){console.warn('[news]',v.name,e.message);addLog(`News ERR ${v.name}: ${e.message}`,'err');}
+    addLog(`News: ${v.name} — ${fresh.filter(a=>a.vessel===v.name).length} articles found`,'news');
     if(fresh.length>=30) break;
   }
 
   fresh.sort((a,b)=>new Date(b.date)-new Date(a.date));
   const top=fresh.slice(0,25);
+  addLog(`News: scan complete — ${top.length} articles total`, 'news');
 
   // Write to Supabase
   if(SB.ready&&top.length) {
