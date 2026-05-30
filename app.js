@@ -444,10 +444,11 @@ function updateMarker(v) {
   if(!map||!layers||!v.lat||!v.lon) return;
   const mmsi=v.mmsi, col=opColor(v.operator), sel=S.selected===mmsi;
   const hist=v._historical&&!SHARE_MODE; // share mode treats historical as solid
+  const vapi=v._vapi&&!SHARE_MODE;
   const sz=sel?22:14, cog=v.cog||0;
-  const opacity=hist?(sel?0.7:0.45):(sel?1:0.85);
+  const opacity=hist?(sel?0.7:0.45):vapi?(sel?0.8:0.6):(sel?1:0.85);
   const svg=`<svg width="${sz}" height="${sz}" viewBox="0 0 20 20">
-    <polygon points="10,1 14.5,17 10,13.5 5.5,17" fill="${hist?'none':col}" stroke="${col}"
+    <polygon points="10,1 14.5,17 10,13.5 5.5,17" fill="${(hist||vapi)?'none':col}" stroke="${col}"
       stroke-width="1.5" transform="rotate(${cog},10,10)" opacity="${opacity}"/>
     ${sel?`<circle cx="10" cy="10" r="9" fill="none" stroke="${col}" stroke-width="1.2" opacity="0.35"/>`:''}</svg>`;
   const icon=L.divIcon({html:svg,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],className:''});
@@ -459,15 +460,15 @@ function updateMarker(v) {
     markers[mmsi].setIcon(icon);
     markers[mmsi].setZIndexOffset(sel?1000:0);
   }
-  const age=v._historical&&!SHARE_MODE?` · last seen ${ageStr(v.ts)}`:'';
+  const age=v._historical&&!SHARE_MODE?` · last seen ${ageStr(v.ts)}`:vapi?` · VesselAPI ${ageStr(v.ts)}`:'';
   markers[mmsi].bindTooltip(
     `<b style="color:${col}">${esc(v.abbr||v.name)}</b><br>
     <span style="color:var(--t5)">${esc(v.operator)}</span><br>${esc(v.role)}<br>
-    ${v.sog!=null&&!hist?v.sog.toFixed(1)+' kn':''}${age}${v.dest&&!hist?' → '+esc(v.dest):''}`,
+    ${v.sog!=null&&!hist&&!vapi?v.sog.toFixed(1)+' kn':''}${age}${v.dest&&!hist?' → '+esc(v.dest):''}`,
     {className:'ltt',direction:'top'}
   );
   if(v.track&&v.track.length>1) {
-    const trackStyle={color:col,weight:hist?1:2,opacity:hist?0.25:0.5,dashArray:hist?'3 5':null};
+    const trackStyle={color:col,weight:hist?1:2,opacity:hist?0.25:vapi?0.3:0.5,dashArray:hist||vapi?'3 5':null};
     if(tracks[mmsi]) { tracks[mmsi].setLatLngs(v.track); tracks[mmsi].setStyle(trackStyle); }
     else tracks[mmsi]=L.polyline(v.track,trackStyle).addTo(layers).on('click',()=>selectVessel(mmsi));
   }
@@ -1442,6 +1443,37 @@ function ageStr(ts){
 }
 
 // ── Boot ─────────────────────────────────────────────────────
+// ── VesselAPI static positions (GitHub Actions, updated every 2h) ─────────
+async function loadVapiPositions() {
+  try {
+    const res = await fetch('data/vapi-positions.json?_='+Math.floor(Date.now()/7200000));
+    if(!res.ok) return;
+    const { fetched, vessels } = await res.json();
+    const fetchedTs = fetched ? new Date(fetched).getTime() : 0;
+    let added = 0;
+    for(const [mmsi, vp] of Object.entries(vessels)) {
+      if(!VESSEL_DB[mmsi]) continue;
+      const existing = S.vessels[mmsi];
+      const vpTs = vp.ts ? new Date(vp.ts).getTime() : 0;
+      // only use VesselAPI data if we have nothing better, or it's fresher
+      if(!existing?.lat || (existing._vapi && vpTs > (existing.ts||0))) {
+        S.vessels[mmsi] = {
+          mmsi, ...VESSEL_DB[mmsi],
+          lat: vp.lat, lon: vp.lon,
+          sog: vp.sog||0, cog: vp.cog||0,
+          ts: vpTs,
+          track: [],
+          _vapi: true,
+          _vapiAge: fetchedTs,
+        };
+        updateMarker(S.vessels[mmsi]);
+        added++;
+      }
+    }
+    if(added) { renderFleet(); addLog(`VesselAPI: +${added} positions from static snapshot (${new Date(fetchedTs).toLocaleTimeString()})`, 'sys'); }
+  } catch(e) { /* vapi-positions.json not present */ }
+}
+
 window.onload=()=>{
   loadLS();
 
@@ -1467,6 +1499,7 @@ window.onload=()=>{
 
   loadSBData();
   fetchMissionsBackground().then(()=>renderLaunchBanner());
+  loadVapiPositions();
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
   if(SHARE_MODE) setInterval(loadSBData, 180000);
