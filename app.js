@@ -850,7 +850,11 @@ async function fetchMissionsBackground() {
     const [upResp] = await Promise.all([fetch(`${base}upcoming/?limit=30&ordering=net`)]);
     if(!upResp.ok) return;
     const upData = await upResp.json();
-    const filterFn = l => Object.keys(OPERATOR_MATCH).some(k=>(l.launch_service_provider?.name||'').includes(k));
+    const filterFn = l => {
+      const netTs = l.net ? new Date(l.net).getTime() : null;
+      if(netTs && Date.now() - netTs > 3600000) return false;
+      return Object.keys(OPERATOR_MATCH).some(k=>(l.launch_service_provider?.name||'').includes(k));
+    };
     missionsCache = (upData.results||[]).filter(filterFn);
     addLog(`Missions cache: ${missionsCache.length} upcoming loaded`, 'sys');
     if(S.tab==='vessel') renderRight();
@@ -877,6 +881,8 @@ async function showMissions() {
 
     const filterFn = l => {
       const lsp = l.launch_service_provider?.name||'';
+      const netTs = l.net ? new Date(l.net).getTime() : null;
+      if(netTs && Date.now() - netTs > 3600000) return false;
       return Object.keys(OPERATOR_MATCH).some(k=>lsp.includes(k));
     };
     const upcoming = (upData.results||[]).filter(filterFn);
