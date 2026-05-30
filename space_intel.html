@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Space Intel</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -13,10 +13,10 @@
   --bdr:#0c3352;--bdr2:#071828;
   --t:#8ab5cc;--t2:#c5dced;--t3:#3d6478;--t4:#163650;--t5:#265870;
   --acc:#00d4ff;--grn:#00ff88;--hi:#ff2244;--warn:#ff8c00;
-  --f:'Share Tech Mono',monospace;--fh:'Orbitron',monospace;
+  --f:'Inter','Space Grotesk',sans-serif;--fm:'Share Tech Mono',monospace;--fh:'Space Grotesk','Orbitron',sans-serif;
 }
 html,body{height:100%;overflow:hidden;background:var(--bg);}
-#app{height:100vh;display:flex;flex-direction:column;font-family:var(--f);color:var(--t);font-size:14px;}
+#app{height:100vh;display:flex;flex-direction:column;font-family:var(--f);color:var(--t);font-size:15px;}
 ::-webkit-scrollbar{width:5px;height:5px;}
 ::-webkit-scrollbar-track{background:var(--bg2);}
 ::-webkit-scrollbar-thumb{background:#0c3352;}
@@ -27,11 +27,11 @@ button{font-family:var(--f);cursor:pointer;}
   padding:9px 18px;border-bottom:1px solid var(--bdr);
   background:var(--bg2);display:flex;align-items:center;gap:16px;flex-shrink:0;
 }
-.ht{font-family:var(--fh);font-size:16px;font-weight:900;color:var(--acc);letter-spacing:.14em;}
-.hs{font-size:12px;color:var(--t5);letter-spacing:.08em;margin-top:2px;}
-.hstats{margin-left:auto;display:flex;gap:20px;align-items:center;}
-.sv{font-family:var(--fh);font-size:22px;font-weight:900;}
-.sl{font-size:11px;color:var(--t5);letter-spacing:.06em;margin-top:2px;text-align:center;}
+.ht{font-family:var(--fh);font-size:19px;font-weight:700;color:var(--acc);letter-spacing:.06em;}
+.hs{font-size:12px;color:var(--t5);letter-spacing:.04em;margin-top:3px;}
+.hstats{margin-left:auto;display:flex;gap:24px;align-items:center;}
+.sv{font-family:var(--fh);font-size:26px;font-weight:700;}
+.sl{font-size:12px;color:var(--t5);letter-spacing:.04em;margin-top:2px;text-align:center;}
 .pulse-dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:4px;flex-shrink:0;}
 .pulse-dot.on{background:var(--grn);box-shadow:0 0 7px var(--grn);}
 .pulse-dot.off{background:#2a3a4a;}
@@ -61,9 +61,9 @@ button{font-family:var(--f);cursor:pointer;}
 #fleet{overflow-y:auto;flex:1;}
 .vrow{padding:10px 12px;border-bottom:1px solid var(--bdr2);cursor:pointer;border-left:3px solid transparent;transition:background .1s;}
 .vrow:hover{background:rgba(0,200,255,.03);}
-.vn{font-family:var(--fh);font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.vop{font-size:12px;margin-top:3px;}
-.vbottom{display:flex;align-items:center;margin-top:5px;gap:6px;font-size:12px;}
+.vn{font-family:var(--fh);font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.vop{font-size:12px;margin-top:3px;color:var(--t3);}
+.vbottom{display:flex;align-items:center;margin-top:5px;gap:6px;font-size:13px;}
 .vdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 
 /* ── Map ── */
@@ -90,33 +90,33 @@ button{font-family:var(--f);cursor:pointer;}
 .erow{padding:10px 14px;border-bottom:1px solid var(--bdr2);border-left:3px solid transparent;}
 .erow:hover{background:rgba(0,200,255,.02);}
 .etime{font-size:12px;color:var(--t4);margin-bottom:3px;}
-.etype{font-size:12px;font-weight:700;letter-spacing:.05em;}
-.eop{font-size:11px;padding:1px 6px;margin-left:6px;}
-.ename{font-size:14px;margin:3px 0;}
-.edetail{font-size:13px;color:var(--t5);line-height:1.6;}
-.empty{color:var(--t4);text-align:center;padding:40px 16px;font-size:14px;line-height:2.2;}
+.etype{font-size:12px;font-weight:600;letter-spacing:.02em;}
+.eop{font-size:11px;padding:2px 7px;margin-left:6px;}
+.ename{font-size:15px;font-weight:600;margin:3px 0;}
+.edetail{font-size:13px;color:var(--t);line-height:1.65;}
+.empty{color:var(--t5);text-align:center;padding:40px 20px;font-size:14px;line-height:2.4;}
 
 /* ── Vessel detail ── */
 .dhdr{padding:13px 15px 11px;border-bottom:1px solid var(--bdr);}
-.dname{font-family:var(--fh);font-size:15px;font-weight:700;line-height:1.4;margin-bottom:5px;}
-.tbody{padding:11px 15px;}
-.fr{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bdr2);gap:8px;}
-.fk{color:var(--t5);font-size:12px;letter-spacing:.03em;flex-shrink:0;padding-top:1px;}
-.fv{color:var(--t);font-size:13px;text-align:right;}
-.sec{color:var(--t5);font-size:12px;letter-spacing:.07em;margin:11px 0 5px;}
-.abox{background:var(--bg3);border:1px solid var(--bdr);padding:10px;font-size:13px;color:#567fa0;line-height:1.7;margin-top:6px;}
-.warn-box{background:rgba(255,140,0,.05);border:1px solid #553300;padding:7px 10px;font-size:12px;color:#cc7700;margin-top:6px;}
-.hist-box{background:rgba(68,119,255,.05);border:1px solid #112244;padding:7px 10px;font-size:12px;color:#4466aa;margin-top:6px;}
+.dname{font-family:var(--fh);font-size:17px;font-weight:700;line-height:1.4;margin-bottom:5px;}
+.tbody{padding:12px 16px;}
+.fr{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bdr2);gap:8px;}
+.fk{color:var(--t5);font-size:12px;letter-spacing:.01em;flex-shrink:0;padding-top:2px;}
+.fv{color:var(--t2);font-size:14px;text-align:right;font-weight:500;}
+.sec{color:var(--t4);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;margin:13px 0 6px;}
+.abox{background:var(--bg3);border:1px solid var(--bdr);padding:12px;font-size:13px;color:var(--t);line-height:1.75;margin-top:6px;}
+.warn-box{background:rgba(255,140,0,.06);border:1px solid #553300;padding:8px 11px;font-size:13px;color:#cc7700;margin-top:6px;}
+.hist-box{background:rgba(68,119,255,.06);border:1px solid #112244;padding:8px 11px;font-size:13px;color:#4466aa;margin-top:6px;}
 
 /* ── Settings modal ── */
 #settingsmodal{position:fixed;inset:0;background:rgba(2,12,24,.92);z-index:20000;display:flex;align-items:center;justify-content:center;}
 .modal-box{background:var(--bg2);border:1px solid var(--bdr);padding:28px 32px;max-width:520px;width:94%;max-height:90vh;overflow-y:auto;}
-.modal-title{font-family:var(--fh);color:var(--acc);font-size:16px;letter-spacing:.1em;margin-bottom:16px;}
-.modal-sec{font-size:12px;color:var(--t4);letter-spacing:.08em;margin:18px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--bdr2);}
-.modal-desc{font-size:13px;color:var(--t5);line-height:1.8;margin-bottom:10px;}
-.modal-input{width:100%;background:var(--bg3);border:1px solid var(--bdr);color:var(--t2);font-family:var(--f);font-size:13px;padding:9px 11px;margin-bottom:8px;outline:none;}
+.modal-title{font-family:var(--fh);color:var(--acc);font-size:18px;font-weight:700;letter-spacing:.04em;margin-bottom:18px;}
+.modal-sec{font-size:12px;font-weight:600;color:var(--t4);letter-spacing:.07em;text-transform:uppercase;margin:20px 0 9px;padding-bottom:5px;border-bottom:1px solid var(--bdr2);}
+.modal-desc{font-size:14px;color:var(--t5);line-height:1.85;margin-bottom:12px;}
+.modal-input{width:100%;background:var(--bg3);border:1px solid var(--bdr);color:var(--t2);font-family:var(--fm);font-size:13px;padding:10px 12px;margin-bottom:10px;outline:none;}
 .modal-input:focus{border-color:var(--acc);}
-.modal-btn{background:transparent;border:1px solid var(--acc);color:var(--acc);padding:8px 22px;font-size:13px;letter-spacing:.08em;}
+.modal-btn{background:transparent;border:1px solid var(--acc);color:var(--acc);padding:9px 24px;font-size:14px;font-weight:600;letter-spacing:.04em;}
 .modal-btn:hover{background:rgba(0,212,255,.08);}
 .modal-btn.sec{border-color:var(--bdr);color:var(--t5);}
 .modal-btn.sec:hover{border-color:var(--t);color:var(--t);}
@@ -126,7 +126,7 @@ button{font-family:var(--f);cursor:pointer;}
 #news-panel{display:none;position:fixed;top:0;right:0;width:480px;height:100vh;background:var(--bg2);border-left:1px solid var(--bdr);overflow-y:auto;z-index:9000;box-shadow:-4px 0 24px rgba(0,0,0,.6);}
 
 /* ── Log panel ── */
-.log-line{padding:3px 13px;border-bottom:1px solid var(--bdr2);font-size:11px;display:flex;gap:8px;align-items:baseline;line-height:1.5;}
+.log-line{padding:4px 13px;border-bottom:1px solid var(--bdr2);font-size:12px;font-family:var(--fm);display:flex;gap:8px;align-items:baseline;line-height:1.5;}
 .log-line:hover{background:rgba(0,200,255,.02);}
 .log-ts{color:var(--t4);font-size:10px;flex-shrink:0;font-family:var(--f);}
 .log-msg{flex:1;word-break:break-all;}
@@ -231,7 +231,7 @@ button{font-family:var(--f);cursor:pointer;}
     <button onclick="document.getElementById('news-panel').style.display='none'"
       style="background:none;border:1px solid #1a3050;color:var(--t4);padding:4px 10px;cursor:pointer">✕</button>
   </div>
-  <div id="news-content" style="padding:14px;font-size:12px;line-height:1.8;color:var(--t2)">
+  <div id="news-content" style="padding:16px;font-size:14px;line-height:1.9;color:var(--t2)">
     Click NEWS SCAN to search for recent articles on tracked vessels.
   </div>
 </div>
@@ -1128,15 +1128,15 @@ async function fetchNews(){
 
 function renderNewsArticles(articles){
   return articles.map(a=>`
-    <div style="border:1px solid ${a.color}33;border-left:3px solid ${a.color};
-      padding:10px 12px;margin-bottom:10px;cursor:pointer;background:${a.color}08"
+    <div style="border:1px solid ${a.color}33;border-left:4px solid ${a.color};
+      padding:14px 15px;margin-bottom:12px;cursor:pointer;background:${a.color}08;border-radius:2px"
       onclick="window.open('${esc(a.link)}','_blank')">
-      <div style="font-size:10px;color:${a.color};margin-bottom:3px">
+      <div style="font-size:12px;font-weight:600;color:${a.color};margin-bottom:5px">
         ${esc(a.vessel)} · ${a.date?new Date(a.date).toLocaleDateString():''}
       </div>
-      <div style="font-weight:bold;margin-bottom:4px;color:var(--t2);font-size:12px">${esc(a.title)}</div>
-      <div style="color:var(--t3);font-size:11px;line-height:1.6">${esc(String(a.desc||'').slice(0,200))}…</div>
-      <div style="color:#4488bb;font-size:10px;margin-top:4px">↗ Read article</div>
+      <div style="font-weight:700;margin-bottom:6px;color:var(--t2);font-size:15px;line-height:1.45">${esc(a.title)}</div>
+      <div style="color:var(--t);font-size:13px;line-height:1.7">${esc(String(a.desc||'').slice(0,220))}…</div>
+      <div style="color:#4488bb;font-size:12px;font-weight:600;margin-top:8px">↗ Read article</div>
     </div>`
   ).join('');
 }
