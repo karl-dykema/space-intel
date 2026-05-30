@@ -142,4 +142,18 @@ button{font-family:var(--f);cursor:pointer;}
 .log-msg{flex:1;word-break:break-all;}
 .log-badge{font-size:9px;background:var(--hi);color:#fff;border-radius:2px;padding:0 4px;margin-left:4px;vertical-align:middle;display:inline-block;}
 
+/* ── Launch alert banner ── */
+#launch-banner{
+  flex-shrink:0;padding:9px 18px;display:flex;align-items:center;gap:14px;
+  border-bottom:1px solid var(--bdr);font-size:13px;cursor:pointer;
+}
+#launch-banner:hover{filter:brightness(1.1);}
+.lb-label{font-size:10px;font-weight:700;letter-spacing:.1em;flex-shrink:0;}
+.lb-name{font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-cd{font-family:var(--fm);font-weight:700;letter-spacing:.04em;flex-shrink:0;}
+.lb-vessel{font-size:11px;flex-shrink:0;text-decoration:underline;text-underline-offset:2px;}
+
+/* ── Share mode ── */
+body.share-mode .admin-only{display:none!important;}
+
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.15;}}

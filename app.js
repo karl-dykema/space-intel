@@ -1,5 +1,7 @@
 'use strict';
 
+const SHARE_MODE = new URLSearchParams(location.search).has('share');
+
 let history = {};
 let events  = [];
 
@@ -463,57 +465,6 @@ function connect(key) {
     addLog(`AIS ${msg} (code ${ev.code})`, ev.code===4001||ev.code===4003?'err':'sys');
   };
   ws.onerror=()=>{clearTimeout(timeout);setDot('off','Connection error');addLog('AIS WebSocket error','err');};
-}
-
-// Unfiltered 30-second scan — logs every MMSI aisstream sees in key regions
-function scanRegion() {
-  const key=localStorage.getItem(LS.KEY);
-  if(!key){addLog('No AIS key — open ⚙ SETTINGS first','err');return;}
-  const wasConnected=!!S.ws;
-  if(wasConnected){disconnect(); addLog('SCAN: paused main stream for 30s scan','sys');}
-  addLog('SCAN: 30s unfiltered scan of Pacific/Atlantic/Gulf coasts — watching LOG tab…','warn');
-  setTab('log');
-  const ws=new WebSocket('wss://stream.aisstream.io/v0/stream');
-  const seen=new Set();
-  let rawCount=0;
-  ws.onopen=()=>{
-    addLog('SCAN: WebSocket open — sending subscription…','sys');
-    ws.send(JSON.stringify({
-      APIKey:key,
-      BoundingBoxes:[
-        [[32,  -122],[38,  -117]],
-        [[27.5,-81 ],[29.5,-79 ]],
-        [[28,  -97 ],[30,  -94 ]],
-      ],
-      FilterMessageTypes:['PositionReport'],
-    }));
-    addLog('SCAN: subscription sent — waiting for data…','sys');
-  };
-  ws.onmessage=async ev=>{
-    rawCount++;
-    if(rawCount===1) addLog('SCAN: first message received — stream is live','event');
-    try{
-      const text=ev.data instanceof Blob?await ev.data.text():ev.data;
-      const msg=JSON.parse(text);
-      const rawMMSI=String(msg.MetaData?.MMSI_String||msg.MetaData?.MMSI||'');
-      if(!rawMMSI||rawMMSI==='0'||seen.has(rawMMSI)) return;
-      seen.add(rawMMSI);
-      const known=VESSEL_DB[rawMMSI];
-      const name=(msg.MetaData?.ShipName||'').trim().replace(/@+$/,'');
-      if(known){
-        addLog(`SCAN ✓ FLEET  ${rawMMSI}  ${known.abbr||known.name}  "${name}"`, 'event');
-      } else {
-        addLog(`SCAN   unknown ${rawMMSI}  "${name}"`, 'sys');
-      }
-    }catch(e){}
-  };
-  ws.onclose=ev=>addLog(`SCAN: WebSocket closed (code ${ev.code}) after ${rawCount} msgs`,'sys');
-  ws.onerror=()=>addLog('SCAN: connection error','err');
-  setTimeout(()=>{
-    ws.close();
-    addLog(`SCAN done — ${rawCount} raw msgs · ${seen.size} unique MMSIs · ${[...seen].filter(m=>VESSEL_DB[m]).length} fleet matches`,'warn');
-    if(wasConnected){connect(key); addLog('SCAN: resuming main stream','sys');}
-  }, 30000);
 }
 
 function disconnect() {
@@ -1059,6 +1010,52 @@ function openVesselFromMission(mmsi) {
   selectVessel(mmsi);
 }
 
+// ── Share link ────────────────────────────────────────────────
+function copyShareLink() {
+  const sbUrl = localStorage.getItem(LS.SB_URL)||'';
+  const sbKey = localStorage.getItem(LS.SB_AKEY)||'';
+  let url = `${location.origin}${location.pathname}?share`;
+  if(sbUrl) url += `&sb_url=${encodeURIComponent(sbUrl)}`;
+  if(sbKey) url += `&sb_key=${encodeURIComponent(sbKey)}`;
+  navigator.clipboard.writeText(url).then(()=>{
+    const msg=document.getElementById('share-link-msg');
+    if(msg){msg.textContent='Copied ✓';setTimeout(()=>msg.textContent='',3000);}
+  }).catch(()=>{
+    const msg=document.getElementById('share-link-msg');
+    if(msg) msg.textContent='Copy failed — check clipboard permissions';
+  });
+}
+
+// ── Launch banner ─────────────────────────────────────────────
+function renderLaunchBanner() {
+  const banner=document.getElementById('launch-banner');
+  if(!banner) return;
+  const now=Date.now();
+  const soon=missionsCache.find(l=>{
+    const net=l.net?new Date(l.net).getTime():null;
+    return net && net > now - 3600000 && net < now + 86400000;
+  });
+  if(!soon){banner.style.display='none';return;}
+  const net=new Date(soon.net).getTime();
+  const op=Object.entries(OPERATOR_MATCH).find(([k])=>(soon.launch_service_provider?.name||'').includes(k))?.[1]||'';
+  const col=opColor(op);
+  const vessels=vesselHintsForLaunch(op, soon.pad?.name||'', soon.pad?.location?.name||'');
+  const droneMMSI=vessels.find(m=>{const r=(VESSEL_DB[m]?.role||'').toLowerCase();return r.includes('drone')||r.includes('landing platform');});
+  const droneV=droneMMSI?VESSEL_DB[droneMMSI]:null;
+  banner.style.display='flex';
+  banner.style.background=`linear-gradient(90deg,${col}18 0%,var(--bg3) 100%)`;
+  banner.style.borderColor=`var(--bdr)`;
+  banner.style.borderLeftColor=col;
+  banner.style.borderLeftWidth='3px';
+  banner.innerHTML=
+    `<span class="lb-label" style="color:${col}">⚡ LAUNCH</span>`+
+    `<span class="lb-name" style="color:${col}">${esc(soon.name||'')}</span>`+
+    `<span class="lb-cd" style="color:${col}" data-net="${net}">calculating…</span>`+
+    (droneV?`<span class="lb-vessel" style="color:${opColor(droneV.operator)}" onclick="openVesselFromMission('${droneMMSI}');event.stopPropagation()">${esc(droneV.abbr||droneV.name)}</span>`:'');
+  banner.onclick=()=>showMissions();
+  startCountdowns();
+}
+
 // ── Util ──────────────────────────────────────────────────────
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function tsStr(ts){
@@ -1078,6 +1075,18 @@ function ageStr(ts){
 // ── Boot ─────────────────────────────────────────────────────
 window.onload=()=>{
   loadLS();
+
+  if(SHARE_MODE) {
+    document.body.classList.add('share-mode');
+    document.getElementById('share-badge').style.display='';
+    const sub=document.getElementById('hsubtitle');
+    if(sub) sub.textContent='GLOBAL FLEET · VIEW ONLY · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA';
+    const p=new URLSearchParams(location.search);
+    const sbUrl=p.get('sb_url'), sbKey=p.get('sb_key');
+    if(sbUrl) localStorage.setItem(LS.SB_URL, sbUrl);
+    if(sbKey) localStorage.setItem(LS.SB_AKEY, sbKey);
+  }
+
   SB.init();
   initTZSelect();
   initMap();
@@ -1088,7 +1097,8 @@ window.onload=()=>{
   setInterval(()=>{renderFleet();updateHeaderStats();},5000);
 
   loadSBData();
-  fetchMissionsBackground();
+  fetchMissionsBackground().then(()=>renderLaunchBanner());
 
-  if(!localStorage.getItem(LS.KEY)) showSettings();
+  if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
+  if(SHARE_MODE) setInterval(loadSBData, 180000);
 };

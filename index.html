@@ -3,7 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Space Intel</title>
+<title>Space Intel — Live Fleet Tracker</title>
+
+<!-- OG / social preview -->
+<meta property="og:title" content="Space Intel — Live Fleet Tracker"/>
+<meta property="og:description" content="Real-time AIS tracking of SpaceX, Blue Origin, Rocket Lab, and ULA vessels — drone ships, recovery boats, and transport ships."/>
+<meta property="og:type" content="website"/>
+<meta property="og:url" content="https://karl-dykema.github.io/space-intel/"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Space Intel — Live Fleet Tracker"/>
+<meta name="twitter:description" content="Real-time AIS tracking of SpaceX, Blue Origin, Rocket Lab, and ULA vessels."/>
+
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css"/>
@@ -11,14 +21,17 @@
 <body>
 <div id="app">
 
+  <!-- Launch alert banner — shown when a mission is within 24h -->
+  <div id="launch-banner" style="display:none"></div>
+
   <div id="hdr">
     <div>
-      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.21</span></div>
-      <div class="hs">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
+      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.22</span></div>
+      <div class="hs" id="hsubtitle">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
     <div style="display:flex;align-items:center;gap:14px;margin-left:16px">
-      <div style="display:flex;align-items:center">
+      <div class="admin-only" style="display:flex;align-items:center">
         <span class="pulse-dot off" id="pdot"></span>
         <span id="cstatus" style="font-size:11px;color:var(--t4)">Disconnected</span>
       </div>
@@ -26,15 +39,15 @@
         <span id="sbdot" style="width:7px;height:7px;border-radius:50%;background:#2a3a4a;display:inline-block;flex-shrink:0"></span>
         <span id="sbstatus" style="font-size:10px;color:var(--t4)">DB —</span>
       </div>
+      <div id="share-badge" style="display:none;font-size:10px;font-weight:600;color:var(--t4);letter-spacing:.08em;border:1px solid var(--bdr);padding:3px 8px">VIEW ONLY</div>
     </div>
   </div>
 
   <div id="cbar">
-    <button class="cbtn" id="cbtn" onclick="toggleConnect()">CONNECT</button>
+    <button class="cbtn admin-only" id="cbtn" onclick="toggleConnect()">CONNECT</button>
     <button class="cbtn" onclick="showMissions()">MISSIONS</button>
-    <button class="cbtn" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS</button>
-    <button class="cbtn" onclick="scanRegion()" style="color:var(--warn);margin-left:auto" title="30s unfiltered scan — logs any vessel MMSI seen in Pacific+Atlantic">SCAN</button>
-    <button class="cbtn" onclick="clearEvents()" style="color:var(--t4)">CLEAR EVENTS</button>
+    <button class="cbtn admin-only" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS</button>
+    <button class="cbtn admin-only" onclick="clearEvents()" style="color:var(--t4);margin-left:auto">CLEAR EVENTS</button>
   </div>
 
   <div id="body">
@@ -57,7 +70,7 @@
         <button class="rtab act" id="rtab-events"  onclick="setTab('events')">EVENTS</button>
         <button class="rtab"     id="rtab-vessel"  onclick="setTab('vessel')">VESSEL</button>
         <button class="rtab"     id="rtab-history" onclick="setTab('history')">HISTORY</button>
-        <button class="rtab"     id="rtab-log"     onclick="setTab('log')">LOG<span id="log-badge" class="log-badge" style="display:none">0</span></button>
+        <button class="rtab admin-only" id="rtab-log" onclick="setTab('log')">LOG<span id="log-badge" class="log-badge" style="display:none">0</span></button>
       </div>
       <div id="rpanel"></div>
     </div>
@@ -87,7 +100,14 @@
     <input class="modal-input" id="sb-url-input"  type="text"     placeholder="https://xxxxxxxxxxxx.supabase.co"/>
     <input class="modal-input" id="sb-key-input"  type="password" placeholder="Supabase anon (public) key…"/>
 
-    <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
+    <div class="modal-sec">SHARE LINK</div>
+    <div class="modal-desc">Share a read-only view with friends. The link embeds your Supabase read key — safe to share (anon key is read-only by design).</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="modal-btn sec" onclick="copyShareLink()">COPY SHARE LINK</button>
+      <span id="share-link-msg" style="font-size:11px;color:var(--grn)"></span>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
       <button class="modal-btn" onclick="saveSettings()">SAVE &amp; APPLY</button>
       <button class="modal-btn sec" onclick="closeSettings()">CANCEL</button>
       <span id="settings-msg" style="font-size:11px;color:var(--grn)"></span>
