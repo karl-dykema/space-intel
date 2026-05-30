@@ -152,6 +152,18 @@ const VESSEL_DB = {
     notes:'Support tug for Jacklyn. [✓ MMSI confirmed]',
   },
   // ── Rocket Lab ───────────────────────────────────────────────
+  '512385000': {
+    name:'Sea Surveyor', abbr:'Sea Surveyor',
+    operator:'Rocket Lab', role:'Recovery / Support Vessel',
+    color:'#ff3355', homePort:'Māhia Peninsula, NZ',
+    imo:'8824543', flag:'New Zealand', verified:true,
+    specs:{ type:'Offshore support vessel' },
+    history:[
+      'New Zealand-flagged support vessel for Rocket Lab Electron recovery operations',
+      'Operates in recovery zone east of Māhia Peninsula, New Zealand',
+    ],
+    notes:'Rocket Lab NZ support vessel. IMO 8824543. [✓ MMSI confirmed]',
+  },
   '512440000': {
     name:'Seaworker', abbr:'Seaworker',
     operator:'Rocket Lab', role:'Electron Recovery Vessel',
@@ -255,7 +267,7 @@ const VESSEL_HINTS = {
     recovery: ['366584000','367550000'],
   },
   'Blue Origin': { drone: { default:'368368960' } },
-  'Rocket Lab':  { recovery: ['512440000'] },
+  'Rocket Lab':  { recovery: ['512440000','512385000'] },
 };
 
 // Seconds after T-0 for each key event, per vehicle
