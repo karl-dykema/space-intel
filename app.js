@@ -581,23 +581,24 @@ function buildVesselRow(v){
   const sel=S.selected===v.mmsi, col=opColor(v.operator);
   const isLive=!!v.lat&&!!v.ts&&!v._historical&&(Date.now()-v.ts<600000);
   const isHist=v._historical;
+  const shareHist=SHARE_MODE&&isHist&&!!v.lat; // historical data looks clean in share mode
   const stale=!!v.lat&&!isLive&&!isHist;
   const isOffline=v._offline||(!v.lat&&!isHist);
-  const dotCol=isLive?'#00ff88':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
-  const status=isLive?'LIVE':isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
-  const nameCol = isLive ? col : isHist ? col+'66' : 'var(--t3)';
-  const roleCol  = isLive ? col+'99' : col+'33';
-  const bg = isLive ? (sel?'var(--bg4)':'rgba(0,200,255,.04)') : sel ? 'var(--bg4)' : '';
-  const borderCol = isLive ? col : isHist ? col+'33' : 'transparent';
+  const dotCol=isLive?'#00ff88':shareHist?'#4477ff':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
+  const status=isLive?'LIVE':shareHist?ageStr(v.ts):isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
+  const nameCol=isLive||shareHist?col:isHist?col+'66':'var(--t3)';
+  const roleCol=isLive||shareHist?col+'99':col+'33';
+  const bg=isLive||shareHist?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):sel?'var(--bg4)':'';
+  const borderCol=isLive?col:shareHist?col+'66':isHist?col+'33':'transparent';
   return `<div class="vrow${sel?' sel':''}" data-mmsi="${esc(v.mmsi)}"
     style="border-left-color:${borderCol}${bg?';background:'+bg:''}${isLive?';box-shadow:inset 2px 0 8px '+col+'22':''}">
     <div class="vn" style="color:${nameCol};${isLive?'text-shadow:0 0 12px '+col+'66':''}">${esc(v.abbr||v.name)}</div>
     <div class="vop" style="color:${roleCol}">${esc(v.operator)} · ${esc(v.role)}</div>
     <div class="vbottom">
-      <div class="vdot" style="background:${dotCol}${isLive?';box-shadow:0 0 6px '+dotCol:''}"></div>
+      <div class="vdot" style="background:${dotCol}${isLive||shareHist?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
       <span style="color:${dotCol};font-size:10px;font-weight:${isLive?'700':'400'}">${status}</span>
       ${v.sog!=null&&v.lat&&!v._historical?`<span style="color:${isLive?'var(--t2)':'var(--t4)'};font-size:11px;margin-left:4px">${v.sog.toFixed(1)} kn</span>`:''}
-      ${isHist?`<span style="color:var(--t4);font-size:10px;margin-left:auto">${ageStr(v.ts)}</span>`:''}
+      ${isHist&&!shareHist?`<span style="color:var(--t4);font-size:10px;margin-left:auto">${ageStr(v.ts)}</span>`:''}
       ${v.dest&&!v._historical?`<span style="color:${isLive?'var(--t)':'var(--t5)'};font-size:10px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">→ ${esc(v.dest)}</span>`:''}
     </div>
   </div>`;
@@ -626,7 +627,9 @@ function renderRight(){
 
 // ── Event feed ────────────────────────────────────────────────
 function buildEventFeed(){
-  if(!events.length) return`<div class="empty">Connect AIS stream — events appear here in real time.<br><br>
+  if(!events.length) return SHARE_MODE
+    ? `<div class="empty">No events yet — position history loads on page open.</div>`
+    : `<div class="empty">Connect AIS stream — events appear here in real time.<br><br>
     Detects: zone entries · underway/moored · AIS gaps · destination changes</div>`;
   return events.slice(0,200).map(buildEventRow).join('');
 }
@@ -679,9 +682,9 @@ function buildVesselDetail(){
       ${db.homePort?`<div style="font-size:12px;color:var(--t4);margin-top:2px">📍 ${esc(db.homePort)}</div>`:''}
     </div>
     <div class="tbody">
-      ${!db.verified?`<div class="warn-box">⚠ MMSI ${esc(mmsi)} unverified — confirm at marinetraffic.com</div>`:''}
-      ${v._historical?`<div class="hist-box">📡 Showing last known position (${ageStr(v.ts)}). Connect AIS for live data.</div>`:''}
-      ${v._offline?`<div style="background:rgba(0,0,0,.15);border:1px solid var(--bdr);padding:8px 11px;font-size:12px;color:var(--t4);margin-bottom:6px">IN PORT — no AIS signal. Will appear on map when underway.</div>`:''}
+      ${!SHARE_MODE&&!db.verified?`<div class="warn-box">⚠ MMSI ${esc(mmsi)} unverified — confirm at marinetraffic.com</div>`:''}
+      ${!SHARE_MODE&&v._historical?`<div class="hist-box">📡 Showing last known position (${ageStr(v.ts)}). Connect AIS for live data.</div>`:''}
+      ${!SHARE_MODE&&v._offline?`<div style="background:rgba(0,0,0,.15);border:1px solid var(--bdr);padding:8px 11px;font-size:12px;color:var(--t4);margin-bottom:6px">IN PORT — no AIS signal. Will appear on map when underway.</div>`:''}
 
       ${upcomingMissions.length?`
         <div class="sec">UPCOMING MISSIONS</div>
