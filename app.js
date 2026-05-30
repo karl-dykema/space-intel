@@ -560,9 +560,10 @@ function updateHeaderStats(){
   const ops=[...new Set(live.map(v=>v.operator))].length;
   const liveMMSIs    = live.map(v=>v.mmsi);
   const underwayMMSIs= live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
+  const safeArr=a=>JSON.stringify(a).replace(/"/g,"'");
   document.getElementById('hstats').innerHTML=[
-    [live.length, 'LIVE',    '#00ff88', `cycleVessels(${JSON.stringify(liveMMSIs)},'live')`],
-    [moving,      'UNDERWAY','#00d4ff', `cycleVessels(${JSON.stringify(underwayMMSIs)},'underway')`],
+    [live.length, 'LIVE',    '#00ff88', `cycleVessels(${safeArr(liveMMSIs)},'live')`],
+    [moving,      'UNDERWAY','#00d4ff', `cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
     [ops,         'OPS',     '#ff9900', `setTab('events')`],
   ].map(([v,l,c,fn])=>`<div onclick="${fn}" style="cursor:${v>0?'pointer':'default'};text-align:center" title="${l}">
     <div class="sv" style="color:${c}">${v}</div>
@@ -606,16 +607,20 @@ function buildVesselRow(v){
   const isOffline=v._offline||(!v.lat&&!isHist);
   const dotCol=isLive?'#00ff88':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
   const status=isLive?'LIVE':isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
+  const nameCol = isLive ? col : isHist ? col+'66' : 'var(--t3)';
+  const roleCol  = isLive ? col+'99' : col+'33';
+  const bg = isLive ? (sel?'var(--bg4)':'rgba(0,200,255,.04)') : sel ? 'var(--bg4)' : '';
+  const borderCol = isLive ? col : isHist ? col+'33' : 'transparent';
   return `<div class="vrow${sel?' sel':''}" data-mmsi="${esc(v.mmsi)}"
-    style="border-left-color:${isLive?col:isHist?col+'44':'transparent'}${sel?';background:var(--bg4)':''}">
-    <div class="vn" style="color:${sel?col:isHist?col+'88':'var(--t2)'}">${esc(v.abbr||v.name)}</div>
-    <div class="vop" style="color:${col}55">${esc(v.operator)} · ${esc(v.role)}</div>
+    style="border-left-color:${borderCol}${bg?';background:'+bg:''}${isLive?';box-shadow:inset 2px 0 8px '+col+'22':''}">
+    <div class="vn" style="color:${nameCol};${isLive?'text-shadow:0 0 12px '+col+'66':''}">${esc(v.abbr||v.name)}</div>
+    <div class="vop" style="color:${roleCol}">${esc(v.operator)} · ${esc(v.role)}</div>
     <div class="vbottom">
-      <div class="vdot" style="background:${dotCol}${isLive?';box-shadow:0 0 5px '+dotCol:''}"></div>
+      <div class="vdot" style="background:${dotCol}${isLive?';box-shadow:0 0 6px '+dotCol:''}"></div>
       <span style="color:${dotCol};font-size:10px;font-weight:${isLive?'700':'400'}">${status}</span>
-      ${v.sog!=null&&v.lat&&!v._historical?`<span style="color:var(--t);font-size:11px;margin-left:4px">${v.sog.toFixed(1)} kn</span>`:''}
+      ${v.sog!=null&&v.lat&&!v._historical?`<span style="color:${isLive?'var(--t2)':'var(--t4)'};font-size:11px;margin-left:4px">${v.sog.toFixed(1)} kn</span>`:''}
       ${isHist?`<span style="color:var(--t4);font-size:10px;margin-left:auto">${ageStr(v.ts)}</span>`:''}
-      ${v.dest&&!v._historical?`<span style="color:var(--t5);font-size:10px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">→ ${esc(v.dest)}</span>`:''}
+      ${v.dest&&!v._historical?`<span style="color:${isLive?'var(--t)':'var(--t5)'};font-size:10px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">→ ${esc(v.dest)}</span>`:''}
     </div>
   </div>`;
 }
