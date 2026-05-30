@@ -590,9 +590,11 @@ function renderFleet(){
     .sort((a,b)=>{
       const rank=v=>{
         const isLive=!!v.lat&&!!v.ts&&!v._historical&&(Date.now()-v.ts<600000);
-        if(isLive) return 0;
-        if(v._historical) return 1;
-        return 2;
+        const shareHist=SHARE_MODE&&v._historical&&!!v.lat;
+        if((isLive||shareHist)&&isCarryingBooster(v.mmsi)) return 0;
+        if(isLive) return 1;
+        if(v._historical) return 2;
+        return 3;
       };
       return rank(a)-rank(b);
     });
@@ -651,12 +653,31 @@ function renderRight(){
 }
 
 // ── Event feed ────────────────────────────────────────────────
+function buildBoosterCards() {
+  const carrying = KNOWN_MMSIS
+    .map(mmsi => ({ mmsi, mission: isCarryingBooster(mmsi) }))
+    .filter(x => x.mission);
+  if(!carrying.length) return '';
+  return carrying.map(({mmsi, mission}) => {
+    const db = VESSEL_DB[mmsi];
+    const col = opColor(db?.operator);
+    const net = mission.net ? new Date(mission.net).getTime() : null;
+    return `<div class="erow" style="border-left-color:#ff8c00;background:rgba(255,140,0,.06);cursor:pointer" onclick="selectVessel('${mmsi}')">
+      <div style="font-size:10px;font-weight:700;color:#ff8c00;letter-spacing:.08em;margin-bottom:4px">🚀 BOOSTER ABOARD</div>
+      <div class="ename" style="color:${col}">${esc(db?.abbr||db?.name||mmsi)}</div>
+      <div class="edetail">${esc(mission.name||'')} · launched ${net?ageStr(net):'—'}</div>
+      <div style="font-size:11px;color:var(--t4);margin-top:3px">En route back to port</div>
+    </div>`;
+  }).join('');
+}
+
 function buildEventFeed(){
-  if(!events.length) return SHARE_MODE
+  const boosterCards = buildBoosterCards();
+  if(!events.length) return boosterCards + (SHARE_MODE
     ? `<div class="empty">No events yet — position history loads on page open.</div>`
     : `<div class="empty">Connect AIS stream — events appear here in real time.<br><br>
-    Detects: zone entries · underway/moored · AIS gaps · destination changes</div>`;
-  return events.slice(0,200).map(buildEventRow).join('');
+    Detects: zone entries · underway/moored · AIS gaps · destination changes</div>`);
+  return boosterCards + events.slice(0,200).map(buildEventRow).join('');
 }
 function buildEventRow(ev){
   const cfg=EV_CFG[ev.type]||{icon:'·',color:'#888'};
