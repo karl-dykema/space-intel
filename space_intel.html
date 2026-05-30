@@ -131,6 +131,15 @@ button{font-family:var(--f);cursor:pointer;}
 .panel-search{padding:10px 14px;border-bottom:1px solid var(--bdr2);background:var(--bg3);}
 .panel-search input{width:100%;background:var(--bg4);border:1px solid var(--bdr);color:var(--t2);font-family:var(--f);font-size:13px;padding:7px 11px;outline:none;}
 .panel-search input:focus{border-color:var(--acc);}
+/* ── News article cards ── */
+.ncard{padding:14px 16px;border-bottom:1px solid var(--bdr2);cursor:pointer;border-left:4px solid transparent;transition:background .1s;}
+.ncard:hover{background:rgba(0,200,255,.03);}
+.ncard-op{font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:.06em;margin-bottom:5px;}
+.ncard-title{font-family:var(--f);font-size:14px;font-weight:600;color:var(--t2);line-height:1.45;margin-bottom:6px;}
+.ncard-desc{font-family:var(--f);font-size:13px;color:var(--t);line-height:1.65;}
+.ncard-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
+.ncard-date{font-size:11px;color:var(--t4);}
+.ncard-link{font-size:12px;font-weight:600;color:#4488bb;}
 /* ── Missions panel ── */
 #missions-panel{display:none;position:fixed;top:0;right:0;width:520px;height:100vh;background:var(--bg2);border-left:1px solid var(--bdr);overflow-y:auto;z-index:9000;box-shadow:-4px 0 24px rgba(0,0,0,.6);}
 .mcard{padding:16px 18px;border-bottom:1px solid var(--bdr);border-left:4px solid transparent;}
@@ -255,8 +264,8 @@ button{font-family:var(--f);cursor:pointer;}
   <div class="panel-search">
     <input id="news-search" type="text" placeholder="Search articles…" oninput="filterNews(this.value)"/>
   </div>
-  <div id="news-content" style="padding:16px;font-size:14px;line-height:1.9;color:var(--t2)">
-    Click NEWS to search for recent articles on tracked vessels.
+  <div id="news-content" style="padding:8px 0 16px">
+    <div style="padding:20px 16px;font-size:13px;color:var(--t4)">Click NEWS to search for recent articles on tracked vessels.</div>
   </div>
 </div>
 
@@ -1351,29 +1360,28 @@ async function fetchNews(){
   }
 
   if(!top.length&&!sbNewsCache.length) {
-    content.innerHTML=`<div style="color:var(--t4)">No recent news found.</div>`;
+    content.innerHTML=`<div style="padding:20px 16px;font-size:13px;color:var(--t4)">No recent news found.</div>`;
     return;
   }
   if(top.length) {
     _allNewsArticles = top;
     document.getElementById('news-search').value='';
-    content.innerHTML=`<div style="color:var(--t5);font-size:12px;margin-bottom:12px">
-      ${top.length} articles · Google News RSS${SB.ready?' · saved to Supabase':''}</div>`+
+    content.innerHTML=
+      `<div style="padding:8px 16px 6px;font-size:11px;color:var(--t4);letter-spacing:.04em">${top.length} articles · Google News RSS${SB.ready?' · saved to Supabase':''}</div>`+
       renderNewsArticles(top);
   }
 }
 
 function renderNewsArticles(articles){
   return articles.map(a=>`
-    <div style="border:1px solid ${a.color}33;border-left:4px solid ${a.color};
-      padding:14px 15px;margin-bottom:12px;cursor:pointer;background:${a.color}08;border-radius:2px"
-      onclick="window.open('${esc(a.link)}','_blank')">
-      <div style="font-size:12px;font-weight:600;color:${a.color};margin-bottom:5px">
-        ${esc(a.vessel)} · ${a.date?new Date(a.date).toLocaleDateString():''}
+    <div class="ncard" style="border-left-color:${a.color}" onclick="window.open('${esc(a.link)}','_blank')">
+      <div class="ncard-op" style="color:${a.color}">${esc(a.vessel)}</div>
+      <div class="ncard-title">${esc(a.title)}</div>
+      ${a.desc?`<div class="ncard-desc">${esc(String(a.desc).slice(0,200))}</div>`:''}
+      <div class="ncard-meta">
+        <span class="ncard-date">${a.date?new Date(a.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):''}</span>
+        <span class="ncard-link">↗ Read article</span>
       </div>
-      <div style="font-weight:700;margin-bottom:6px;color:var(--t2);font-size:15px;line-height:1.45">${esc(a.title)}</div>
-      <div style="color:var(--t);font-size:13px;line-height:1.7">${esc(String(a.desc||'').slice(0,220))}…</div>
-      <div style="color:#4488bb;font-size:12px;font-weight:600;margin-top:8px">↗ Read article</div>
     </div>`
   ).join('');
 }
@@ -1660,8 +1668,10 @@ function buildMissionCard(l, isPast=false) {
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function stripHTML(s){
   return String(s||'')
-    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"')
-    .replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&nbsp;/gi,' ')
+    .replace(/<[^>]+>/g,' ')
+    .replace(/&nbsp;/gi,' ')  // second pass catches doubly-encoded &amp;nbsp; → &nbsp;
+    .replace(/\s+/g,' ').trim();
 }
 function tsStr(ts){
   if(!ts)return'—';
