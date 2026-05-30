@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Space Intel</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+<div id="app">
+
+  <div id="hdr">
+    <div>
+      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.17</span></div>
+      <div class="hs">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
+    </div>
+    <div class="hstats" id="hstats"></div>
+    <div style="display:flex;align-items:center;gap:14px;margin-left:16px">
+      <div style="display:flex;align-items:center">
+        <span class="pulse-dot off" id="pdot"></span>
+        <span id="cstatus" style="font-size:11px;color:var(--t4)">Disconnected</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:4px" title="Supabase persistence">
+        <span id="sbdot" style="width:7px;height:7px;border-radius:50%;background:#2a3a4a;display:inline-block;flex-shrink:0"></span>
+        <span id="sbstatus" style="font-size:10px;color:var(--t4)">DB —</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="cbar">
+    <button class="cbtn" id="cbtn" onclick="toggleConnect()">CONNECT</button>
+    <button class="cbtn" onclick="showMissions()">MISSIONS</button>
+    <button class="cbtn" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS</button>
+    <button class="cbtn" onclick="scanRegion()" style="color:var(--warn);margin-left:auto" title="30s unfiltered scan — logs any vessel MMSI seen in Pacific+Atlantic">SCAN</button>
+    <button class="cbtn" onclick="clearEvents()" style="color:var(--t4)">CLEAR EVENTS</button>
+  </div>
+
+  <div id="body">
+    <div id="left">
+      <div id="opleg"></div>
+      <div class="lhdr" id="lhdr">FLEET ROSTER</div>
+      <div id="fleet"></div>
+    </div>
+
+    <div id="mapwrap">
+      <div id="map"></div>
+      <div id="mleg">
+        <div class="mlt">OPERATOR</div>
+        <div id="mapleg-ops"></div>
+      </div>
+    </div>
+
+    <div id="right">
+      <div class="rtabs">
+        <button class="rtab act" id="rtab-events"  onclick="setTab('events')">EVENTS</button>
+        <button class="rtab"     id="rtab-vessel"  onclick="setTab('vessel')">VESSEL</button>
+        <button class="rtab"     id="rtab-history" onclick="setTab('history')">HISTORY</button>
+        <button class="rtab"     id="rtab-log"     onclick="setTab('log')">LOG<span id="log-badge" class="log-badge" style="display:none">0</span></button>
+      </div>
+      <div id="rpanel"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div id="settingsmodal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">⚙ SETTINGS</div>
+
+    <div class="modal-sec">AIS STREAM — LIVE TRACKING</div>
+    <div class="modal-desc">
+      Connects your browser directly to <b style="color:var(--acc)">aisstream.io</b> to receive live AIS
+      position reports. Get a free key at <b style="color:var(--acc)">aisstream.io/authenticate</b>
+    </div>
+    <input class="modal-input" id="key-input" type="password" placeholder="aisstream.io API key…"/>
+
+    <div class="modal-sec">SUPABASE — PERSISTENT HISTORY <span style="color:var(--t4)">(optional)</span></div>
+    <div class="modal-desc">
+      Stores position history and events in a free Supabase PostgreSQL project so data
+      survives page reloads and is available across devices.<br><br>
+      1. Create a free project at <b style="color:var(--acc)">supabase.com</b><br>
+      2. Open <b>SQL Editor</b> and run <code style="color:var(--acc)">supabase_schema.sql</code><br>
+      3. Go to <b>Project Settings → API</b> and paste your URL and anon key below
+    </div>
+    <input class="modal-input" id="sb-url-input"  type="text"     placeholder="https://xxxxxxxxxxxx.supabase.co"/>
+    <input class="modal-input" id="sb-key-input"  type="password" placeholder="Supabase anon (public) key…"/>
+
+    <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
+      <button class="modal-btn" onclick="saveSettings()">SAVE &amp; APPLY</button>
+      <button class="modal-btn sec" onclick="closeSettings()">CANCEL</button>
+      <span id="settings-msg" style="font-size:11px;color:var(--grn)"></span>
+    </div>
+  </div>
+</div>
+
+<!-- Missions panel -->
+<div id="missions-panel">
+  <div class="panel-hdr">
+    <div class="panel-title" style="color:#ff8800">UPCOMING MISSIONS</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <select id="tz-select" onchange="setTZ(this.value)"
+        style="background:var(--bg4);border:1px solid var(--bdr);color:var(--t2);font-family:var(--f);font-size:12px;padding:4px 8px;outline:none;cursor:pointer">
+      </select>
+      <button class="panel-close" onclick="document.getElementById('missions-panel').style.display='none'">✕</button>
+    </div>
+  </div>
+  <div class="missions-src" id="missions-src">Loading from The Space Devs launch database…</div>
+  <div id="missions-content"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="vessels.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
