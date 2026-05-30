@@ -267,6 +267,50 @@ const VESSEL_DB = {
     ],
     notes:'UNVERIFIED — may be USNS Hugo / TSV-2. The Spaceport Company sea launch platform. Confirm MMSI at marinetraffic.com',
   },
+  // ── US Military / Range Support ──────────────────────────────
+  '369998000': {
+    name:'USNS Howard O. Lorenzen', abbr:'Lorenzen',
+    operator:'US Space Force Range', role:'Missile Range Instrumentation Ship',
+    color:'#aabb00', homePort:'Norfolk, VA',
+    imo:'9416680', flag:'USA', built:2012, verified:true,
+    specs:{ length:'163m', beam:'27m', type:'T-AGM-25 range ship', radar:'Cobra King AESA' },
+    history:[
+      'Operated by Military Sealift Command; missions sponsored by US Air Force / Space Force',
+      'Cobra King radar can track ballistic missiles and rocket stages over horizon',
+      'Frequently positioned downrange from Cape Canaveral and Vandenberg for major launches',
+      'Successor to USNS Observation Island (T-AGM-23)',
+      'Commissioned 2014; built by VT Halter Marine, Pascagoula MS',
+    ],
+    notes:'US Space Force range support. Positions near Canaveral/Vandenberg for launches. [✓ MMSI]',
+  },
+  '338941000': {
+    name:'USNS Invincible', abbr:'Invincible',
+    operator:'US Space Force Range', role:'Missile Range Instrumentation Ship',
+    color:'#aabb00', homePort:'Jacksonville, FL',
+    imo:'8833879', flag:'USA', built:1986, verified:true,
+    specs:{ length:'68m', beam:'13m', type:'T-AGM-24 (ex-AGOS-10)', },
+    history:[
+      'Originally built as ocean surveillance ship (AGOS-10); converted to range ship in 2000',
+      'Supports Eastern and Western range missile / rocket tracking',
+      'Operated by Military Sealift Command with civilian crew',
+    ],
+    notes:'Stalwart-class range ship. Reclassified AGOS→AGM 2000. [✓ MMSI]',
+  },
+  '369468000': {
+    name:'SBX-1', abbr:'SBX-1',
+    operator:'US Space Force Range', role:'Sea-Based X-Band Radar Platform',
+    color:'#aabb00', homePort:'Pearl Harbor, HI',
+    imo:'8765412', flag:'USA', built:2005, verified:true,
+    specs:{ length:'119m', beam:'73m', type:'CS-50 semi-submersible', radar:'X-band AESA phased array' },
+    history:[
+      'World\'s largest sea-based X-band radar; detects objects the size of a baseball at 2,500 miles',
+      'Deployed 2006 as part of the Ballistic Missile Defense System in the Pacific',
+      'Operated by Boeing under MDA contract; based at Pearl Harbor when not on mission',
+      'Moves slowly (8 kn max) to mission positions in the Pacific',
+      'Radar housed under the distinctive large white radome visible from miles away',
+    ],
+    notes:'Massive semi-sub radar platform. Rarely moves but AIS-visible. Primarily BMDS / Pacific range. [✓ MMSI]',
+  },
   // ── Test vessel ───────────────────────────────────────────────
   '353136000': {
     name:'Ever Given', abbr:'Ever Given',
@@ -302,7 +346,7 @@ function detectZones(lat, lon) {
 }
 
 // ── Operator colors ───────────────────────────────────────────
-const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88' };
+const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00' };
 function opColor(op) { return OP_COLORS[op]||'#aaaaaa'; }
 
 // ── Event config ──────────────────────────────────────────────
