@@ -583,7 +583,17 @@ function renderOpLegend(){
 function renderFleet(){
   const lc=Object.values(S.vessels).filter(v=>v.lat&&!v._historical).length;
   document.getElementById('lhdr').textContent=S.ws?`FLEET · ${lc} LIVE`:'FLEET ROSTER';
-  const rows=KNOWN_MMSIS.map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true});
+  const rows=KNOWN_MMSIS
+    .map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true})
+    .sort((a,b)=>{
+      const rank=v=>{
+        const isLive=!!v.lat&&!!v.ts&&!v._historical&&(Date.now()-v.ts<600000);
+        if(isLive) return 0;
+        if(v._historical) return 1;
+        return 2;
+      };
+      return rank(a)-rank(b);
+    });
   document.getElementById('fleet').innerHTML=rows.map(buildVesselRow).join('');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
 }
