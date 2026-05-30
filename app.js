@@ -1158,9 +1158,9 @@ const VAPI_PROXY = 'http://localhost:8768';
 async function vapiProxyFetch(mmsi, key, sat=false) {
   const url = `${VAPI_PROXY}/vapi?mmsi=${mmsi}&sat=${sat}&key=${encodeURIComponent(key)}`;
   const res = await fetch(url);
-  if(!res.ok) return null;
-  const j = await res.json();
-  return j?.vesselPosition || null;
+  const text = await res.text();
+  let j; try { j = JSON.parse(text); } catch(e) { j = null; }
+  return { status: res.status, raw: text.slice(0, 300), data: j?.vesselPosition || j?.data || j?.position || null };
 }
 
 async function showCompare() {
@@ -1197,19 +1197,30 @@ async function showCompare() {
   const results = [];
   let done = 0;
 
+  let firstRaw = null;
   for(const mmsi of KNOWN_MMSIS) {
     try {
-      const [t, s] = await Promise.all([
+      const [tR, sR] = await Promise.all([
         vapiProxyFetch(mmsi, key, false),
         vapiProxyFetch(mmsi, key, true),
       ]);
-      results.push({ mmsi, t, s });
+      if(!firstRaw) firstRaw = { mmsi, status: tR.status, raw: tR.raw };
+      results.push({ mmsi, t: tR.data, s: sR.data, tStatus: tR.status, sStatus: sR.status });
     } catch(e) {
       results.push({ mmsi, t:null, s:null, err:e.message });
     }
     done++;
     status.textContent = `${done}/${KNOWN_MMSIS.length}`;
     await new Promise(r=>setTimeout(r,300));
+  }
+  if(firstRaw) {
+    const debugBar = document.createElement('div');
+    debugBar.style.cssText = 'padding:8px 16px;background:#1a2020;border-bottom:1px solid #2a4040;font-size:11px;color:#aabb00';
+    debugBar.innerHTML = `<b>Debug — first vessel (${firstRaw.mmsi}) HTTP ${firstRaw.status}:</b><br><code style="color:var(--t3);word-break:break-all">${esc(firstRaw.raw)}</code>`;
+    content.innerHTML = '';
+    content.appendChild(debugBar);
+    content.innerHTML += buildCompareTable(results);
+    return;
   }
 
   status.textContent = 'Done';
