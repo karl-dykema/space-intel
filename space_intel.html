@@ -160,7 +160,7 @@ button{font-family:var(--f);cursor:pointer;}
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.12</span></div>
+      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.13</span></div>
       <div class="hs">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -929,9 +929,10 @@ function connect(key) {
     setDot('on','● LIVE — '+KNOWN_MMSIS.length+' vessels globally');
     addLog(`AIS connected — subscribed to ${KNOWN_MMSIS.length} MMSIs globally`, 'ais');
   };
-  ws.onmessage=ev=>{
+  ws.onmessage=async ev=>{
     try{
-      const msg=JSON.parse(ev.data);
+      const text=ev.data instanceof Blob?await ev.data.text():ev.data;
+      const msg=JSON.parse(text);
       const rawMMSI=msg.MetaData?.MMSI_String||msg.MetaData?.MMSI||'';
       if(rawMMSI&&!VESSEL_DB[String(rawMMSI)]) addLog(`AIS rcv unknown MMSI ${rawMMSI}`, 'ais');
       handleAIS(msg);
@@ -972,11 +973,12 @@ function scanRegion() {
     }));
     addLog('SCAN: subscription sent — waiting for data…','sys');
   };
-  ws.onmessage=ev=>{
+  ws.onmessage=async ev=>{
     rawCount++;
     if(rawCount===1) addLog('SCAN: first message received — stream is live','event');
     try{
-      const msg=JSON.parse(ev.data);
+      const text=ev.data instanceof Blob?await ev.data.text():ev.data;
+      const msg=JSON.parse(text);
       const rawMMSI=String(msg.MetaData?.MMSI_String||msg.MetaData?.MMSI||'');
       if(!rawMMSI||rawMMSI==='0'||seen.has(rawMMSI)) return;
       seen.add(rawMMSI);
