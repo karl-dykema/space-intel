@@ -263,7 +263,12 @@ button{font-family:var(--f);cursor:pointer;}
 <div id="missions-panel">
   <div class="panel-hdr">
     <div class="panel-title" style="color:#ff8800">UPCOMING MISSIONS</div>
-    <button class="panel-close" onclick="document.getElementById('missions-panel').style.display='none'">✕</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
+      <select id="tz-select" onchange="setTZ(this.value)"
+        style="background:var(--bg4);border:1px solid var(--bdr);color:var(--t2);font-family:var(--f);font-size:12px;padding:4px 8px;outline:none;cursor:pointer">
+      </select>
+      <button class="panel-close" onclick="document.getElementById('missions-panel').style.display='none'">✕</button>
+    </div>
   </div>
   <div class="missions-src" id="missions-src">Loading from The Space Devs launch database…</div>
   <div id="missions-content"></div>
@@ -1185,6 +1190,47 @@ function renderNewsArticles(articles){
   ).join('');
 }
 
+// ── Timezone ─────────────────────────────────────────────────
+const TZ_OPTIONS = [
+  { label:'Local',                     value:'local' },
+  { label:'UTC',                       value:'UTC' },
+  { label:'Eastern (ET)',              value:'America/New_York' },
+  { label:'Central (CT)',              value:'America/Chicago' },
+  { label:'Mountain (MT)',             value:'America/Denver' },
+  { label:'Pacific (PT)',              value:'America/Los_Angeles' },
+  { label:'Hawaii (HT)',               value:'America/Honolulu' },
+  { label:'London (GMT/BST)',          value:'Europe/London' },
+  { label:'Paris / Berlin (CET/CEST)', value:'Europe/Paris' },
+  { label:'Auckland (NZST)',           value:'Pacific/Auckland' },
+];
+
+let currentTZ = localStorage.getItem('space_intel_tz') || 'local';
+
+function initTZSelect() {
+  const sel = document.getElementById('tz-select');
+  if(!sel) return;
+  const localLabel = `Local (${Intl.DateTimeFormat().resolvedOptions().timeZone})`;
+  TZ_OPTIONS[0].label = localLabel;
+  sel.innerHTML = TZ_OPTIONS.map(o=>
+    `<option value="${o.value}"${o.value===currentTZ?' selected':''}>${o.label}</option>`
+  ).join('');
+}
+
+function setTZ(tz) {
+  currentTZ = tz;
+  localStorage.setItem('space_intel_tz', tz);
+  // Re-render missions if open
+  if(document.getElementById('missions-panel').style.display!=='none') showMissions();
+}
+
+function fmtTime(ts) {
+  if(!ts) return '—';
+  const d = new Date(ts);
+  const opts = { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit', timeZoneName:'short' };
+  if(currentTZ==='local') return d.toLocaleString([], opts);
+  return d.toLocaleString([], { ...opts, timeZone:currentTZ });
+}
+
 // ── News search ───────────────────────────────────────────────
 let _allNewsArticles = [];
 function filterNews(q) {
@@ -1348,7 +1394,7 @@ function buildMissionCard(l, isPast=false) {
   const op       = Object.entries(OPERATOR_MATCH).find(([k])=>lsp.includes(k))?.[1]||lsp;
   const col      = opColor(op);
   const net      = l.net ? new Date(l.net).getTime() : null;
-  const netStr   = l.net ? new Date(l.net).toUTCString().replace(' GMT','Z') : 'TBD';
+  const netStr   = net ? fmtTime(net) : 'TBD';
   const pad      = l.pad?.name||'';
   const loc      = l.pad?.location?.name||'';
   const status   = l.status?.name||'';
@@ -1370,7 +1416,7 @@ function buildMissionCard(l, isPast=false) {
       <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:8px">${isPast?'ACTUAL TIMELINE (projected vessel times)':'PROJECTED TIMELINE'}</div>
       ${timeline.map(e=>{
         const tv = e.vessel&&VESSEL_DB[e.vessel];
-        const absTime = (net&&isPast&&e.t>60) ? new Date(net+e.t*1000).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',timeZoneName:'short'}) : null;
+        const absTime = (net&&e.t>60) ? fmtTime(net+e.t*1000) : null;
         return `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--bdr2)${e.highlight?';background:'+col+'08':''};border-radius:2px">
           <span style="font-family:var(--fm);font-size:12px;color:${e.highlight?col:'var(--t4)'};flex:1">${esc(e.label)}</span>
           ${absTime?`<span style="font-size:10px;color:var(--t5);flex-shrink:0">${esc(absTime)}</span>`:''}
@@ -1430,6 +1476,7 @@ function ageStr(ts){
 window.onload=()=>{
   loadLS();
   SB.init();
+  initTZSelect();
   initMap();
   renderOpLegend();
   renderFleet();
