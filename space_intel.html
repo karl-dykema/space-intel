@@ -123,7 +123,6 @@ button{font-family:var(--f);cursor:pointer;}
 .sb-sql{background:var(--bg3);border:1px solid var(--bdr2);padding:8px 10px;font-size:10px;color:var(--t5);white-space:pre;overflow-x:auto;margin-top:6px;line-height:1.7;}
 
 /* ── News panel ── */
-#news-panel{display:none;position:fixed;top:0;right:0;width:480px;height:100vh;background:var(--bg2);border-left:1px solid var(--bdr);overflow-y:auto;z-index:9000;box-shadow:-4px 0 24px rgba(0,0,0,.6);}
 .panel-hdr{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bdr);background:var(--bg3);position:sticky;top:0;z-index:1;}
 .panel-title{font-family:var(--fh);font-size:14px;font-weight:700;letter-spacing:.04em;}
 .panel-close{background:none;border:1px solid #1a3050;color:var(--t4);padding:5px 12px;cursor:pointer;font-size:13px;}
@@ -131,15 +130,6 @@ button{font-family:var(--f);cursor:pointer;}
 .panel-search{padding:10px 14px;border-bottom:1px solid var(--bdr2);background:var(--bg3);}
 .panel-search input{width:100%;background:var(--bg4);border:1px solid var(--bdr);color:var(--t2);font-family:var(--f);font-size:13px;padding:7px 11px;outline:none;}
 .panel-search input:focus{border-color:var(--acc);}
-/* ── News article cards ── */
-.ncard{padding:14px 16px;border-bottom:1px solid var(--bdr2);cursor:pointer;border-left:4px solid transparent;transition:background .1s;}
-.ncard:hover{background:rgba(0,200,255,.03);}
-.ncard-op{font-family:var(--fh);font-size:11px;font-weight:600;letter-spacing:.06em;margin-bottom:5px;}
-.ncard-title{font-family:var(--f);font-size:14px;font-weight:600;color:var(--t2);line-height:1.45;margin-bottom:6px;}
-.ncard-desc{font-family:var(--f);font-size:13px;color:var(--t);line-height:1.65;}
-.ncard-meta{display:flex;align-items:center;justify-content:space-between;margin-top:8px;}
-.ncard-date{font-size:11px;color:var(--t4);}
-.ncard-link{font-size:12px;font-weight:600;color:#4488bb;}
 /* ── Missions panel ── */
 #missions-panel{display:none;position:fixed;top:0;right:0;width:520px;height:100vh;background:var(--bg2);border-left:1px solid var(--bdr);overflow-y:auto;z-index:9000;box-shadow:-4px 0 24px rgba(0,0,0,.6);}
 .mcard{padding:16px 18px;border-bottom:1px solid var(--bdr);border-left:4px solid transparent;}
@@ -170,7 +160,7 @@ button{font-family:var(--f);cursor:pointer;}
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.10</span></div>
+      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.11</span></div>
       <div class="hs">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -191,7 +181,6 @@ button{font-family:var(--f);cursor:pointer;}
   <div id="cbar">
     <button class="cbtn" id="cbtn" onclick="toggleConnect()">CONNECT</button>
     <button class="cbtn" onclick="showMissions()">MISSIONS</button>
-    <button class="cbtn" onclick="fetchNews()">NEWS</button>
     <button class="cbtn" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS</button>
     <button class="cbtn" onclick="scanRegion()" style="color:var(--warn);margin-left:auto" title="30s unfiltered scan — logs any vessel MMSI seen in Pacific+Atlantic">SCAN</button>
     <button class="cbtn" onclick="clearEvents()" style="color:var(--t4)">CLEAR EVENTS</button>
@@ -252,20 +241,6 @@ button{font-family:var(--f);cursor:pointer;}
       <button class="modal-btn sec" onclick="closeSettings()">CANCEL</button>
       <span id="settings-msg" style="font-size:11px;color:var(--grn)"></span>
     </div>
-  </div>
-</div>
-
-<!-- News panel -->
-<div id="news-panel">
-  <div class="panel-hdr">
-    <div class="panel-title" style="color:#4488bb">VESSEL NEWS</div>
-    <button class="panel-close" onclick="document.getElementById('news-panel').style.display='none'">✕</button>
-  </div>
-  <div class="panel-search">
-    <input id="news-search" type="text" placeholder="Search articles…" oninput="filterNews(this.value)"/>
-  </div>
-  <div id="news-content" style="padding:8px 0 16px">
-    <div style="padding:20px 16px;font-size:13px;color:var(--t4)">Click NEWS to search for recent articles on tracked vessels.</div>
   </div>
 </div>
 
@@ -663,7 +638,6 @@ function sbWriteEvent(ev) {
   });
 }
 
-let sbNewsCache = [];
 
 async function loadSBData() {
   if(!SB.init()) { addLog('Supabase not configured — enter URL + key in ⚙ SETTINGS', 'sys'); return; }
@@ -724,12 +698,6 @@ async function loadSBData() {
       }
     }
   }
-
-  // Cached news (30 days)
-  const sbNews = await SB.select('news_articles', {
-    fetched_at:`gte.${since30}`, order:'fetched_at.desc', limit:'100',
-  });
-  if(sbNews?.length) { sbNewsCache=sbNews; addLog(`Supabase: ${sbNews.length} cached news articles`, 'db'); }
 
   addLog('Supabase: history load complete', 'db');
   renderFleet();
@@ -1295,127 +1263,6 @@ function buildHistoryTab(){
 }
 
 function frows(arr){return arr.map(([k,v])=>`<div class="fr"><span class="fk">${k}</span><span class="fv">${esc(String(v))}</span></div>`).join('');}
-
-// ── News (allorigins CORS proxy + Supabase cache) ─────────────
-async function fetchNews(){
-  addLog('News: scanning Google News RSS for all fleet vessels…', 'news');
-  const panel=document.getElementById('news-panel');
-  const content=document.getElementById('news-content');
-  panel.style.display='block';
-
-  // Show Supabase-cached articles immediately
-  if(sbNewsCache.length) {
-    _allNewsArticles = sbNewsCache.map(a=>({
-      title:a.title, link:a.link, desc:a.description||'',
-      date:a.published_at, vessel:a.vessel_name, mmsi:a.mmsi,
-      color:opColor(VESSEL_DB[a.mmsi]?.operator),
-    }));
-    content.innerHTML=`<div style="color:var(--t5);font-size:12px;margin-bottom:12px">
-      ${sbNewsCache.length} cached articles · fetching fresh…</div>`+
-      renderNewsArticles(_allNewsArticles);
-  }
-
-  // Search by topic (operator + space context) rather than generic vessel names.
-  // Vessel names like "Megan", "Shannon", "Bob", "Doug" are too common — searching
-  // by name pulls celebrity/sports results. Only ASDS names are space-specific enough.
-  const NEWS_QUERIES = [
-    // SpaceX — unique ASDS names are safe to search directly
-    { query:'"Of Course I Still Love You" SpaceX', label:'OCISLY (SpaceX)', mmsi:'368351350' },
-    { query:'"A Shortfall of Gravitas" SpaceX',    label:'ASOG (SpaceX)',   mmsi:'368219910' },
-    { query:'"Just Read the Instructions" SpaceX', label:'JRTI (SpaceX)',   mmsi:'368219920' },
-    // SpaceX recovery ships — search by topic, tag to primary vessel
-    { query:'SpaceX fairing recovery ship "GO Megan" OR "GO Shannon"', label:'SpaceX fairing ships', mmsi:'366584000' },
-    { query:'SpaceX "Bob" OR "Doug" recovery vessel booster', label:'SpaceX recovery ships', mmsi:'368456000' },
-    // SpaceX general launch news
-    { query:'SpaceX Falcon 9 drone ship landing booster', label:'SpaceX launches', mmsi:'368219910' },
-    { query:'SpaceX Starship launch booster catch',       label:'SpaceX Starship', mmsi:'368219920' },
-    // Blue Origin
-    { query:'"New Glenn" Blue Origin landing "Jacklyn"',  label:'Jacklyn (Blue Origin)', mmsi:'368368960' },
-    { query:'Blue Origin New Glenn launch landing ship',  label:'Blue Origin launches',  mmsi:'368368960' },
-    // Rocket Lab
-    { query:'Rocket Lab Electron booster recovery vessel catch', label:'Rocket Lab recovery', mmsi:'512012345' },
-    // ULA
-    { query:'ULA Vulcan Centaur fairing recovery ship',   label:'ULA fairing recovery', mmsi:'367532790' },
-  ];
-
-  // Space-relevance filter — reject anything that slipped through without space context
-  const SPACE_TERMS = /spacex|rocket|launch|falcon|starship|booster|drone\s*ship|landing|fairing|orbit|payload|starlink|blue\s*origin|new\s*glenn|rocket\s*lab|electron|vulcan|ula|nasa|spacecraft|splashdown|recovery|cape\s*canaveral|vandenberg|boca\s*chica|jacklyn|gravitas|instructions|still\s*love/i;
-
-  const fresh=[];
-  for(const q of NEWS_QUERIES) {
-    const enc=encodeURIComponent(q.query);
-    const rss=encodeURIComponent(`https://news.google.com/rss/search?q=${enc}&hl=en-US&gl=US&ceid=US:en`);
-    const vinfo=VESSEL_DB[q.mmsi]||{};
-    try {
-      let resp=await fetch(`https://api.allorigins.win/get?url=${rss}`);
-      if(!resp.ok){await new Promise(r=>setTimeout(r,2000));resp=await fetch(`https://api.allorigins.win/get?url=${rss}`);}
-      const data=await resp.json();
-      const xml=data.contents||'';
-      const rx=/<item>([\s\S]*?)<\/item>/g; let m;
-      while((m=rx.exec(xml))!==null){
-        const b=m[1];
-        const get=tag=>{
-          const r=new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([^<]*)<\\/${tag}>`);
-          const x=r.exec(b);return x?(x[1]||x[2]||'').trim():'';
-        };
-        const title=stripHTML(get('title'));
-        const link=get('link')||(/<link[^>]*>([^<]+)<\/link>/.exec(b)||[])[1]?.trim()||'';
-        const desc=stripHTML(get('description'));
-        const date=get('pubDate');
-        if(!title||(!SPACE_TERMS.test(title)&&!SPACE_TERMS.test(desc))) continue;
-        // Deduplicate by link
-        if(fresh.some(a=>a.link===link)) continue;
-        fresh.push({title,link,desc,date,vessel:q.label,mmsi:q.mmsi,color:opColor(vinfo.operator)});
-      }
-    }catch(e){addLog(`News ERR ${q.label}: ${e.message}`,'err');}
-    addLog(`News: ${q.label} — ${fresh.filter(a=>a.vessel===q.label).length} articles`,'news');
-    if(fresh.length>=40) break;
-    await new Promise(r=>setTimeout(r,800)); // avoid rate-limiting allorigins.win
-  }
-
-  fresh.sort((a,b)=>new Date(b.date)-new Date(a.date));
-  const top=fresh.slice(0,25);
-  addLog(`News: scan complete — ${top.length} articles total`, 'news');
-
-  // Write to Supabase
-  if(SB.ready&&top.length) {
-    for(const a of top) {
-      SB.insert('news_articles',{
-        mmsi:a.mmsi, vessel_name:a.vessel, title:a.title, link:a.link,
-        description:a.desc?.slice(0,1000),
-        published_at:a.date?new Date(a.date).toISOString():null,
-      });
-    }
-    sbNewsCache=top;
-  }
-
-  if(!top.length&&!sbNewsCache.length) {
-    content.innerHTML=`<div style="padding:20px 16px;font-size:13px;color:var(--t4)">No recent news found.</div>`;
-    return;
-  }
-  if(top.length) {
-    _allNewsArticles = top;
-    document.getElementById('news-search').value='';
-    content.innerHTML=
-      `<div style="padding:8px 16px 6px;font-size:11px;color:var(--t4);letter-spacing:.04em">${top.length} articles · Google News RSS${SB.ready?' · saved to Supabase':''}</div>`+
-      renderNewsArticles(top);
-  }
-}
-
-function renderNewsArticles(articles){
-  return articles.map(a=>`
-    <div class="ncard" style="border-left-color:${a.color}" onclick="window.open('${esc(a.link)}','_blank')">
-      <div class="ncard-op" style="color:${a.color}">${esc(a.vessel)}</div>
-      <div class="ncard-title">${esc(a.title)}</div>
-      ${a.desc?`<div class="ncard-desc">${esc(String(a.desc).slice(0,200))}</div>`:''}
-      <div class="ncard-meta">
-        <span class="ncard-date">${a.date?new Date(a.date).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}):''}</span>
-        <span class="ncard-link">↗ Read article</span>
-      </div>
-    </div>`
-  ).join('');
-}
-
 // ── Timezone ─────────────────────────────────────────────────
 const TZ_OPTIONS = [
   { label:'Local',                     value:'local' },
@@ -1457,18 +1304,6 @@ function fmtTime(ts) {
   return d.toLocaleString([], { ...opts, timeZone:currentTZ });
 }
 
-// ── News search ───────────────────────────────────────────────
-let _allNewsArticles = [];
-function filterNews(q) {
-  if(!_allNewsArticles.length) return;
-  const term = q.trim().toLowerCase();
-  const filtered = term
-    ? _allNewsArticles.filter(a=>(a.title+' '+a.desc+' '+a.vessel).toLowerCase().includes(term))
-    : _allNewsArticles;
-  document.getElementById('news-content').innerHTML =
-    filtered.length ? renderNewsArticles(filtered)
-    : `<div style="color:var(--t4);padding:20px">No articles matching "${esc(q)}"</div>`;
-}
 
 // ── Missions (The Space Devs API) ─────────────────────────────
 const OPERATOR_MATCH = {
@@ -1704,13 +1539,6 @@ function openVesselFromMission(mmsi) {
 
 // ── Util ──────────────────────────────────────────────────────
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function stripHTML(s){
-  return String(s||'')
-    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"').replace(/&nbsp;/gi,' ')
-    .replace(/<[^>]+>/g,' ')
-    .replace(/&nbsp;/gi,' ')  // second pass catches doubly-encoded &amp;nbsp; → &nbsp;
-    .replace(/\s+/g,' ').trim();
-}
 function tsStr(ts){
   if(!ts)return'—';
   const d=new Date(ts);
