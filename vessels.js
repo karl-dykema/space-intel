@@ -363,7 +363,68 @@ function detectZones(lat, lon) {
   return ZONES.filter(z=>lat>=z.minLat&&lat<=z.maxLat&&lon>=z.minLon&&lon<=z.maxLon).map(z=>z.id);
 }
 
-// ── Operator colors ───────────────────────────────────────────
+// ── Landmarks ─────────────────────────────────────────────────
+// type: 'launch' | 'viewing' | 'facility' | 'port'
+const LANDMARKS = [
+  // ── Starbase / Boca Chica ────────────────────────────────────
+  { id:'starbase_olm',    lat:25.997,  lon:-97.159,  name:'SpaceX Starbase — OLM',          type:'launch',   desc:'Orbital Launch Mount — Mechazilla catch tower. Starship / Super Heavy.' },
+  { id:'boca_chica_beach',lat:25.893,  lon:-97.218,  name:'Boca Chica Beach',                type:'viewing',  desc:'Closest public ground viewing for Starbase launches. Often closed during ops.' },
+  { id:'isla_blanca',     lat:26.075,  lon:-97.163,  name:'Isla Blanca Park (SPI)',          type:'viewing',  desc:'Popular South Padre Island viewing area, ~9 mi from OLM.' },
+  { id:'andy_bowie',      lat:26.141,  lon:-97.172,  name:'Andy Bowie Park (SPI)',           type:'viewing',  desc:'North SPI county park — good angle on the launch corridor.' },
+  { id:'port_brownsville',lat:25.945,  lon:-97.405,  name:'Port of Brownsville',             type:'port',     desc:'Deep-water port where SpaceX receives Starship hardware by ship.' },
+
+  // ── Cape Canaveral / KSC ─────────────────────────────────────
+  { id:'lc39a',           lat:28.608,  lon:-80.604,  name:'LC-39A (SpaceX)',                 type:'launch',   desc:'Apollo-era pad leased by SpaceX. Falcon 9, Falcon Heavy, future Starship East.' },
+  { id:'lc40',            lat:28.562,  lon:-80.577,  name:'SLC-40 (SpaceX)',                 type:'launch',   desc:'Primary Falcon 9 workhorse pad at Cape Canaveral SFS.' },
+  { id:'slc41',           lat:28.583,  lon:-80.583,  name:'SLC-41 (ULA)',                    type:'launch',   desc:'United Launch Alliance Vulcan Centaur and Atlas V pad.' },
+  { id:'slc37b',          lat:28.532,  lon:-80.567,  name:'SLC-37B (ULA)',                   type:'launch',   desc:'ULA Delta IV Heavy pad. Last Delta IV Heavy launch 2024.' },
+  { id:'ksc_visitor',     lat:28.522,  lon:-80.682,  name:'KSC Visitor Complex',             type:'facility', desc:'Public entrance to KSC — Apollo/Saturn V Center, shuttle Atlantis, paid launch viewing.' },
+  { id:'space_view_park', lat:28.606,  lon:-80.805,  name:'Space View Park, Titusville',     type:'viewing',  desc:'Best free public viewing, 12 mi from pads. Riverside park with PA feed during launches.' },
+  { id:'jetty_park',      lat:28.407,  lon:-80.592,  name:'Jetty Park',                      type:'viewing',  desc:'Port Canaveral beachfront. Eastern angle on the pads, cruise ships for scale.' },
+  { id:'playalinda',      lat:28.655,  lon:-80.632,  name:'Playalinda Beach',                type:'viewing',  desc:'Canaveral National Seashore — closest public beach to LC-39. Often gated on launch days.' },
+  { id:'banana_creek',    lat:28.605,  lon:-80.669,  name:'Banana Creek Viewing (KSC)',      type:'viewing',  desc:'Paid KSC bleacher seating 3.9 mi from pads. Best close-up view available to public.' },
+
+  // ── Vandenberg SFB ───────────────────────────────────────────
+  { id:'slc4e',           lat:34.633,  lon:-120.613, name:'SLC-4E (SpaceX)',                 type:'launch',   desc:'SpaceX Falcon 9 / Falcon Heavy. Polar and sun-synchronous orbit missions.' },
+  { id:'slc6',            lat:34.576,  lon:-120.623, name:'SLC-6 (ULA/SpaceX)',              type:'launch',   desc:'Former Shuttle West pad. ULA and now SpaceX transition for future missions.' },
+  { id:'jalama_beach',    lat:34.512,  lon:-120.503, name:'Jalama Beach',                    type:'viewing',  desc:'Santa Barbara County park. Nearest legal public viewing of Vandenberg launches, ~12 mi.' },
+  { id:'lompoc_viewing',  lat:34.624,  lon:-120.447, name:'W. Ocean Ave, Lompoc',            type:'viewing',  desc:'Common roadside viewing corridor near base perimeter for SLC launches.' },
+
+  // ── Wallops Island, VA ───────────────────────────────────────
+  { id:'wallops_pad',     lat:37.940,  lon:-75.466,  name:'Wallops Flight Facility',         type:'launch',   desc:'NASA / Mid-Atlantic Regional Spaceport. Antares, Minotaur, small commercial launch site.' },
+  { id:'wallops_visitor', lat:37.939,  lon:-75.456,  name:'NASA Wallops Visitor Center',     type:'facility', desc:'Free NASA visitor center with exhibits. Open on launch days for viewing.' },
+
+  // ── Rocket Lab Māhia, NZ ─────────────────────────────────────
+  { id:'rl_lc1',          lat:-39.262, lon:177.865,  name:'Rocket Lab LC-1 (Māhia)',        type:'launch',   desc:'Rocket Lab Electron smallsat launch complex. World\'s first private orbital launch site.' },
+  { id:'mahia_lookout',   lat:-39.200, lon:177.900,  name:'Māhia Peninsula Lookout',        type:'viewing',  desc:'Public scenic reserve with view over launch complex.' },
+
+  // ── NASA Centers ─────────────────────────────────────────────
+  { id:'jsc',             lat:29.559,  lon:-95.094,  name:'NASA JSC — Houston',              type:'facility', desc:'Johnson Space Center. Mission Control, astronaut training, human spaceflight hub.' },
+  { id:'ksc_center',      lat:28.573,  lon:-80.648,  name:'NASA Kennedy Space Center',       type:'facility', desc:'Primary NASA launch center. Manages LC-39 complex, VAB, and Shuttle Landing Facility.' },
+  { id:'msfc',            lat:34.730,  lon:-86.585,  name:'NASA Marshall — Huntsville',      type:'facility', desc:'Marshall Space Flight Center. SLS propulsion, Artemis hardware, rocket engine testing.' },
+  { id:'stennis',         lat:30.363,  lon:-89.600,  name:'NASA Stennis Space Center',       type:'facility', desc:'Rocket engine test facility. RS-25 (SLS) testing. Largest propulsion test site in the US.' },
+  { id:'jpl',             lat:34.201,  lon:-118.172, name:'NASA JPL — Pasadena',             type:'facility', desc:'Jet Propulsion Laboratory. Manages Mars rovers, deep space probes, solar system missions.' },
+  { id:'gsfc',            lat:38.992,  lon:-76.848,  name:'NASA Goddard — Greenbelt',        type:'facility', desc:'Goddard Space Flight Center. Earth observation, Hubble/JWST, science mission ops.' },
+  { id:'armstrong',       lat:34.959,  lon:-117.883, name:'NASA Armstrong — Edwards',        type:'facility', desc:'Armstrong Flight Research Center at Edwards AFB. X-planes, hypersonics, Shuttle landings.' },
+  { id:'ames',            lat:37.408,  lon:-122.064, name:'NASA Ames — Mountain View',       type:'facility', desc:'Ames Research Center. Aeronautics, planetary science, supercomputing.' },
+
+  // ── International Launch Sites ───────────────────────────────
+  { id:'baikonur',        lat:45.920,  lon:63.342,   name:'Baikonur Cosmodrome',             type:'launch',   desc:'Historic Soviet/Russian launch complex. First human spaceflight (Gagarin, 1961). Soyuz/Proton.' },
+  { id:'plesetsk',        lat:62.929,  lon:40.577,   name:'Plesetsk Cosmodrome',             type:'launch',   desc:'Russian military spaceport. Soyuz-2, Angara launches. Most active launch site by count.' },
+  { id:'vostochny',       lat:51.884,  lon:128.333,  name:'Vostochny Cosmodrome',            type:'launch',   desc:'Russia\'s new civilian spaceport. Soyuz-2 and future Angara/Yenisei missions.' },
+  { id:'kourou',          lat:5.239,   lon:-52.769,  name:'Guiana Space Centre — Kourou',    type:'launch',   desc:'ESA/Arianespace primary site. Ariane 6, Vega-C. Near-equatorial location enables efficient GTO.' },
+  { id:'jiuquan',         lat:40.958,  lon:100.291,  name:'Jiuquan Satellite Launch Center', type:'launch',   desc:'China\'s oldest spaceport. Crewed Shenzhou missions. Long March 2F human-rated rocket.' },
+  { id:'xichang',         lat:28.246,  lon:102.026,  name:'Xichang Satellite Launch Center', type:'launch',   desc:'China\'s main GEO launch site. Long March 3B for communications and navigation satellites.' },
+  { id:'wenchang',        lat:19.615,  lon:110.951,  name:'Wenchang Space Launch Center',    type:'launch',   desc:'China\'s newest coastal spaceport. Long March 5/7, Tianhe station modules, Chang\'e lunar missions.' },
+  { id:'tanegashima',     lat:30.401,  lon:130.968,  name:'Tanegashima Space Center',        type:'launch',   desc:'JAXA primary launch site. H-IIA/H3 rockets for Japanese government and commercial payloads.' },
+  { id:'sriharikota',     lat:13.733,  lon:80.234,   name:'Satish Dhawan — Sriharikota',     type:'launch',   desc:'ISRO launch site. PSLV, GSLV, LVM3. Chandrayaan, Mangalyaan, OneWeb missions.' },
+  { id:'naro',            lat:34.432,  lon:127.535,  name:'Naro Space Center (KARI)',        type:'launch',   desc:'South Korea\'s first spaceport. Nuri (KSLV-II) orbital launch vehicle.' },
+  { id:'esrange',         lat:67.886,  lon:21.063,   name:'Esrange Space Center',            type:'launch',   desc:'Swedish sounding rocket and balloon facility above Arctic Circle. Small orbital ambitions.' },
+  { id:'woomera',         lat:-31.130, lon:136.816,  name:'Woomera Test Range',              type:'launch',   desc:'Australia\'s primary rocket range. Historic British test site; now multi-user range.' },
+  { id:'alcantara',       lat:-2.373,  lon:-44.396,  name:'Alcântara Launch Center',         type:'launch',   desc:'Brazilian near-equatorial spaceport. VLM rocket. Favorable orbital insertion economics.' },
+];
+
+
 const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff' };
 function opColor(op) { return OP_COLORS[op]||'#aaaaaa'; }
 

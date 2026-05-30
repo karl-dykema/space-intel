@@ -235,7 +235,8 @@ const S = { ws:null, vessels:{}, selected:null, tab:'events' };
 let missionsCache = [];
 let pastMissionsCache = [];
 const prevZones={};
-let map=null, layers=null, zoneLayer=null, exclusionLayer=null;
+let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null;
+let showLandmarks=true;
 const markers={}, tracks={};
 
 // ── Mission linkage ───────────────────────────────────────────
@@ -386,18 +387,25 @@ function initMap() {
     attribution:'© CARTO © OSM',subdomains:'abcd',maxZoom:19,
   }).addTo(map);
   exclusionLayer=L.layerGroup().addTo(map);
+  landmarkLayer=L.layerGroup().addTo(map);
   layers=L.layerGroup().addTo(map);
   zoneLayer=L.layerGroup().addTo(map);
   map.setView([20,0],2);
   drawExclusionZones();
   drawZones();
+  drawLandmarks();
   document.getElementById('mapleg-ops').innerHTML=
     Object.entries(OP_COLORS).map(([op,c])=>
       `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:${c};margin-bottom:3px">
         <div style="width:12px;height:3px;background:${c};border-radius:1px"></div>${op}</div>`
     ).join('') +
     `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:#ff8c00;margin-top:5px;padding-top:5px;border-top:1px solid var(--bdr2)">
-      <div style="width:12px;height:3px;background:#ff8c00;border-radius:1px;opacity:0.7"></div>USCG Safety Zone</div>`;
+      <div style="width:12px;height:3px;background:#ff8c00;border-radius:1px;opacity:0.7"></div>USCG Safety Zone</div>
+    <div style="margin-top:8px;padding-top:5px;border-top:1px solid var(--bdr2);font-size:9px;color:var(--t4);letter-spacing:.06em;margin-bottom:3px">LANDMARKS</div>` +
+    [['#ff4400','🚀 Launch pad'],['#ffcc00','👁 Viewing area'],['#00aaff','🏛 NASA / facility'],['#00cc88','⚓ Port']].map(([c,l])=>
+      `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:${c};margin-bottom:2px">
+        <svg width="10" height="10" viewBox="0 0 14 14"><polygon points="7,1 13,13 7,10 1,13" fill="${c}"/></svg>${l}</div>`
+    ).join('');
 }
 
 function drawExclusionZones() {
@@ -441,6 +449,40 @@ function drawZones() {
     L.circle([z.lat,z.lon],{radius:z.r*1000,color:'#0c3352',fillColor:'#041525',fillOpacity:0.2,weight:1,dashArray:'4 4'})
       .addTo(zoneLayer).bindTooltip(def?.name||z.id,{className:'ltt',direction:'top'});
   });
+}
+
+function drawLandmarks() {
+  if(!landmarkLayer) return;
+  landmarkLayer.clearLayers();
+  if(!showLandmarks) return;
+  const TYPE_STYLE = {
+    launch:   { col:'#ff4400', sym:'🚀' },
+    viewing:  { col:'#ffcc00', sym:'👁' },
+    facility: { col:'#00aaff', sym:'🏛' },
+    port:     { col:'#00cc88', sym:'⚓' },
+  };
+  LANDMARKS.forEach(lm => {
+    const st = TYPE_STYLE[lm.type] || { col:'#888', sym:'·' };
+    const svg = `<svg width="14" height="14" viewBox="0 0 14 14">
+      <polygon points="7,1 13,13 7,10 1,13" fill="${st.col}" stroke="${st.col}" stroke-width="0.5" opacity="0.85"/>
+    </svg>`;
+    const icon = L.divIcon({ html: svg, iconSize:[14,14], iconAnchor:[7,7], className:'' });
+    L.marker([lm.lat, lm.lon], { icon, zIndexOffset:-500 })
+      .addTo(landmarkLayer)
+      .bindTooltip(
+        `<b style="color:${st.col}">${esc(lm.name)}</b><br>
+        <span style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:.05em">${lm.type}</span><br>
+        <span style="font-size:11px;color:var(--t3)">${esc(lm.desc)}</span>`,
+        { className:'ltt', direction:'top', maxWidth:280 }
+      );
+  });
+}
+
+function toggleLandmarks() {
+  showLandmarks = !showLandmarks;
+  drawLandmarks();
+  const btn = document.getElementById('landmark-btn');
+  if(btn) btn.style.opacity = showLandmarks ? '1' : '0.4';
 }
 
 function updateMarker(v) {
