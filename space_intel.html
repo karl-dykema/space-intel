@@ -1313,13 +1313,24 @@ async function fetchNews(){
       renderNewsArticles(_allNewsArticles);
   }
 
+  // Space-relevance filter — title or desc must contain at least one of these
+  const SPACE_TERMS = /spacex|rocket|launch|falcon|starship|booster|drone\s*ship|landing|fairing|orbit|payload|starlink|blue\s*origin|new\s*glenn|rocket\s*lab|electron|vulcan|ula|nasa|spacecraft|splashdown|recovery\s*vessel|cape\s*canaveral|vandenberg|boca\s*chica/i;
+
   // Always scan full VESSEL_DB — no live connection required
-  const vessels=Object.entries(VESSEL_DB).map(([mmsi,v])=>
-    ({name:v.abbr||v.name, mmsi, color:opColor(v.operator)}));
+  const vessels=Object.entries(VESSEL_DB)
+    .filter(([,v])=>v.operator!=='TEST')
+    .map(([mmsi,v])=>({
+      name: v.abbr||v.name,
+      operator: v.operator,
+      mmsi,
+      color: opColor(v.operator),
+      // Build a tight search query: vessel name + operator so "Megan" → "Megan SpaceX"
+      query: `"${v.abbr||v.name}" "${v.operator}"`,
+    }));
 
   const fresh=[];
   for(const v of vessels) {
-    const q=encodeURIComponent(`"${v.name}" rocket`);
+    const q=encodeURIComponent(v.query);
     const rss=encodeURIComponent(`https://news.google.com/rss/search?q=${q}&hl=en-US&gl=US&ceid=US:en`);
     try {
       const resp=await fetch(`https://api.allorigins.win/get?url=${rss}`);
@@ -1336,7 +1347,9 @@ async function fetchNews(){
         const link=get('link')||(/<link[^>]*>([^<]+)<\/link>/.exec(b)||[])[1]?.trim()||'';
         const desc=stripHTML(get('description'));
         const date=get('pubDate');
-        if(title) fresh.push({title,link,desc,date,vessel:v.name,mmsi:v.mmsi,color:v.color});
+        // Reject articles with no space-industry relevance
+        if(!title||(!SPACE_TERMS.test(title)&&!SPACE_TERMS.test(desc))) continue;
+        fresh.push({title,link,desc,date,vessel:v.name,mmsi:v.mmsi,color:v.color});
       }
     }catch(e){console.warn('[news]',v.name,e.message);addLog(`News ERR ${v.name}: ${e.message}`,'err');}
     addLog(`News: ${v.name} — ${fresh.filter(a=>a.vessel===v.name).length} articles found`,'news');
