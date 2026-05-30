@@ -181,6 +181,23 @@ const VESSEL_DB = {
     notes:'Electron booster recovery vessel. [✓ MMSI confirmed]',
   },
   // ── ULA ──────────────────────────────────────────────────────
+  '338731000': {
+    name:'RocketShip', abbr:'RocketShip',
+    operator:'ULA', role:'Rocket Component Transport',
+    color:'#ff9900', homePort:'Port Canaveral, FL',
+    imo:'9198501', flag:'USA', built:1999, verified:true,
+    specs:{ length:'95m', beam:'25m', type:'Cargo vessel (shallow draft)', capacity:'Full Delta IV stack + payload' },
+    history:[
+      'Originally named Delta Mariner; purpose-built for ULA in 1999 in Mississippi',
+      'Renamed RocketShip during 2019 overhaul',
+      'Transports rockets from ULA\'s Decatur, Alabama factory via Tennessee and Mississippi Rivers to the Gulf',
+      'Primary route: Decatur AL → Gulf of Mexico → Port Canaveral, FL',
+      'Also served Vandenberg SFB via Panama Canal until 2022',
+      'Custom shallow-draft design allows river transit and open-ocean passage',
+      'Hold can accommodate entire Delta IV comprising 3 boosters, second stage, fairing, and payload',
+    ],
+    notes:'ULA rocket component transport. IMO 9198501. [✓ MMSI confirmed]',
+  },
   '367532790': {
     name:'R/V Retrieval', abbr:'Retrieval',
     operator:'ULA', role:'Fairing Recovery',
@@ -193,6 +210,61 @@ const VESSEL_DB = {
       'Operates in Atlantic downrange from Cape Canaveral SFS',
     ],
     notes:'ULA fairing recovery vessel. [? MMSI — verify at marinetraffic.com]',
+  },
+  // ── ESA / Arianespace ────────────────────────────────────────
+  '228438700': {
+    name:'Canopée', abbr:'Canopée',
+    operator:'ESA', role:'Ariane 6 Component Transport',
+    color:'#9933ff', homePort:'Le Havre, France',
+    imo:'9924120', flag:'France', verified:true,
+    specs:{ type:'Roll-on/roll-off cargo ship', propulsion:'Conventional + 4 retractable wind sails (Solid Sail)' },
+    history:[
+      'Purpose-built for ArianeGroup to transport Ariane 6 rocket components to French Guiana',
+      'Features four retractable wind sails (Solid Sail technology) to reduce fuel consumption',
+      'Route: Europe → Pariacabo port, Kourou, French Guiana (Guiana Space Centre)',
+      'First delivery to Kourou was in 2022 ahead of Ariane 6\'s first flight',
+    ],
+    notes:'Ariane 6 transport. Notable for wind sail propulsion assist. IMO 9924120. [✓ MMSI confirmed]',
+  },
+  '228057000': {
+    name:'MN Colibri', abbr:'MN Colibri',
+    operator:'ESA', role:'Arianespace Component Transport',
+    color:'#9933ff', homePort:'France',
+    imo:'9207390', flag:'France', verified:true,
+    specs:{ type:'Ro-ro cargo vessel' },
+    history:[
+      'Chartered by Arianespace for satellite and rocket component transportation',
+      'Transported the James Webb Space Telescope to the Guiana Space Centre in 2021',
+      'Regular service between Europe and Kourou, French Guiana',
+    ],
+    notes:'Arianespace charter transport. Transported JWST in 2021. IMO 9207390. [✓ MMSI confirmed]',
+  },
+  '227278000': {
+    name:'MN Toucan', abbr:'MN Toucan',
+    operator:'ESA', role:'Arianespace Component Transport',
+    color:'#9933ff', homePort:'France',
+    imo:'9112466', flag:'France', verified:true,
+    specs:{ type:'Ro-ro cargo vessel' },
+    history:[
+      'Chartered by Arianespace to transport large rocket components to French Guiana',
+      'Regular service between Europe and Kourou, French Guiana for Ariane launches',
+    ],
+    notes:'Arianespace charter transport. IMO 9112466. [✓ MMSI confirmed]',
+  },
+  // ── The Spaceport Company ─────────────────────────────────────
+  '369857000': {
+    name:'Once in a Lifetime', abbr:'Once in a Lifetime',
+    operator:'The Spaceport Company', role:'Sea-Based Mobile Launch Platform',
+    color:'#00cc88', homePort:'Gulf Coast',
+    imo:'8118011', flag:'USA', verified:false,
+    specs:{ type:'Torpedo Recovery Vessel (converted)' },
+    history:[
+      'Possible vessel associated with USNS Hugo (TSV-2), acquired by The Spaceport Company at auction Feb 2024',
+      'Former US Navy training/torpedo recovery vessel',
+      'The Spaceport Company is developing sea-based mobile launch platforms',
+      'DoD contract to demonstrate platform infrastructure technology',
+    ],
+    notes:'UNVERIFIED — may be USNS Hugo / TSV-2. The Spaceport Company sea launch platform. Confirm MMSI at marinetraffic.com',
   },
   // ── Test vessel ───────────────────────────────────────────────
   '353136000': {
@@ -229,7 +301,7 @@ function detectZones(lat, lon) {
 }
 
 // ── Operator colors ───────────────────────────────────────────
-const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900' };
+const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88' };
 function opColor(op) { return OP_COLORS[op]||'#aaaaaa'; }
 
 // ── Event config ──────────────────────────────────────────────
