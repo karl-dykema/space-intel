@@ -452,7 +452,7 @@ function drawZones() {
 }
 
 function drawLandmarks() {
-  if(!landmarkLayer) return;
+  if(!landmarkLayer || typeof LANDMARKS === 'undefined') return;
   landmarkLayer.clearLayers();
   if(!showLandmarks) return;
   const TYPE_STYLE = {

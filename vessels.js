@@ -341,6 +341,61 @@ const VESSEL_DB = {
     ],
     notes:'AIS test vessel. [✓ MMSI confirmed]',
   },
+
+  // ── China (CNSA / CASC) — Yuanwang Tracking Fleet ───────────
+  // Global tracking ships supporting Long March launches, crewed missions, lunar/Mars probes.
+  // VesselAPI returns 404 (not in their DB); will appear via aisstream when at sea.
+  '413326000': {
+    name:'Yuan Wang 3', abbr:'Yuan Wang 3',
+    operator:'CNSA', role:'Space Tracking Ship',
+    color:'#ff4444', homePort:'Jiangyin, China',
+    flag:'China', verified:true,
+    specs:{ type:'Tracking/research ship', length:'182m' },
+    history:[
+      'Second-generation Yuanwang tracking ship, commissioned 1995',
+      'Supports Long March launches, crewed Shenzhou missions, lunar probes',
+      'Travels to South Pacific, Indian Ocean, and Atlantic for tracking coverage',
+    ],
+    notes:'CNSA space tracking ship. IMO 9439527. [✓ MMSI confirmed via MarineTraffic]',
+  },
+  '413289000': {
+    name:'Yuan Wang 5', abbr:'Yuan Wang 5',
+    operator:'CNSA', role:'Space Tracking Ship',
+    color:'#ff4444', homePort:'Jiangyin, China',
+    flag:'China', verified:true,
+    specs:{ type:'Tracking/research ship' },
+    history:[
+      'Third-generation Yuanwang tracking ship, launched 2007',
+      'Supports all major Chinese space missions requiring over-horizon tracking',
+      'Notable port call at Hambantota, Sri Lanka in 2022 — geopolitical controversy',
+    ],
+    notes:'CNSA space tracking ship. IMO 9413054. [✓ MMSI confirmed via MarineTraffic]',
+  },
+  '413379290': {
+    name:'Yuan Wang 7', abbr:'Yuan Wang 7',
+    operator:'CNSA', role:'Space Tracking Ship',
+    color:'#ff4444', homePort:'Jiangyin, China',
+    flag:'China', verified:true,
+    specs:{ type:'Tracking/research ship' },
+    history:[
+      'Third-generation Yuanwang tracking ship, built 2016',
+      'Supports crewed Shenzhou missions and lunar/Mars probes',
+      'Deploys to key ocean positions before each major Chinese launch',
+    ],
+    notes:'CNSA space tracking ship. [✓ MMSI confirmed via MarineTraffic]',
+  },
+  '412380260': {
+    name:'Yuan Wang 21', abbr:'Yuan Wang 21',
+    operator:'CNSA', role:'Rocket Component Transport',
+    color:'#ff4444', homePort:'Wenchang, China',
+    flag:'China', verified:true,
+    specs:{ type:'Launch vehicle carrier' },
+    history:[
+      'New-generation vessel for transporting Long March rockets to Wenchang launch site',
+      'Purpose-built for the coastal Wenchang Space Launch Center supply chain',
+    ],
+    notes:'CNSA rocket transport ship. [✓ MMSI confirmed via MarineTraffic]',
+  },
 };
 
 const KNOWN_MMSIS = Object.keys(VESSEL_DB);
@@ -425,7 +480,7 @@ const LANDMARKS = [
 ];
 
 
-const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff' };
+const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff', 'CNSA':'#ff4444' };
 function opColor(op) { return OP_COLORS[op]||'#aaaaaa'; }
 
 // ── Event config ──────────────────────────────────────────────
