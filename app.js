@@ -407,11 +407,12 @@ function drawZones() {
 function updateMarker(v) {
   if(!map||!layers||!v.lat||!v.lon) return;
   const mmsi=v.mmsi, col=opColor(v.operator), sel=S.selected===mmsi;
-  const hist=v._historical, sz=sel?22:14, cog=v.cog||0;
+  const hist=v._historical&&!SHARE_MODE; // share mode treats historical as solid
+  const sz=sel?22:14, cog=v.cog||0;
   const opacity=hist?(sel?0.7:0.45):(sel?1:0.85);
   const svg=`<svg width="${sz}" height="${sz}" viewBox="0 0 20 20">
     <polygon points="10,1 14.5,17 10,13.5 5.5,17" fill="${hist?'none':col}" stroke="${col}"
-      stroke-width="${hist?1.5:1.5}" transform="rotate(${cog},10,10)" opacity="${opacity}"/>
+      stroke-width="1.5" transform="rotate(${cog},10,10)" opacity="${opacity}"/>
     ${sel?`<circle cx="10" cy="10" r="9" fill="none" stroke="${col}" stroke-width="1.2" opacity="0.35"/>`:''}</svg>`;
   const icon=L.divIcon({html:svg,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],className:''});
   if(!markers[mmsi]) {
@@ -422,9 +423,9 @@ function updateMarker(v) {
     markers[mmsi].setIcon(icon);
     markers[mmsi].setZIndexOffset(sel?1000:0);
   }
-  const age=hist?` · last seen ${ageStr(v.ts)}`:'';
+  const age=v._historical&&!SHARE_MODE?` · last seen ${ageStr(v.ts)}`:'';
   markers[mmsi].bindTooltip(
-    `<b style="color:${col}">${esc(v.abbr||v.name)}</b>${hist?' <span style="color:#334">[historical]</span>':''}<br>
+    `<b style="color:${col}">${esc(v.abbr||v.name)}</b><br>
     <span style="color:var(--t5)">${esc(v.operator)}</span><br>${esc(v.role)}<br>
     ${v.sog!=null&&!hist?v.sog.toFixed(1)+' kn':''}${age}${v.dest&&!hist?' → '+esc(v.dest):''}`,
     {className:'ltt',direction:'top'}
