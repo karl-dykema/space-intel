@@ -184,7 +184,8 @@ button{font-family:var(--f);cursor:pointer;}
     <button class="cbtn" onclick="showMissions()">MISSIONS</button>
     <button class="cbtn" onclick="fetchNews()">NEWS</button>
     <button class="cbtn" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS</button>
-    <button class="cbtn" onclick="clearEvents()" style="color:var(--t4);margin-left:auto">CLEAR EVENTS</button>
+    <button class="cbtn" onclick="scanRegion()" style="color:var(--warn);margin-left:auto" title="30s unfiltered scan — logs any vessel MMSI seen in Pacific+Atlantic">SCAN</button>
+    <button class="cbtn" onclick="clearEvents()" style="color:var(--t4)">CLEAR EVENTS</button>
   </div>
 
   <div id="body">
@@ -967,6 +968,49 @@ function connect(key) {
     addLog(`AIS ${msg} (code ${ev.code})`, ev.code===4001||ev.code===4003?'err':'sys');
   };
   ws.onerror=()=>{clearTimeout(timeout);setDot('off','Connection error');addLog('AIS WebSocket error','err');};
+}
+
+// Unfiltered 30-second scan — logs every MMSI aisstream sees in key regions
+// Use this to verify an MMSI when MarineTraffic shows a vessel but our app doesn't
+function scanRegion() {
+  const key=localStorage.getItem(LS.KEY);
+  if(!key){addLog('No AIS key — open ⚙ SETTINGS first','err');return;}
+  addLog('SCAN: opening 30s unfiltered scan of Pacific/Atlantic/Gulf coasts…','warn');
+  setTab('log');
+  const ws=new WebSocket('wss://stream.aisstream.io/v0/stream');
+  const seen=new Set();
+  ws.onopen=()=>{
+    ws.send(JSON.stringify({
+      APIKey:key,
+      // Pacific coast (OCISLY/Vandenberg area) + Atlantic/Gulf coast (ASOG/Canaveral area)
+      BoundingBoxes:[
+        [[32,  -122],[38,  -117]],  // Pacific coast CA
+        [[27.5,-81 ],[29.5,-79 ]],  // Atlantic FL / Cape Canaveral
+        [[28,  -97 ],[30,  -94 ]],  // Gulf / Boca Chica
+      ],
+      FilterMessageTypes:['PositionReport'],
+    }));
+  };
+  ws.onmessage=ev=>{
+    try{
+      const msg=JSON.parse(ev.data);
+      const rawMMSI=String(msg.MetaData?.MMSI_String||msg.MetaData?.MMSI||'');
+      if(!rawMMSI||rawMMSI==='0'||seen.has(rawMMSI)) return;
+      seen.add(rawMMSI);
+      const known=VESSEL_DB[rawMMSI];
+      const name=msg.MetaData?.ShipName||'';
+      if(known){
+        addLog(`SCAN ✓ KNOWN  ${rawMMSI}  ${known.abbr||known.name}  "${name}"`, 'event');
+      } else {
+        addLog(`SCAN   unknown ${rawMMSI}  "${name}"`, 'sys');
+      }
+    }catch(e){}
+  };
+  ws.onerror=()=>addLog('SCAN: WebSocket error','err');
+  setTimeout(()=>{
+    ws.close();
+    addLog(`SCAN complete — ${seen.size} unique MMSIs seen in region (${[...seen].filter(m=>VESSEL_DB[m]).length} matched our fleet)`, 'warn');
+  }, 30000);
 }
 
 function disconnect() {
