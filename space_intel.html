@@ -945,13 +945,20 @@ function connect(key) {
     clearTimeout(timeout);
     ws.send(JSON.stringify({
       APIKey:key, BoundingBoxes:[[[-90,-180],[90,180]]],
-      FiltersShipMMSI:KNOWN_MMSIS, FilterMessageTypes:['PositionReport','ShipStaticData'],
+      FiltersShipMMSI:KNOWN_MMSIS.map(Number), FilterMessageTypes:['PositionReport','ShipStaticData'],
     }));
     S.ws=ws; btn.textContent='DISCONNECT'; btn.disabled=false; btn.classList.add('on');
     setDot('on','● LIVE — '+KNOWN_MMSIS.length+' vessels globally');
     addLog(`AIS connected — subscribed to ${KNOWN_MMSIS.length} MMSIs globally`, 'ais');
   };
-  ws.onmessage=ev=>{try{handleAIS(JSON.parse(ev.data));}catch(e){}};
+  ws.onmessage=ev=>{
+    try{
+      const msg=JSON.parse(ev.data);
+      const rawMMSI=msg.MetaData?.MMSI_String||msg.MetaData?.MMSI||'';
+      if(rawMMSI&&!VESSEL_DB[String(rawMMSI)]) addLog(`AIS rcv unknown MMSI ${rawMMSI}`, 'ais');
+      handleAIS(msg);
+    }catch(e){addLog(`AIS parse error: ${e.message}`,'err');}
+  };
   ws.onclose=ev=>{
     clearTimeout(timeout);
     S.ws=null; btn.textContent='CONNECT'; btn.disabled=false; btn.classList.remove('on');
