@@ -108,19 +108,18 @@ const VESSEL_DB = {
     notes:'Active East Coast fairing recovery + ASDS support. [✓ MMSI]',
   },
   '367564890': {
-    name:'GO Beyond', abbr:'GO Beyond',
+    name:'GO Quest', abbr:'GO Quest',
     operator:'SpaceX', role:'Fairing Recovery / OCISLY Support',
     color:'#00d4ff', homePort:'Port of Long Beach, CA',
-    flag:'USA', built:2015, verified:false,
-    specs:{ length:'62m', beam:'14m', type:'Offshore support vessel' },
+    imo:'8987876', flag:'USA', verified:true,
+    specs:{ type:'Offshore support vessel' },
     history:[
-      'West Coast support vessel replacing GO Quest and NRC Quest (both retired 2023)',
-      'Based at Port of Long Beach; supports OCISLY and Vandenberg SFB launches',
-      'Equipped with A-frame stern gear to haul fairing halves from the Pacific',
-      'Can carry at least one complete Falcon 9 fairing on deck',
-      'Has crew-transfer capability to board OCISLY while at sea',
+      'Operated by GO Maritime (Edison Chouest Offshore subsidiary) for SpaceX',
+      'West Coast support vessel for OCISLY and Vandenberg SFB (SLC-4E) launches',
+      'Recovers Falcon 9 fairing halves after Pacific launches',
+      'Escorts and supports OCISLY drone ship at sea',
     ],
-    notes:'Active West Coast fairing recovery + OCISLY support. [? MMSI — verify at marinetraffic.com]',
+    notes:'West Coast fairing recovery + OCISLY support. IMO 8987876. [✓ MMSI confirmed]',
   },
   // ── Blue Origin ──────────────────────────────────────────────
   '368368960': {
