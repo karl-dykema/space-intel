@@ -638,7 +638,8 @@ function cycleVessels(mmsis, key) {
 }
 
 function updateHeaderStats(){
-  const live=Object.values(S.vessels).filter(v=>v.lat&&!v._historical);
+  const now=Date.now();
+  const live=Object.values(S.vessels).filter(v=>v.lat&&!v._historical&&!v._vapi&&v.ts&&(now-v.ts<600000));
   const moving=live.filter(v=>v.sog>0.5).length;
   const ops=[...new Set(live.map(v=>v.operator))].length;
   const liveMMSIs    = live.map(v=>v.mmsi);
@@ -708,7 +709,7 @@ function buildVesselRow(v){
     <div class="vbottom">
       <div class="vdot" style="background:${dotCol}${isLive||shareHist?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
       <span style="color:${dotCol};font-size:10px;font-weight:${isLive?'700':'400'}">${status}</span>
-      ${v.sog!=null&&v.lat&&!v._historical?`<span style="color:${isLive?'var(--t2)':'var(--t4)'};font-size:11px;margin-left:4px">${v.sog.toFixed(1)} kn</span>`:''}
+      ${v.sog!=null&&isLive?`<span style="color:var(--t2);font-size:11px;margin-left:4px">${v.sog.toFixed(1)} kn</span>`:''}
       ${isHist&&!shareHist?`<span style="color:var(--t4);font-size:10px;margin-left:auto">${ageStr(v.ts)}</span>`:''}
       ${v.dest&&!v._historical?`<span style="color:${isLive?'var(--t)':'var(--t5)'};font-size:10px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">→ ${esc(v.dest)}</span>`:''}
     </div>
@@ -856,8 +857,8 @@ function buildVesselDetail(){
       <div class="sec">LIVE STATUS</div>
       ${frows([
         ['POSITION', v.lat?`${v.lat.toFixed(4)}°  ${v.lon.toFixed(4)}°`:'—'],
-        ['SPEED',    v.sog!=null&&!v._historical&&!v._offline?v.sog.toFixed(1)+' kn':'—'],
-        ['COURSE',   v.cog!=null&&!v._historical&&!v._offline?Math.round(v.cog)+'°':'—'],
+        ['SPEED',    v.sog!=null&&!v._historical&&!v._offline&&!v._vapi&&v.ts&&(Date.now()-v.ts<600000)?v.sog.toFixed(1)+' kn':'—'],
+        ['COURSE',   v.cog!=null&&!v._historical&&!v._offline&&!v._vapi&&v.ts&&(Date.now()-v.ts<600000)?Math.round(v.cog)+'°':'—'],
         ['DESTINATION',v.dest||'—'],
         ['ETA',      v.eta||'—'],
         ['LAST FIX', v.ts?ageStr(v.ts):'never'],
