@@ -192,7 +192,8 @@ async function loadSBData() {
     history[mmsi].firstSeen = history[mmsi].positions[0].ts;
     history[mmsi].lastSeen  = history[mmsi].positions[history[mmsi].positions.length-1].ts;
 
-    if(!S.vessels[mmsi]) {
+    // override VesselAPI fallback if Supabase has real position history
+    if(!S.vessels[mmsi] || S.vessels[mmsi]._vapi) {
       const last = history[mmsi].positions[history[mmsi].positions.length-1];
       if(Date.now()-last.ts < 48*3600000) {
         S.vessels[mmsi] = {
@@ -1293,8 +1294,8 @@ async function loadVapiPositions() {
       if(!VESSEL_DB[mmsi]) continue;
       const existing = S.vessels[mmsi];
       const vpTs = vp.ts ? new Date(vp.ts).getTime() : 0;
-      // only use VesselAPI data if we have nothing better, or it's fresher
-      if(!existing?.lat || (existing._vapi && vpTs > (existing.ts||0))) {
+      // most recent timestamp wins across all sources
+      if(!existing?.lat || vpTs > (existing.ts||0)) {
         S.vessels[mmsi] = {
           mmsi, ...VESSEL_DB[mmsi],
           lat: vp.lat, lon: vp.lon,
@@ -1335,9 +1336,8 @@ window.onload=()=>{
   updateHeaderStats();
   setInterval(()=>{renderFleet();updateHeaderStats();},5000);
 
-  loadSBData();
+  loadSBData().then(()=>loadVapiPositions());
   fetchMissionsBackground().then(()=>renderLaunchBanner());
-  loadVapiPositions();
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
   if(SHARE_MODE) setInterval(loadSBData, 180000);
