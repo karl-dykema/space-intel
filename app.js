@@ -55,6 +55,14 @@ function buildLogTab() {
 function loadLS() {
   try { history = JSON.parse(localStorage.getItem(LS.HISTORY)||'{}'); } catch(e){history={};}
   try { events  = JSON.parse(localStorage.getItem(LS.EVENTS )||'[]'); } catch(e){events=[];}
+  try {
+    const cached = JSON.parse(localStorage.getItem(LS.MISSIONS)||'null');
+    if(cached?.data && Date.now() - cached.ts < 3600000) missionsCache = cached.data;
+  } catch(e) {}
+}
+
+function saveMissions() {
+  try { localStorage.setItem(LS.MISSIONS, JSON.stringify({data:missionsCache, ts:Date.now()})); } catch(e) {}
 }
 function saveLS() {
   try {
@@ -219,10 +227,29 @@ const prevZones={};
 let map=null, layers=null, zoneLayer=null;
 const markers={}, tracks={};
 
+// ── Mission linkage ───────────────────────────────────────────
+function findActiveMission(mmsi) {
+  if(!missionsCache.length) return null;
+  const now = Date.now();
+  return missionsCache.find(l => {
+    const net = l.net ? new Date(l.net).getTime() : null;
+    if(!net || Math.abs(now - net) > 12 * 3600000) return false;
+    const op = Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
+    return vesselHintsForLaunch(op, l.pad?.name||'').includes(mmsi);
+  }) || null;
+}
+
 // ── Events ────────────────────────────────────────────────────
 function addEvent(mmsi, type, detail, lat, lon) {
   const info=VESSEL_DB[mmsi]||{};
   const cfg=EV_CFG[type]||{icon:'·',color:'#888'};
+  const mission = findActiveMission(mmsi);
+  if(mission) {
+    const net=new Date(mission.net).getTime(), diff=Date.now()-net;
+    const abs=Math.abs(diff), sign=diff>=0?'+':'-';
+    const h=Math.floor(abs/3600000), m=Math.floor((abs%3600000)/60000);
+    detail=`${detail} · ${mission.name} T${sign}${h}h${String(m).padStart(2,'0')}m`;
+  }
   const ev={
     ts:Date.now(), mmsi,
     name:info.name||mmsi, abbr:info.abbr||mmsi,
@@ -856,6 +883,7 @@ async function fetchMissionsBackground() {
       return Object.keys(OPERATOR_MATCH).some(k=>(l.launch_service_provider?.name||'').includes(k));
     };
     missionsCache = (upData.results||[]).filter(filterFn);
+    saveMissions();
     addLog(`Missions cache: ${missionsCache.length} upcoming loaded`, 'sys');
     if(S.tab==='vessel') renderRight();
   } catch(e) {
@@ -889,6 +917,7 @@ async function showMissions() {
     const past     = (pastData.results||[]).filter(filterFn);
 
     missionsCache = upcoming;
+    saveMissions();
 
     addLog(`Missions: ${upcoming.length} upcoming, ${past.length} recent past`, 'sys');
     document.getElementById('missions-src').textContent =
