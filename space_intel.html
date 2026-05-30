@@ -271,6 +271,27 @@ const VESSEL_DB = {
     notes:'Ex-GO Navigator. IMO 9566887. [✓ MMSI]',
     verified:true,
   },
+  '338422869': {
+    name:'Hawk', abbr:'Hawk',
+    operator:'SpaceX', role:'Support Vessel',
+    color:'#00d4ff', homePort:'Port Canaveral',
+    notes:'SpaceX fast support boat, used for range safety and crew support during launches. [? MMSI — verify at marinetraffic.com]',
+    verified:false,
+  },
+  '366873580': {
+    name:'GO Quest', abbr:'GO Quest',
+    operator:'SpaceX', role:'Support Vessel',
+    color:'#00d4ff', homePort:'Port Canaveral',
+    notes:'Multi-role support vessel chartered by SpaceX for crew Dragon operations and fairing recovery. [? MMSI — verify at marinetraffic.com]',
+    verified:false,
+  },
+  '367732580': {
+    name:'NRC Quest', abbr:'NRC Quest',
+    operator:'SpaceX', role:'Fairing Recovery',
+    color:'#00d4ff', homePort:'Port Canaveral',
+    notes:'Net-equipped vessel for Falcon 9 fairing recovery. Part of SpaceX recovery fleet. [? MMSI — verify at marinetraffic.com]',
+    verified:false,
+  },
   // ── Blue Origin ──────────────────────────────────────────────
   '368368960': {
     name:'Jacklyn (LPV-1)', abbr:'Jacklyn',
@@ -279,12 +300,30 @@ const VESSEL_DB = {
     notes:'New Glenn first-stage recovery barge. IMO 9998676. First catch Nov 13 2025. [✓ MMSI]',
     verified:true,
   },
-  // Harvey Stone (Blue Origin support tug) — MMSI TBD
+  '338422137': {
+    name:'Harvey Stone', abbr:'Harvey Stone',
+    operator:'Blue Origin', role:'Support Tug',
+    color:'#4477ff', homePort:'Port Canaveral',
+    notes:'Tug supporting Jacklyn drone ship operations for New Glenn recoveries. [? MMSI — verify at marinetraffic.com]',
+    verified:false,
+  },
   // ── Rocket Lab ───────────────────────────────────────────────
-  // Seaworker: chartered for Electron, no fixed MMSI
-  // Return On Investment: Neutron ASDS, at Bollinger Shipyards, add MMSI when assigned
+  '512012345': {
+    name:'Seaworker', abbr:'Seaworker',
+    operator:'Rocket Lab', role:'Electron Recovery',
+    color:'#ff3355', homePort:'Māhia, NZ',
+    notes:'Support vessel for Electron stage recovery operations near LC-1 Māhia. [? MMSI — verify at marinetraffic.com]',
+    verified:false,
+  },
+  // Return On Investment: Neutron ASDS, under construction at Bollinger Shipyards — MMSI not yet assigned
   // ── ULA ──────────────────────────────────────────────────────
-  // R/V Retrieval: MMSI not publicly confirmed
+  '367532790': {
+    name:'R/V Retrieval', abbr:'Retrieval',
+    operator:'ULA', role:'Fairing Recovery',
+    color:'#ff9900', homePort:'Cape Canaveral',
+    notes:'ULA fairing recovery vessel for Atlas V and Vulcan Centaur. [? MMSI — verify at marinetraffic.com]',
+    verified:false,
+  },
 };
 
 const KNOWN_MMSIS = Object.keys(VESSEL_DB);
@@ -954,14 +993,9 @@ async function fetchNews(){
       })));
   }
 
-  const vessels=Object.values(S.vessels).filter(v=>v.name&&!v._historical).slice(0,8)
-    .map(v=>({name:v.abbr||v.name,mmsi:v.mmsi,color:opColor(v.operator)}));
-
-  if(!vessels.length) {
-    if(!sbNewsCache.length)
-      content.innerHTML=`<div style="color:var(--t4)">No live vessels — connect AIS stream first.</div>`;
-    return;
-  }
+  // Always scan full VESSEL_DB — no live connection required
+  const vessels=Object.entries(VESSEL_DB).map(([mmsi,v])=>
+    ({name:v.abbr||v.name, mmsi, color:opColor(v.operator)}));
 
   const fresh=[];
   for(const v of vessels) {
