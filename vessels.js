@@ -362,12 +362,13 @@ const EV_CFG = {
 
 // ── localStorage keys ─────────────────────────────────────────
 const LS = {
-  KEY:      'space_intel_ais_key',
-  HISTORY:  'space_intel_history',
-  EVENTS:   'space_intel_events',
-  SB_URL:   'space_intel_sb_url',
-  SB_AKEY:  'space_intel_sb_akey',
-  MISSIONS: 'space_intel_missions',
+  KEY:          'space_intel_ais_key',
+  HISTORY:      'space_intel_history',
+  EVENTS:       'space_intel_events',
+  SB_URL:       'space_intel_sb_url',
+  SB_AKEY:      'space_intel_sb_akey',
+  MISSIONS:     'space_intel_missions',
+  MISSIONS_PAST:'space_intel_missions_past',
 };
 const MAX_EVENTS = 500;
 const MAX_POS    = 3000;

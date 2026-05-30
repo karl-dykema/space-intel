@@ -61,10 +61,17 @@ function loadLS() {
     const cached = JSON.parse(localStorage.getItem(LS.MISSIONS)||'null');
     if(cached?.data && Date.now() - cached.ts < 3600000) missionsCache = cached.data;
   } catch(e) {}
+  try {
+    const cached = JSON.parse(localStorage.getItem(LS.MISSIONS_PAST)||'null');
+    if(cached?.data && Date.now() - cached.ts < 3600000) pastMissionsCache = cached.data;
+  } catch(e) {}
 }
 
 function saveMissions() {
-  try { localStorage.setItem(LS.MISSIONS, JSON.stringify({data:missionsCache, ts:Date.now()})); } catch(e) {}
+  try { localStorage.setItem(LS.MISSIONS,      JSON.stringify({data:missionsCache,     ts:Date.now()})); } catch(e) {}
+}
+function savePastMissions() {
+  try { localStorage.setItem(LS.MISSIONS_PAST, JSON.stringify({data:pastMissionsCache, ts:Date.now()})); } catch(e) {}
 }
 function saveLS() {
   try {
@@ -225,11 +232,26 @@ function updateSBStatus() {
 // ── App state ─────────────────────────────────────────────────
 const S = { ws:null, vessels:{}, selected:null, tab:'events' };
 let missionsCache = [];
+let pastMissionsCache = [];
 const prevZones={};
 let map=null, layers=null, zoneLayer=null;
 const markers={}, tracks={};
 
 // ── Mission linkage ───────────────────────────────────────────
+function isCarryingBooster(mmsi) {
+  const role = (VESSEL_DB[mmsi]?.role||'').toLowerCase();
+  if(!role.includes('drone') && !role.includes('landing platform')) return null;
+  const now = Date.now();
+  return [...missionsCache, ...pastMissionsCache].find(l => {
+    const net = l.net ? new Date(l.net).getTime() : null;
+    if(!net) return false;
+    const age = now - net;
+    if(age < 600000 || age > 86400000) return false; // 10 min–24 h after NET
+    const op = Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
+    return vesselHintsForLaunch(op, l.pad?.name||'', l.pad?.location?.name||'').includes(mmsi);
+  }) || null;
+}
+
 function findActiveMission(mmsi) {
   if(!missionsCache.length) return null;
   const now = Date.now();
@@ -582,9 +604,10 @@ function buildVesselRow(v){
   const sel=S.selected===v.mmsi, col=opColor(v.operator);
   const isLive=!!v.lat&&!!v.ts&&!v._historical&&(Date.now()-v.ts<600000);
   const isHist=v._historical;
-  const shareHist=SHARE_MODE&&isHist&&!!v.lat; // historical data looks clean in share mode
+  const shareHist=SHARE_MODE&&isHist&&!!v.lat;
   const stale=!!v.lat&&!isLive&&!isHist;
   const isOffline=v._offline||(!v.lat&&!isHist);
+  const carrying=(isLive||shareHist)?isCarryingBooster(v.mmsi):null;
   const dotCol=isLive?'#00ff88':shareHist?'#4477ff':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
   const status=isLive?'LIVE':shareHist?ageStr(v.ts):isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
   const nameCol=isLive||shareHist?col:isHist?col+'66':'var(--t3)';
@@ -595,6 +618,7 @@ function buildVesselRow(v){
     style="border-left-color:${borderCol}${bg?';background:'+bg:''}${isLive?';box-shadow:inset 2px 0 8px '+col+'22':''}">
     <div class="vn" style="color:${nameCol};${isLive?'text-shadow:0 0 12px '+col+'66':''}">${esc(v.abbr||v.name)}</div>
     <div class="vop" style="color:${roleCol}">${esc(v.operator)} · ${esc(v.role)}</div>
+    ${carrying?`<div style="font-size:10px;font-weight:700;color:#ff8c00;letter-spacing:.04em;margin-top:2px">🚀 BOOSTER ABOARD · ${esc(carrying.name||'')}</div>`:''}
     <div class="vbottom">
       <div class="vdot" style="background:${dotCol}${isLive||shareHist?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
       <span style="color:${dotCol};font-size:10px;font-weight:${isLive?'700':'400'}">${status}</span>
@@ -669,12 +693,13 @@ function buildVesselDetail(){
   const v=live||{mmsi,...db,_offline:true};
   const col=opColor(db.operator), h=history[mmsi];
 
-  const upcomingMissions=missionsCache.filter(l=>{
+  const linkedMissions = l => {
     const op=Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
-    const pad=l.pad?.name||'';
-    const hints=vesselHintsForLaunch(op,pad,l.pad?.location?.name||'');
-    return hints.includes(mmsi);
-  }).slice(0,3);
+    return vesselHintsForLaunch(op, l.pad?.name||'', l.pad?.location?.name||'').includes(mmsi);
+  };
+  const upcomingMissions = missionsCache.filter(linkedMissions).slice(0,3);
+  const recentMissions   = pastMissionsCache.filter(linkedMissions).slice(0,5);
+  const carrying         = isCarryingBooster(mmsi);
 
   return`
     <div class="dhdr" style="border-left:4px solid ${col}">
@@ -687,6 +712,12 @@ function buildVesselDetail(){
       ${!SHARE_MODE&&v._historical?`<div class="hist-box">📡 Showing last known position (${ageStr(v.ts)}). Connect AIS for live data.</div>`:''}
       ${!SHARE_MODE&&v._offline?`<div style="background:rgba(0,0,0,.15);border:1px solid var(--bdr);padding:8px 11px;font-size:12px;color:var(--t4);margin-bottom:6px">IN PORT — no AIS signal. Will appear on map when underway.</div>`:''}
 
+      ${carrying?`<div style="background:rgba(255,140,0,.1);border:1px solid #ff8c0066;padding:10px 13px;margin-bottom:6px">
+        <div style="font-size:11px;font-weight:700;color:#ff8c00;letter-spacing:.06em;margin-bottom:3px">🚀 BOOSTER ABOARD</div>
+        <div style="font-size:13px;font-weight:600;color:var(--t2)">${esc(carrying.name||'')}</div>
+        <div style="font-size:11px;color:var(--t4);margin-top:2px">Launched ${ageStr(new Date(carrying.net).getTime())} · returning to port</div>
+      </div>`:''}
+
       ${upcomingMissions.length?`
         <div class="sec">UPCOMING MISSIONS</div>
         ${upcomingMissions.map(l=>{
@@ -696,6 +727,23 @@ function buildVesselDetail(){
             <div style="font-size:13px;font-weight:600;color:${col2}">${esc(l.name||'')}</div>
             <div style="font-size:12px;color:var(--t5)">${esc(l.rocket?.configuration?.name||'')} · ${esc(l.pad?.location?.name||'')}</div>
             ${net?`<div style="font-family:var(--fm);font-size:13px;color:${col2};margin-top:3px" data-net="${net}">calculating…</div>`:''}
+          </div>`;
+        }).join('')}
+      `:''}
+
+      ${recentMissions.length?`
+        <div class="sec">RECENT MISSIONS</div>
+        ${recentMissions.map(l=>{
+          const net=l.net?new Date(l.net).getTime():null;
+          const col2=opColor(Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'');
+          const status=l.status?.name||'';
+          const statusCol=/Success/i.test(status)?'#00ff88':/Failure/i.test(status)?'#ff4444':'#ff8800';
+          return`<div style="padding:8px 0;border-bottom:1px solid var(--bdr2)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="font-size:13px;font-weight:600;color:${col2};flex:1">${esc(l.name||'')}</div>
+              ${status?`<span style="font-size:10px;font-weight:700;color:${statusCol}">${esc(status.toUpperCase())}</span>`:''}
+            </div>
+            <div style="font-size:12px;color:var(--t5);margin-top:2px">${esc(l.rocket?.configuration?.name||'')} · ${net?fmtTime(net):'TBD'}</div>
           </div>`;
         }).join('')}
       `:''}
@@ -828,26 +876,50 @@ function startCountdowns() {
 
 async function fetchMissionsBackground() {
   try {
-    // Skip fetch if cache is < 10 minutes old
-    const cached = JSON.parse(localStorage.getItem(LS.MISSIONS)||'null');
-    if(cached?.ts && Date.now() - cached.ts < 600000) {
-      if(!missionsCache.length && cached.data) missionsCache = cached.data;
-      addLog(`Missions: cache fresh (${Math.round((Date.now()-cached.ts)/60000)}m old) — skipping fetch`, 'sys');
+    const cachedUp   = JSON.parse(localStorage.getItem(LS.MISSIONS)     ||'null');
+    const cachedPast = JSON.parse(localStorage.getItem(LS.MISSIONS_PAST)||'null');
+    const upFresh   = cachedUp?.ts   && Date.now() - cachedUp.ts   < 600000;
+    const pastFresh = cachedPast?.ts && Date.now() - cachedPast.ts < 600000;
+
+    if(upFresh && pastFresh) {
+      if(!missionsCache.length     && cachedUp.data)   missionsCache     = cachedUp.data;
+      if(!pastMissionsCache.length && cachedPast.data) pastMissionsCache = cachedPast.data;
+      addLog(`Missions: cache fresh — skipping fetch`, 'sys');
       if(S.tab==='vessel') renderRight();
       return;
     }
+
     const base = 'https://ll.thespacedevs.com/2.3.0/launches/';
-    const upResp = await fetch(`${base}upcoming/?limit=30&ordering=net`);
-    if(!upResp.ok) { addLog(`Missions background fetch: HTTP ${upResp.status}`, 'err'); return; }
-    const upData = await upResp.json();
-    const filterFn = l => {
-      const netTs = l.net ? new Date(l.net).getTime() : null;
-      if(netTs && Date.now() - netTs > 3600000) return false;
-      return Object.keys(OPERATOR_MATCH).some(k=>(l.launch_service_provider?.name||'').includes(k));
-    };
-    missionsCache = (upData.results||[]).filter(filterFn);
-    saveMissions();
-    addLog(`Missions cache: ${missionsCache.length} upcoming loaded`, 'sys');
+    const opFilter = l => Object.keys(OPERATOR_MATCH).some(k=>(l.launch_service_provider?.name||'').includes(k));
+
+    const fetches = [];
+    if(!upFresh)   fetches.push(fetch(`${base}upcoming/?limit=30&ordering=net`));
+    if(!pastFresh) fetches.push(fetch(`${base}previous/?limit=20&ordering=-net`));
+    const results = await Promise.all(fetches);
+
+    let i = 0;
+    if(!upFresh) {
+      const r = results[i++];
+      if(r.ok) {
+        const d = await r.json();
+        missionsCache = (d.results||[]).filter(l => {
+          const netTs = l.net ? new Date(l.net).getTime() : null;
+          if(netTs && Date.now() - netTs > 3600000) return false;
+          return opFilter(l);
+        });
+        saveMissions();
+      }
+    }
+    if(!pastFresh) {
+      const r = results[i++];
+      if(r.ok) {
+        const d = await r.json();
+        pastMissionsCache = (d.results||[]).filter(opFilter);
+        savePastMissions();
+      }
+    }
+
+    addLog(`Missions: ${missionsCache.length} upcoming · ${pastMissionsCache.length} recent`, 'sys');
     if(S.tab==='vessel') renderRight();
   } catch(e) {
     addLog(`Missions background fetch failed: ${e.message}`, 'err');
@@ -894,8 +966,10 @@ async function showMissions() {
     const upcoming = (upData.results||[]).filter(filterFn);
     const past     = (pastData.results||[]).filter(filterFn);
 
-    missionsCache = upcoming;
+    missionsCache     = upcoming;
+    pastMissionsCache = past;
     saveMissions();
+    savePastMissions();
 
     addLog(`Missions: ${upcoming.length} upcoming, ${past.length} recent past`, 'sys');
     document.getElementById('missions-src').textContent =
