@@ -139,18 +139,18 @@ const VESSEL_DB = {
     ],
     notes:'New Glenn first-stage landing platform. [✓ MMSI]',
   },
-  '338422137': {
+  '369045000': {
     name:'Harvey Stone', abbr:'Harvey Stone',
     operator:'Blue Origin', role:'Support Tug',
     color:'#4477ff', homePort:'Port Canaveral, FL',
-    flag:'USA', verified:false,
+    flag:'USA', verified:true,
     specs:{ type:'Harbor/ocean tug' },
     history:[
       'Primary tug for Jacklyn drone ship towing and positioning',
       'Escorts Jacklyn to and from recovery zone for each New Glenn launch',
       'Named after Blue Origin engineer Harvey Stone',
     ],
-    notes:'Support tug for Jacklyn. [? MMSI — verify at marinetraffic.com]',
+    notes:'Support tug for Jacklyn. [✓ MMSI confirmed]',
   },
   // ── Rocket Lab ───────────────────────────────────────────────
   '512440000': {
