@@ -16,7 +16,7 @@ const VESSEL_DB = {
       'Named after a ship in Iain M. Banks\' Culture novel series',
       'Can hold position within meters in open ocean using GPS + thruster control',
     ],
-    notes:'Primary Atlantic/Gulf ASDS. Falcon 9 & Heavy recoveries. [✓ MMSI]',
+    notes:'Primary Atlantic/Gulf ASDS. Falcon 9 & Heavy recoveries. [✓ MMSI] Note: some AIS registries show hull as "Marmac 302" — may be a naming mixup with OCISLY; widely cited as Marmac 304.',
   },
   '368219920': {
     name:'Just Read the Instructions', abbr:'JRTI',
@@ -46,7 +46,7 @@ const VESSEL_DB = {
       'Converted from Marmac 302 barge in 2015',
       'Operates 300–700km off Baja California coast for Pacific recovery zone',
     ],
-    notes:'Pacific ASDS for Vandenberg SFB launches. MMSI confirmed by user. [✓ MMSI]',
+    notes:'Pacific ASDS for Vandenberg SFB launches. MMSI confirmed by user. [✓ MMSI] Note: some AIS registries show hull as "Marmac 304" — may be a naming mixup with ASOG; widely cited as Marmac 302.',
   },
   '366584000': {
     name:'Megan', abbr:'Megan',
