@@ -1661,7 +1661,7 @@ function buildMissionCard(l, isPast=false) {
         return `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--bdr2)${e.highlight?';background:'+col+'08':''};border-radius:2px">
           <span style="font-family:var(--fm);font-size:12px;color:${e.highlight?col:'var(--t4)'};flex:1">${esc(e.label)}</span>
           ${absTime?`<span style="font-size:10px;color:var(--t5);flex-shrink:0">${esc(absTime)}</span>`:''}
-          ${tv?`<span style="font-size:11px;color:${opColor(tv.operator)};flex-shrink:0;margin-left:${absTime?'0':'auto'}">${esc(tv.abbr||tv.name)}</span>`:''}
+          ${tv?`<span class="vessel-link" onclick="openVesselFromMission('${e.vessel}')" style="font-size:11px;color:${opColor(tv.operator)};flex-shrink:0;margin-left:${absTime?'0':'auto'};cursor:pointer;text-decoration:underline;text-underline-offset:2px">${esc(tv.abbr||tv.name)} ↗</span>`:''}
         </div>`;
       }).join('')}
     </div>` : '';
@@ -1676,8 +1676,9 @@ function buildMissionCard(l, isPast=false) {
     </div>
     <div class="mcountdown" style="color:${isPast?'var(--t5)':col}" ${net?`data-net="${net}"`:''}>${net?'calculating…':'Date TBD'}</div>
     <div class="mcountdown-lbl">${esc(netStr)}${isPast?` · <span style="color:${/Success/i.test(status)?'#00ff88':'#ff4444'};font-weight:700">${esc(status)}</span>`:''}</div>
-    ${catchV?`<div style="margin-top:10px;padding:10px 12px;background:${opColor(catchV.operator)}11;border:1px solid ${opColor(catchV.operator)}44;border-radius:2px">
-      <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:4px">PROJECTED CATCH VESSEL</div>
+    ${catchV?`<div class="vessel-link" onclick="openVesselFromMission('${catchVessel}')"
+      style="margin-top:10px;padding:10px 12px;background:${opColor(catchV.operator)}11;border:1px solid ${opColor(catchV.operator)}44;border-radius:2px;cursor:pointer">
+      <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:4px">PROJECTED CATCH VESSEL ↗</div>
       <div style="font-size:15px;font-weight:700;color:${opColor(catchV.operator)}">${esc(catchV.name||catchV.abbr)}</div>
       <div style="font-size:12px;color:var(--t5);margin-top:2px">${esc(catchV.role)} · ${esc(catchV.homePort||'')}</div>
       <div style="font-size:12px;color:var(--t4);margin-top:3px">${esc(catchEvents[0].label)}</div>
@@ -1687,9 +1688,16 @@ function buildMissionCard(l, isPast=false) {
     ${timelineHTML}
     ${vessels.length&&!catchV?`<div class="mcard-vessels">
       <div style="font-size:11px;color:var(--t4);font-weight:600;letter-spacing:.06em;margin-bottom:6px">VESSELS DEPLOYED</div>
-      ${vessels.map(m=>{const v=VESSEL_DB[m];return`<div style="font-size:13px;color:${opColor(v.operator)};padding:3px 0">${esc(v.abbr||v.name)} <span style="color:var(--t5);font-size:11px">· ${esc(v.role)}</span></div>`;}).join('')}
+      ${vessels.map(m=>{const v=VESSEL_DB[m];return`<div class="vessel-link" onclick="openVesselFromMission('${m}')" style="font-size:13px;color:${opColor(v.operator)};padding:3px 0;cursor:pointer">
+        ${esc(v.abbr||v.name)} <span style="color:var(--t5);font-size:11px">· ${esc(v.role)}</span> <span style="font-size:11px">↗</span>
+      </div>`;}).join('')}
     </div>`:''}
   </div>`;
+}
+
+function openVesselFromMission(mmsi) {
+  document.getElementById('missions-panel').style.display='none';
+  selectVessel(mmsi);
 }
 
 // ── Util ──────────────────────────────────────────────────────
