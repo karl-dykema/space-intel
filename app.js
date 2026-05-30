@@ -960,14 +960,24 @@ function buildMissionCard(l, isPast=false) {
   const timeline = timelineForVehicle(vehicle);
   const uncertain= !l.net || /TBD|NET|No Earlier/i.test(l.net_precision?.name||'');
 
-  const catchEvents = (timeline||[]).filter(e=>e.highlight&&e.vessel&&VESSEL_DB[e.vessel]);
+  // Override hardcoded ASDS in timeline with pad-aware vessel; flag if corrected
+  const isLandingPlatform = m => { const r=(VESSEL_DB[m]?.role||'').toLowerCase(); return r.includes('drone')||r.includes('landing platform'); };
+  const droneMMSI = vessels.find(isLandingPlatform);
+  const apiDroneMMSI = (timeline||[]).find(e=>e.highlight&&e.vessel&&isLandingPlatform(e.vessel))?.vessel;
+  const hasMismatch = apiDroneMMSI && droneMMSI && apiDroneMMSI !== droneMMSI;
+  const patchedTimeline = timeline ? timeline.map(e =>
+    (e.vessel && isLandingPlatform(e.vessel) && droneMMSI && e.vessel !== droneMMSI)
+      ? {...e, vessel:droneMMSI} : e
+  ) : null;
+
+  const catchEvents = (patchedTimeline||[]).filter(e=>e.highlight&&e.vessel&&VESSEL_DB[e.vessel]);
   const catchVessel = catchEvents[0]?.vessel;
   const catchV = catchVessel ? VESSEL_DB[catchVessel] : null;
 
-  const timelineHTML = timeline ? `
+  const timelineHTML = patchedTimeline ? `
     <div style="margin:12px 0 4px">
       <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:8px">${isPast?'ACTUAL TIMELINE (projected vessel times)':'PROJECTED TIMELINE'}</div>
-      ${timeline.map(e=>{
+      ${patchedTimeline.map(e=>{
         const tv = e.vessel&&VESSEL_DB[e.vessel];
         const absTime = (net&&e.t>60) ? fmtTime(net+e.t*1000) : null;
         return `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--bdr2)${e.highlight?';background:'+col+'08':''};border-radius:2px">
@@ -995,6 +1005,7 @@ function buildMissionCard(l, isPast=false) {
       <div style="font-size:12px;color:var(--t5);margin-top:2px">${esc(catchV.role)} · ${esc(catchV.homePort||'')}</div>
       <div style="font-size:12px;color:var(--t4);margin-top:3px">${esc(catchEvents[0].label)}</div>
     </div>`:''}
+    ${hasMismatch?`<div style="background:rgba(255,140,0,.07);border:1px solid #553300;padding:7px 10px;font-size:12px;color:#cc7700;margin-top:8px">⚠ API assigned ${esc(VESSEL_DB[apiDroneMMSI]?.abbr||apiDroneMMSI)} — corrected to ${esc(VESSEL_DB[droneMMSI]?.abbr||droneMMSI)} based on launch site</div>`:''}
     ${uncertain?`<div class="mcard-uncertain">⚠ Launch window may shift — verify at nextspaceflight.com</div>`:''}
     ${desc?`<div class="mcard-desc">${esc(desc.slice(0,300))}${desc.length>300?'…':''}</div>`:''}
     ${timelineHTML}
