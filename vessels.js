@@ -45,7 +45,7 @@ const VESSEL_DB = {
       'Named after a ship in Iain M. Banks\' Culture novel series',
       'Converted from Marmac 304 barge in 2015 (AIS registry confirmed)',
       'Operates 300–700km off Baja California coast for Pacific recovery zone',
-      'Booster catch confirmed live by observer — May 30 2026',
+      'Booster catch: Starlink 17-41 — May 30 2026',
     ],
     notes:'Pacific ASDS for Vandenberg SFB launches. Hull: Marmac 304 (confirmed). MMSI confirmed. [✓ MMSI]',
   },
