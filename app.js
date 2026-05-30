@@ -498,6 +498,7 @@ function showSettings() {
   const sk=localStorage.getItem(LS.SB_AKEY)||'';
   document.getElementById('sb-key-input').value=sk?'•'.repeat(20):'';
   document.getElementById('settings-msg').textContent='';
+  loadSuggestions();
 }
 function closeSettings(){document.getElementById('settingsmodal').style.display='none';}
 
@@ -520,7 +521,7 @@ function saveSettings() {
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('settingsmodal').style.display!=='none') saveSettings();
-  if(e.key==='Escape') closeSettings();
+  if(e.key==='Escape'){ closeSettings(); closeSuggestModal(); }
 });
 
 // ── Header stats ──────────────────────────────────────────────
@@ -1011,6 +1012,76 @@ function buildMissionCard(l, isPast=false) {
 function openVesselFromMission(mmsi) {
   document.getElementById('missions-panel').style.display='none';
   selectVessel(mmsi);
+}
+
+// ── Suggestions ───────────────────────────────────────────────
+function showSuggestModal() {
+  const m=document.getElementById('suggestmodal');
+  m.style.display='flex';
+  m.onclick=e=>{if(e.target===m)closeSuggestModal();};
+  document.getElementById('sg-msg').textContent='';
+}
+function closeSuggestModal() {
+  document.getElementById('suggestmodal').style.display='none';
+}
+
+async function submitSuggestion() {
+  const type   =document.getElementById('sg-type').value;
+  const name   =document.getElementById('sg-name').value.trim();
+  const mmsi   =document.getElementById('sg-mmsi').value.trim();
+  const notes  =document.getElementById('sg-notes').value.trim();
+  const contact=document.getElementById('sg-contact').value.trim();
+  const msg    =document.getElementById('sg-msg');
+
+  if(!name && !mmsi) { msg.style.color='var(--hi)'; msg.textContent='Enter at least a vessel name or MMSI.'; return; }
+  if(!SB.ready) { msg.style.color='var(--hi)'; msg.textContent='No database connected — suggestion cannot be saved.'; return; }
+
+  msg.style.color='var(--t4)'; msg.textContent='Submitting…';
+  try {
+    await fetch(`${SB.url}/rest/v1/suggestions`, {
+      method:'POST',
+      headers:{ 'apikey':SB.akey, 'Authorization':`Bearer ${SB.akey}`,
+                'Content-Type':'application/json', 'Prefer':'return=minimal' },
+      body:JSON.stringify({ type, vessel_name:name||null, mmsi:mmsi||null, notes:notes||null, contact:contact||null }),
+    });
+    msg.style.color='var(--grn)'; msg.textContent='Submitted — thank you!';
+    ['sg-name','sg-mmsi','sg-notes','sg-contact'].forEach(id=>document.getElementById(id).value='');
+    setTimeout(closeSuggestModal, 1800);
+  } catch(e) {
+    msg.style.color='var(--hi)'; msg.textContent='Error: '+e.message;
+  }
+}
+
+async function loadSuggestions() {
+  const el=document.getElementById('sg-list');
+  const count=document.getElementById('sg-count');
+  if(!el) return;
+  if(!SB.ready) { el.innerHTML='<div style="font-size:12px;color:var(--t4)">Supabase not configured.</div>'; return; }
+  try {
+    const r=await fetch(`${SB.url}/rest/v1/suggestions?status=eq.pending&order=ts.desc&limit=50`,
+      {headers:{'apikey':SB.akey,'Authorization':`Bearer ${SB.akey}`}});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const rows=await r.json();
+    if(count) count.textContent=rows.length?`(${rows.length} pending)`:'(none)';
+    if(!rows.length){el.innerHTML='<div style="font-size:12px;color:var(--t4)">No pending suggestions.</div>';return;}
+    el.innerHTML=rows.map(s=>{
+      const clip=`Type: ${s.type}\nVessel: ${s.vessel_name||'—'}\nMMSI: ${s.mmsi||'—'}\nNotes: ${s.notes||'—'}\nContact: ${s.contact||'—'}\nSubmitted: ${new Date(s.ts).toLocaleString()}`;
+      return`<div style="padding:10px 0;border-bottom:1px solid var(--bdr2)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <span style="font-size:10px;font-weight:700;color:var(--acc);letter-spacing:.06em">${esc(s.type.replace('_',' ').toUpperCase())}</span>
+          <span style="font-size:10px;color:var(--t4)">${new Date(s.ts).toLocaleString()}</span>
+          <button onclick="navigator.clipboard.writeText(${JSON.stringify(clip).replace(/"/g,"'")})"
+            style="margin-left:auto;background:none;border:1px solid var(--bdr);color:var(--t4);font-size:10px;padding:2px 8px;cursor:pointer">COPY</button>
+        </div>
+        ${s.vessel_name?`<div style="font-size:13px;font-weight:600;color:var(--t2)">${esc(s.vessel_name)}</div>`:''}
+        ${s.mmsi?`<div style="font-size:12px;color:var(--acc);font-family:var(--fm)">${esc(s.mmsi)}</div>`:''}
+        ${s.notes?`<div style="font-size:12px;color:var(--t);margin-top:3px;line-height:1.6">${esc(s.notes)}</div>`:''}
+        ${s.contact?`<div style="font-size:11px;color:var(--t4);margin-top:3px">Contact: ${esc(s.contact)}</div>`:''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML=`<div style="font-size:12px;color:var(--hi)">Error loading suggestions: ${esc(e.message)}</div>`;
+  }
 }
 
 // ── Share link ────────────────────────────────────────────────

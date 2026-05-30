@@ -48,6 +48,7 @@
     <button class="cbtn" onclick="showMissions()">MISSIONS</button>
     <button class="cbtn admin-only" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS</button>
     <button class="cbtn admin-only" onclick="clearEvents()" style="color:var(--t4);margin-left:auto">CLEAR EVENTS</button>
+    <button class="cbtn share-only" onclick="showSuggestModal()" style="margin-left:auto;color:var(--grn);border-color:var(--grn)33">+ SUGGEST VESSEL</button>
   </div>
 
   <div id="body">
@@ -111,6 +112,43 @@
       <button class="modal-btn" onclick="saveSettings()">SAVE &amp; APPLY</button>
       <button class="modal-btn sec" onclick="closeSettings()">CANCEL</button>
       <span id="settings-msg" style="font-size:11px;color:var(--grn)"></span>
+    </div>
+
+    <div class="modal-sec" style="margin-top:28px">PENDING SUGGESTIONS <span id="sg-count" style="color:var(--t4);font-weight:400"></span></div>
+    <div id="sg-list"><div style="font-size:12px;color:var(--t4)">Loading…</div></div>
+  </div>
+</div>
+
+<!-- Suggest vessel modal -->
+<div id="suggestmodal" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title" style="color:var(--grn)">+ SUGGEST A VESSEL</div>
+    <div class="modal-desc">Know a ship that should be on the map? Submit details below — the maintainer reviews all suggestions.</div>
+
+    <div class="modal-sec">TYPE</div>
+    <select class="modal-input" id="sg-type">
+      <option value="new_vessel">New vessel to add</option>
+      <option value="mmsi_fix">MMSI correction</option>
+      <option value="data_fix">Data fix (name / role / details)</option>
+      <option value="other">Other</option>
+    </select>
+
+    <div class="modal-sec">VESSEL NAME</div>
+    <input class="modal-input" id="sg-name" type="text" placeholder="e.g. GO Navigator, USNS Invincible…"/>
+
+    <div class="modal-sec">MMSI <span style="color:var(--t4);font-weight:400">(9-digit number)</span></div>
+    <input class="modal-input" id="sg-mmsi" type="text" placeholder="e.g. 366584000" maxlength="12"/>
+
+    <div class="modal-sec">NOTES</div>
+    <textarea class="modal-input" id="sg-notes" rows="3" placeholder="Source, why this vessel is relevant, any corrections…" style="resize:vertical"></textarea>
+
+    <div class="modal-sec">CONTACT <span style="color:var(--t4);font-weight:400">(optional)</span></div>
+    <input class="modal-input" id="sg-contact" type="text" placeholder="Email, Twitter/X, or Reddit — only seen by maintainer"/>
+
+    <div style="display:flex;gap:10px;align-items:center;margin-top:16px;flex-wrap:wrap">
+      <button class="modal-btn" style="border-color:var(--grn);color:var(--grn)" onclick="submitSuggestion()">SUBMIT</button>
+      <button class="modal-btn sec" onclick="closeSuggestModal()">CANCEL</button>
+      <span id="sg-msg" style="font-size:11px;color:var(--grn)"></span>
     </div>
   </div>
 </div>

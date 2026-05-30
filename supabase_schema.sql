@@ -42,6 +42,19 @@ create table if not exists news_articles (
 );
 create index if not exists news_fetched on news_articles (fetched_at desc);
 
+-- Crowd-sourced vessel suggestions (from share-mode viewers)
+create table if not exists suggestions (
+  id          bigserial    primary key,
+  ts          timestamptz  not null default now(),
+  type        text         not null,
+  vessel_name text,
+  mmsi        text,
+  notes       text,
+  contact     text,
+  status      text         not null default 'pending'
+);
+create index if not exists suggestions_ts on suggestions (ts desc);
+
 -- ── Row Level Security ────────────────────────────────────────
 -- Anon key can read + insert, but NOT update or delete.
 -- Safe for a personal project with a public-facing anon key.
@@ -58,3 +71,7 @@ create policy "write_events"    on events        for insert with check (true);
 
 create policy "read_news"       on news_articles for select using (true);
 create policy "write_news"      on news_articles for insert with check (true);
+
+alter table suggestions enable row level security;
+create policy "read_suggestions"  on suggestions for select using (true);
+create policy "write_suggestions" on suggestions for insert with check (true);

@@ -155,5 +155,9 @@ button{font-family:var(--f);cursor:pointer;}
 
 /* ── Share mode ── */
 body.share-mode .admin-only{display:none!important;}
+.share-only{display:none!important;}
+body.share-mode .share-only{display:initial!important;}
+#suggestmodal{position:fixed;inset:0;background:rgba(2,12,24,.92);z-index:20000;display:flex;align-items:center;justify-content:center;}
+#suggestmodal textarea.modal-input{font-family:var(--f);}
 
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.15;}}
