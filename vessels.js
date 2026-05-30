@@ -267,6 +267,22 @@ const VESSEL_DB = {
     ],
     notes:'UNVERIFIED — may be USNS Hugo / TSV-2. The Spaceport Company sea launch platform. Confirm MMSI at marinetraffic.com',
   },
+  // ── NASA / Navy capsule recovery ─────────────────────────────
+  '368926266': {
+    name:'USS John P. Murtha', abbr:'Murtha',
+    operator:'NASA Recovery', role:'Orion / Artemis Capsule Recovery Ship',
+    color:'#3399ff', homePort:'Naval Base San Diego, CA',
+    imo:'1', flag:'USA', built:2011, verified:true,
+    specs:{ length:'208m', beam:'32m', type:'San Antonio-class LPD (amphibious transport dock)', capacity:'Well deck for capsule recovery' },
+    history:[
+      'Primary recovery vessel for NASA Artemis program Orion capsules',
+      'Recovered Artemis I Orion capsule (uncrewed) — December 2022',
+      'Recovered Artemis II Orion "Integrity" + 4 crew — April 10 2026',
+      'Well deck accommodates the 23,000 lb capsule; ship carries Navy divers and NASA recovery teams',
+      'Only tasked to NASA for specific Artemis recovery missions; otherwise on normal Navy deployments',
+    ],
+    notes:'Only relevant during Artemis missions. IMO listed as 1 (military placeholder). [✓ MMSI]',
+  },
   // ── US Military / Range Support ──────────────────────────────
   '369998000': {
     name:'USNS Howard O. Lorenzen', abbr:'Lorenzen',
@@ -346,7 +362,7 @@ function detectZones(lat, lon) {
 }
 
 // ── Operator colors ───────────────────────────────────────────
-const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00' };
+const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff' };
 function opColor(op) { return OP_COLORS[op]||'#aaaaaa'; }
 
 // ── Event config ──────────────────────────────────────────────

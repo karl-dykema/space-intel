@@ -112,6 +112,25 @@ ADS-B data sources to evaluate:
 - [ADS-B Exchange](https://www.adsbexchange.com) — unfiltered, includes military
 - [FlightAware AeroAPI](https://flightaware.com/commercial/aeroapi/) — paid, higher fidelity
 
+### NOTAMs / Maritime Safety Notices
+Launch exclusion zones are already drawn on the map (static, from 33 CFR). Dynamic notices are harder:
+
+**Aviation NOTAMs (FAA):** TFRs (Temporary Flight Restrictions) are issued per launch and available via:
+- [NASA DIP NOTAM service](https://dip.amesaero.nasa.gov) — free, parses FAA SWIM feed
+- [SkyLink API](https://skylinkapi.com) — free tier 1,000 req/month, structured output
+
+**Maritime (USCG):** No public REST API. Notices issued as:
+- Broadcast Notice to Mariners on VHF 16/22A and 2182 kHz
+- Local Notice to Mariners (weekly PDF) from each USCG District
+- Safety zones published in Federal Register per launch season
+
+Best approach: poll FAA TFR feed for airspace restrictions near known launch coordinates as a proxy for imminent launch activity. Coordinates to watch: Canaveral (28.5°N 80.6°W), Vandenberg (34.7°N 120.6°W), Starbase (26.0°N 97.2°W), Mahia (-39.3°N 177.9°E).
+
+**Regulatory zone references:**
+- Cape Canaveral maritime: 33 CFR 165.775 (12 nm boundary, polygon drawn in app)
+- Vandenberg maritime: 33 CFR 334.1130 (3 nm coastline zone, polygon drawn in app)
+- Starbase/Boca Chica: ad-hoc USCG notices, no permanent CFR zone
+
 Integration would require: a second data source alongside AIS, a way to display aircraft icons on the same Leaflet map (different icon shape, altitude label), and registration-to-callsign resolution. The OpenSky API returns lat/lon/altitude/velocity and is REST-based — could poll every 15–30s for the known registrations.
 
 ---

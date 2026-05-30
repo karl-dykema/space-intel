@@ -234,7 +234,7 @@ const S = { ws:null, vessels:{}, selected:null, tab:'events' };
 let missionsCache = [];
 let pastMissionsCache = [];
 const prevZones={};
-let map=null, layers=null, zoneLayer=null;
+let map=null, layers=null, zoneLayer=null, exclusionLayer=null;
 const markers={}, tracks={};
 
 // ── Mission linkage ───────────────────────────────────────────
@@ -382,15 +382,51 @@ function initMap() {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
     attribution:'© CARTO © OSM',subdomains:'abcd',maxZoom:19,
   }).addTo(map);
+  exclusionLayer=L.layerGroup().addTo(map);
   layers=L.layerGroup().addTo(map);
   zoneLayer=L.layerGroup().addTo(map);
   map.setView([20,0],2);
+  drawExclusionZones();
   drawZones();
   document.getElementById('mapleg-ops').innerHTML=
     Object.entries(OP_COLORS).map(([op,c])=>
       `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:${c};margin-bottom:3px">
         <div style="width:12px;height:3px;background:${c};border-radius:1px"></div>${op}</div>`
-    ).join('');
+    ).join('') +
+    `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:#ff8c00;margin-top:5px;padding-top:5px;border-top:1px solid var(--bdr2)">
+      <div style="width:12px;height:3px;background:#ff8c00;border-radius:1px;opacity:0.7"></div>USCG Safety Zone</div>`;
+}
+
+function drawExclusionZones() {
+  const style = { color:'#ff8c00', fillColor:'#ff8c00', fillOpacity:0.04, weight:1.2, dashArray:'6 3' };
+  const tip = (name, cfr) => `<b style="color:#ff8c00">${name}</b><br><span style="font-size:11px;color:var(--t5)">USCG Safety Zone · ${cfr}</span>`;
+
+  // Cape Canaveral — 33 CFR 165.775 (12 nm offshore boundary)
+  L.polygon([
+    [28.815, -80.478], [28.722, -80.683], [28.422, -80.579],
+    [28.183, -80.483], [28.167, -80.354], [28.815, -80.354],
+  ], style).addTo(exclusionLayer)
+    .bindTooltip(tip('Cape Canaveral Maritime Safety Zone','33 CFR 165.775'),{className:'ltt',direction:'top'});
+
+  // Vandenberg — 33 CFR 334.1130 (3 nm offshore danger zones)
+  L.polygon([
+    [34.902, -120.671], [34.902, -120.733], [34.880, -120.733],
+    [34.833, -120.675], [34.747, -120.704], [34.697, -120.670],
+    [34.587, -120.713], [34.550, -120.685], [34.511, -120.625],
+    [34.405, -120.500], [34.393, -120.452], [34.406, -120.411],
+    [34.456, -120.411],
+  ], style).addTo(exclusionLayer)
+    .bindTooltip(tip('Vandenberg Maritime Danger Zone','33 CFR 334.1130'),{className:'ltt',direction:'top'});
+
+  // Starbase / Boca Chica — USCG enforces ad-hoc safety zones per launch
+  L.circle([26.0, -97.15], {radius:28000, ...style})
+    .addTo(exclusionLayer)
+    .bindTooltip(tip('Starbase / Boca Chica Safety Zone','Ad-hoc USCG marine safety notices'),{className:'ltt',direction:'top'});
+
+  // Mahia Peninsula NZ — Rocket Lab maritime exclusion
+  L.circle([-39.26, 177.87], {radius:20000, ...style})
+    .addTo(exclusionLayer)
+    .bindTooltip(tip('Māhia Launch Exclusion Zone','Maritime NZ exclusion notices'),{className:'ltt',direction:'top'});
 }
 
 function drawZones() {
