@@ -2,7 +2,7 @@ name: Update VesselAPI positions
 
 on:
   schedule:
-    - cron: '0 */2 * * *'   # every 2 hours
+    - cron: '0 6 */3 * *'   # every 3 days (~10 runs/month × 10 vessels = ~100 of 150 free calls)
   workflow_dispatch:          # manual trigger
 
 jobs:
