@@ -873,9 +873,17 @@ function startCountdowns() {
 
 async function fetchMissionsBackground() {
   try {
+    // Skip fetch if cache is < 10 minutes old
+    const cached = JSON.parse(localStorage.getItem(LS.MISSIONS)||'null');
+    if(cached?.ts && Date.now() - cached.ts < 600000) {
+      if(!missionsCache.length && cached.data) missionsCache = cached.data;
+      addLog(`Missions: cache fresh (${Math.round((Date.now()-cached.ts)/60000)}m old) — skipping fetch`, 'sys');
+      if(S.tab==='vessel') renderRight();
+      return;
+    }
     const base = 'https://ll.thespacedevs.com/2.3.0/launches/';
-    const [upResp] = await Promise.all([fetch(`${base}upcoming/?limit=30&ordering=net`)]);
-    if(!upResp.ok) return;
+    const upResp = await fetch(`${base}upcoming/?limit=30&ordering=net`);
+    if(!upResp.ok) { addLog(`Missions background fetch: HTTP ${upResp.status}`, 'err'); return; }
     const upData = await upResp.json();
     const filterFn = l => {
       const netTs = l.net ? new Date(l.net).getTime() : null;
@@ -894,6 +902,21 @@ async function fetchMissionsBackground() {
 async function showMissions() {
   const panel = document.getElementById('missions-panel');
   panel.style.display = 'block';
+
+  // Serve from cache if < 10 minutes old — avoids burning rate limit on every open
+  const cachedMeta = (() => { try { return JSON.parse(localStorage.getItem(LS.MISSIONS)||'null'); } catch(e){return null;} })();
+  if(cachedMeta?.ts && Date.now() - cachedMeta.ts < 600000 && missionsCache.length) {
+    const ageMin = Math.round((Date.now() - cachedMeta.ts) / 60000);
+    document.getElementById('missions-src').textContent =
+      `${missionsCache.length} upcoming · cached ${ageMin}m ago · The Space Devs API`;
+    document.getElementById('missions-content').innerHTML =
+      `<div style="padding:10px 18px 6px;font-size:11px;font-weight:700;color:var(--t4);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--bdr2)">UPCOMING</div>` +
+      missionsCache.map(buildMissionCard).join('');
+    startCountdowns();
+    addLog(`Missions: served from cache (${ageMin}m old)`, 'sys');
+    return;
+  }
+
   document.getElementById('missions-content').innerHTML =
     '<div style="padding:24px;color:var(--t4)">Loading…</div>';
   addLog('Missions: fetching from The Space Devs API…', 'sys');
@@ -937,9 +960,22 @@ async function showMissions() {
     startCountdowns();
   } catch(e) {
     addLog(`Missions fetch error: ${e.message}`, 'err');
-    document.getElementById('missions-src').textContent = 'Could not load — check connection';
-    document.getElementById('missions-content').innerHTML =
-      `<div style="padding:20px;color:var(--t4)">Could not reach The Space Devs API: ${esc(e.message)}</div>`;
+    if(missionsCache.length) {
+      const is429 = e.message.includes('429');
+      document.getElementById('missions-src').textContent =
+        `${is429?'Rate limited':'Error'} — showing cached data · The Space Devs API`;
+      document.getElementById('missions-content').innerHTML =
+        `<div style="background:rgba(255,140,0,.07);border-bottom:1px solid #553300;padding:9px 18px;font-size:12px;color:#cc7700">
+          ⚠ ${is429?'API rate limited (429) — try again in a few minutes':'Could not reach API'} · displaying cached missions
+        </div>` +
+        `<div style="padding:10px 18px 6px;font-size:11px;font-weight:700;color:var(--t4);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--bdr2)">UPCOMING</div>` +
+        missionsCache.map(buildMissionCard).join('');
+      startCountdowns();
+    } else {
+      document.getElementById('missions-src').textContent = 'Could not load — check connection';
+      document.getElementById('missions-content').innerHTML =
+        `<div style="padding:20px;color:var(--t4)">Could not reach The Space Devs API: ${esc(e.message)}</div>`;
+    }
   }
 }
 
