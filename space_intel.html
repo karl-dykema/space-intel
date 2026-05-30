@@ -324,6 +324,14 @@ const VESSEL_DB = {
     verified:false,
   },
   // Return On Investment: Neutron ASDS, under construction at Bollinger Shipyards — MMSI not yet assigned
+  // ── TEST — always active, remove when real vessels appear ────
+  '636092398': {
+    name:'Ever Given', abbr:'Ever Given',
+    operator:'TEST', role:'Container Ship (AIS test vessel)',
+    color:'#888888', homePort:'Panama',
+    notes:'Famous container ship — included as a test vessel to verify AIS connection is working. Remove once SpaceX/Blue Origin vessels appear. [✓ MMSI]',
+    verified:true,
+  },
   // ── ULA ──────────────────────────────────────────────────────
   '367532790': {
     name:'R/V Retrieval', abbr:'Retrieval',
@@ -1088,9 +1096,9 @@ async function fetchNews(){
           const r=new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([^<]*)<\\/${tag}>`);
           const x=r.exec(b);return x?(x[1]||x[2]||'').trim():'';
         };
-        const title=get('title');
+        const title=stripHTML(get('title'));
         const link=get('link')||(/<link[^>]*>([^<]+)<\/link>/.exec(b)||[])[1]?.trim()||'';
-        const desc=get('description').replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+        const desc=stripHTML(get('description'));
         const date=get('pubDate');
         if(title) fresh.push({title,link,desc,date,vessel:v.name,mmsi:v.mmsi,color:v.color});
       }
@@ -1143,6 +1151,11 @@ function renderNewsArticles(articles){
 
 // ── Util ──────────────────────────────────────────────────────
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function stripHTML(s){
+  return String(s||'')
+    .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&').replace(/&quot;/g,'"')
+    .replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim();
+}
 function tsStr(ts){
   if(!ts)return'—';
   const d=new Date(ts);
