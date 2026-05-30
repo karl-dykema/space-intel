@@ -160,7 +160,7 @@ button{font-family:var(--f);cursor:pointer;}
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.11</span></div>
+      <div class="ht">SPACE INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.12</span></div>
       <div class="hs">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -958,18 +958,23 @@ function scanRegion() {
   setTab('log');
   const ws=new WebSocket('wss://stream.aisstream.io/v0/stream');
   const seen=new Set();
+  let rawCount=0;
   ws.onopen=()=>{
+    addLog('SCAN: WebSocket open — sending subscription…','sys');
     ws.send(JSON.stringify({
       APIKey:key,
       BoundingBoxes:[
-        [[32,  -122],[38,  -117]],  // Pacific coast CA (OCISLY/Vandenberg)
-        [[27.5,-81 ],[29.5,-79 ]],  // Atlantic FL / Cape Canaveral (ASOG)
-        [[28,  -97 ],[30,  -94 ]],  // Gulf / Boca Chica (Starbase)
+        [[32,  -122],[38,  -117]],  // Pacific coast CA
+        [[27.5,-81 ],[29.5,-79 ]],  // Atlantic FL / Cape Canaveral
+        [[28,  -97 ],[30,  -94 ]],  // Gulf / Boca Chica
       ],
       FilterMessageTypes:['PositionReport'],
     }));
+    addLog('SCAN: subscription sent — waiting for data…','sys');
   };
   ws.onmessage=ev=>{
+    rawCount++;
+    if(rawCount===1) addLog('SCAN: first message received — stream is live','event');
     try{
       const msg=JSON.parse(ev.data);
       const rawMMSI=String(msg.MetaData?.MMSI_String||msg.MetaData?.MMSI||'');
@@ -984,10 +989,11 @@ function scanRegion() {
       }
     }catch(e){}
   };
+  ws.onclose=ev=>addLog(`SCAN: WebSocket closed (code ${ev.code}) after ${rawCount} msgs`,'sys');
   ws.onerror=()=>addLog('SCAN: connection error','err');
   setTimeout(()=>{
     ws.close();
-    addLog(`SCAN done — ${seen.size} MMSIs seen (${[...seen].filter(m=>VESSEL_DB[m]).length} fleet matches)`, 'warn');
+    addLog(`SCAN done — ${rawCount} raw msgs · ${seen.size} unique MMSIs · ${[...seen].filter(m=>VESSEL_DB[m]).length} fleet matches`,'warn');
     if(wasConnected){connect(key); addLog('SCAN: resuming main stream','sys');}
   }, 30000);
 }
