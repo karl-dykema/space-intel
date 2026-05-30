@@ -1286,10 +1286,11 @@ function startCountdowns() {
       const net = parseInt(el.dataset.net);
       if(!net) return;
       const diff = net - Date.now();
-      if(diff <= 0) { el.textContent = 'T-0 / LAUNCHED'; return; }
-      const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000),
-            m=Math.floor((diff%3600000)/60000),  s=Math.floor((diff%60000)/1000);
-      el.textContent = `T-${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+      const abs  = Math.abs(diff);
+      const d=Math.floor(abs/86400000), h=Math.floor((abs%86400000)/3600000),
+            m=Math.floor((abs%3600000)/60000),  s=Math.floor((abs%60000)/1000);
+      const parts = `${d}d ${String(h).padStart(2,'0')}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`;
+      el.textContent = diff > 0 ? `T-${parts}` : `T+${parts}`;
     });
   }, 1000);
 }
@@ -1386,12 +1387,8 @@ function buildMissionCard(l, isPast=false) {
       ${missionType?`<span class="mtag" style="background:#1a2a3a;color:var(--t5)">${esc(missionType)}</span>`:''}
       <span class="mtag" style="background:${statusCol}22;color:${statusCol}">${esc(status)}</span>
     </div>
-    ${isPast
-      ? `<div class="mcountdown" style="color:var(--t5);font-size:16px">${esc(netStr)}</div>
-         <div class="mcountdown-lbl" style="color:${/Success/i.test(status)?'#00ff88':'#ff4444'};font-weight:700">${esc(status)}</div>`
-      : `<div class="mcountdown" style="color:${col}" ${net?`data-net="${net}"`:''}>${net?'calculating…':'Date TBD'}</div>
-         <div class="mcountdown-lbl">${esc(netStr)}</div>`
-    }
+    <div class="mcountdown" style="color:${isPast?'var(--t5)':col}" ${net?`data-net="${net}"`:''}>${net?'calculating…':'Date TBD'}</div>
+    <div class="mcountdown-lbl">${esc(netStr)}${isPast?` · <span style="color:${/Success/i.test(status)?'#00ff88':'#ff4444'};font-weight:700">${esc(status)}</span>`:''}</div>
     ${catchV?`<div style="margin-top:10px;padding:10px 12px;background:${opColor(catchV.operator)}11;border:1px solid ${opColor(catchV.operator)}44;border-radius:2px">
       <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:4px">PROJECTED CATCH VESSEL</div>
       <div style="font-size:15px;font-weight:700;color:${opColor(catchV.operator)}">${esc(catchV.name||catchV.abbr)}</div>
