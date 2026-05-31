@@ -141,6 +141,15 @@ function maybeSBPos(mmsi, lat, lon, sog, cog, ts) {
   SB.insert('positions', { mmsi, lat, lon, sog, cog, ts:new Date(ts).toISOString() });
 }
 
+// Throttle: one aircraft position write per minute
+const sbLastAcPos = {};
+function maybeSBAcPos(reg, lat, lon, alt, gs, track, ts) {
+  if(!SB.ready || SHARE_MODE) return;
+  if(sbLastAcPos[reg] && ts - sbLastAcPos[reg] < 60000) return;
+  sbLastAcPos[reg] = ts;
+  SB.insert('aircraft_positions', { reg, lat, lon, alt: alt ?? null, gs: gs ?? null, track: track ?? null, ts: new Date(ts).toISOString() });
+}
+
 function sbWriteEvent(ev) {
   if(!SB.ready) return;
   SB.insert('events', {
@@ -205,6 +214,36 @@ async function loadSBData() {
         updateMarker(S.vessels[mmsi]);
       }
     }
+  }
+
+  // Load aircraft track history (last 24h)
+  const since24h = new Date(Date.now() - 24 * 3600000).toISOString();
+  const acRows = await SB.select('aircraft_positions', {
+    ts: `gte.${since24h}`, order: 'ts.asc', limit: '3000',
+    select: 'reg,lat,lon,alt,gs,track,ts',
+  });
+  if (acRows?.length) {
+    const byReg = {};
+    acRows.forEach(r => { (byReg[r.reg] = byReg[r.reg] || []).push(r); });
+    for (const [reg, rows] of Object.entries(byReg)) {
+      if (!AIRCRAFT_DB[reg]) continue;
+      const pts = rows.map(r => [r.lat, r.lon]);
+      const last = rows[rows.length - 1];
+      const lastTs = new Date(last.ts).getTime();
+      const existing = S.aircraft[reg];
+      if (!existing) {
+        S.aircraft[reg] = {
+          reg, lat: last.lat, lon: last.lon,
+          alt: last.alt, gs: last.gs, track: last.track ?? 0,
+          ts: lastTs, _stale: true, _staleTs: lastTs,
+          _track: pts,
+        };
+      } else {
+        existing._track = [...pts.filter(p => !existing._track?.some(e => e[0]===p[0]&&e[1]===p[1])), ...(existing._track||[])];
+      }
+      updateAircraftMarker(reg);
+    }
+    addLog(`Supabase: aircraft tracks loaded (${Object.keys(byReg).length} regs, ${acRows.length} pts)`, 'db');
   }
 
   addLog('Supabase: history load complete', 'db');
@@ -411,9 +450,13 @@ function initMap() {
     `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:#ff8c00;margin-top:5px;padding-top:5px;border-top:1px solid var(--bdr2)">
       <div style="width:12px;height:3px;background:#ff8c00;border-radius:1px;opacity:0.7"></div>Safety Zone</div>
     <div style="margin-top:8px;padding-top:5px;border-top:1px solid var(--bdr2);font-size:9px;color:var(--t4);letter-spacing:.06em;margin-bottom:3px">LANDMARKS</div>` +
-    [['#ff4400','🚀 Launch pad'],['#ffcc00','👁 Viewing area'],['#00aaff','🏛 NASA / facility'],['#00cc88','⚓ Port']].map(([c,l])=>
-      `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:${c};margin-bottom:2px">
-        <svg width="10" height="10" viewBox="0 0 14 14"><polygon points="7,1 13,13 7,10 1,13" fill="${c}"/></svg>${l}</div>`
+    [
+      ['#ff4400','Launch pad',   `<svg width="10" height="10" viewBox="0 0 11 11"><polygon points="5.5,1 10,10 5.5,7.5 1,10" fill="#ff4400"/></svg>`],
+      ['#ffcc00','Viewing area', `<svg width="9" height="9" viewBox="0 0 9 9"><rect x="0.5" y="0.5" width="8" height="8" rx="1" fill="#ffcc00"/></svg>`],
+      ['#00aaff','Facility',     `<svg width="9" height="9" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#00aaff"/></svg>`],
+      ['#00cc88','Port',         `<svg width="9" height="9" viewBox="0 0 10 10"><polygon points="5,1 9,5 5,9 1,5" fill="#00cc88"/></svg>`],
+    ].map(([c,l,icon])=>
+      `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:${c};margin-bottom:2px">${icon}${l}</div>`
     ).join('');
 }
 
@@ -506,17 +549,27 @@ function drawLandmarks() {
   landmarkLayer.clearLayers();
   if(!showLandmarks) return;
   const TYPE_STYLE = {
-    launch:   { col:'#ff4400', sym:'🚀' },
-    viewing:  { col:'#ffcc00', sym:'👁' },
-    facility: { col:'#00aaff', sym:'🏛' },
-    port:     { col:'#00cc88', sym:'⚓' },
+    launch:   { col:'#ff4400' },
+    viewing:  { col:'#ffcc00' },
+    facility: { col:'#00aaff' },
+    port:     { col:'#00cc88' },
+  };
+  const landmarkSvg = (type, col) => {
+    if (type === 'launch')
+      return `<svg width="11" height="11" viewBox="0 0 11 11"><polygon points="5.5,1 10,10 5.5,7.5 1,10" fill="${col}" stroke="none" opacity="0.9"/></svg>`;
+    if (type === 'facility')
+      return `<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="${col}" stroke="none" opacity="0.85"/></svg>`;
+    if (type === 'viewing')
+      return `<svg width="9" height="9" viewBox="0 0 9 9"><rect x="0.5" y="0.5" width="8" height="8" rx="1" fill="${col}" stroke="none" opacity="0.85"/></svg>`;
+    if (type === 'port')
+      return `<svg width="10" height="10" viewBox="0 0 10 10"><polygon points="5,1 9,5 5,9 1,5" fill="${col}" stroke="none" opacity="0.85"/></svg>`;
+    return `<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="${col}" opacity="0.7"/></svg>`;
   };
   LANDMARKS.forEach(lm => {
-    const st = TYPE_STYLE[lm.type] || { col:'#888', sym:'·' };
-    const svg = `<svg width="14" height="14" viewBox="0 0 14 14">
-      <polygon points="7,1 13,13 7,10 1,13" fill="${st.col}" stroke="${st.col}" stroke-width="0.5" opacity="0.85"/>
-    </svg>`;
-    const icon = L.divIcon({ html: svg, iconSize:[14,14], iconAnchor:[7,7], className:'' });
+    const st = TYPE_STYLE[lm.type] || { col:'#888' };
+    const svg = landmarkSvg(lm.type, st.col);
+    const sz = lm.type === 'launch' ? 11 : 10;
+    const icon = L.divIcon({ html: svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:'' });
     L.marker([lm.lat, lm.lon], { icon, zIndexOffset:-500 })
       .addTo(landmarkLayer)
       .bindTooltip(
@@ -614,10 +667,12 @@ async function pollAircraft() {
       const prevAc = S.aircraft[reg];
       const _track = prevAc?._track || [];
       const lastPt = _track[_track.length - 1];
-      if (!lastPt || Math.abs(lastPt[0] - ac.lat) > 0.001 || Math.abs(lastPt[1] - ac.lon) > 0.001) {
+      const moved = !lastPt || Math.abs(lastPt[0] - ac.lat) > 0.001 || Math.abs(lastPt[1] - ac.lon) > 0.001;
+      if (moved) {
         _track.push([ac.lat, ac.lon]);
         if (_track.length > 500) _track.shift();
       }
+      const acTs = data.now || Date.now();
       S.aircraft[reg] = {
         reg,
         lat: ac.lat, lon: ac.lon,
@@ -625,10 +680,11 @@ async function pollAircraft() {
         gs: ac.gs,
         track: ac.track ?? 0,
         hex: ac.hex,
-        ts: data.now || Date.now(),
+        ts: acTs,
         _stale: false,
         _track,
       };
+      if (moved) maybeSBAcPos(reg, ac.lat, ac.lon, ac.alt_baro, ac.gs, ac.track ?? 0, acTs);
       updateAircraftMarker(reg);
     } catch(_) {}
     await new Promise(r => setTimeout(r, 300));
@@ -1205,6 +1261,22 @@ function renderFleet(){
     const db = AIRCRAFT_DB[reg];
     if (!db.background) return true;
     return !!S.aircraft[reg];
+  }).sort((a, b) => {
+    const now = Date.now();
+    const acRank = reg => {
+      const ac = S.aircraft[reg];
+      if (!ac) return 5;
+      if (!ac._stale && ac.alt !== 'ground') return 0;                          // airborne
+      if (!ac._stale && (ac.gs || 0) > 3) return 1;                             // taxiing
+      if (!ac._stale) return 2;                                                  // on ground live
+      if (ac._staleTs && now - ac._staleTs < 3600000) return 3;                 // recently landed
+      return 4;                                                                  // stale / unknown
+    };
+    const ra = acRank(a), rb = acRank(b);
+    if (ra !== rb) return ra - rb;
+    const tsA = S.aircraft[a]?._staleTs || S.aircraft[a]?.ts || 0;
+    const tsB = S.aircraft[b]?._staleTs || S.aircraft[b]?.ts || 0;
+    return tsB - tsA;
   });
   const aircraftRows = visibleAC.map(reg => buildAircraftRow(reg)).join('');
 
