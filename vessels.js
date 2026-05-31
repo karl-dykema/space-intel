@@ -543,9 +543,36 @@ const AIRCRAFT_DB = {
     model:'Lockheed ER-2', type:'research',
     notes:'Sister ship to N806NA. Based at Armstrong AFRC, Edwards AFB.',
   },
+  'N817NA': {
+    name:'NASA DC-8 Flying Lab', abbr:'DC-8 817',
+    operator:'NASA', role:'Airborne science platform',
+    model:'Douglas DC-8-72', type:'research', background:true,
+    notes:'Based at Armstrong AFRC. Four-engine jet used as airborne science platform; carries instruments for atmospheric and Earth-observation campaigns. Occasionally supports launch range coverage.',
+  },
+  // ── Stratolaunch ─────────────────────────────────────────────
+  'N351SL': {
+    name:'Stratolaunch Roc', abbr:'Roc',
+    operator:'Stratolaunch', role:'Hypersonic test vehicle carrier',
+    model:'Stratolaunch Model 351', type:'carrier', background:true,
+    notes:'World\'s largest aircraft by wingspan (117m). Twin-fuselage, 6-engine carrier for Talon-A reusable hypersonic test vehicle. Operates from Mojave Air & Space Port. Air-launches Talon-A from ~35,000ft over Pacific test range.',
+  },
+  // ── Northrop Grumman ─────────────────────────────────────────
+  'N140SC': {
+    name:'Northrop L-1011 Star Gazer', abbr:'Star Gazer',
+    operator:'Northrop Grumman', role:'Pegasus XL air-launch carrier',
+    model:'Lockheed L-1011 TriStar', type:'carrier', background:true,
+    notes:'Modified L-1011 widebody. Carries Pegasus XL rocket attached beneath fuselage; drops at ~40,000ft altitude over ocean for orbital launches. Based at Vandenberg SFB. Operator: Northrop Grumman Launch & Targeting Systems.',
+  },
+  // ── Virgin Galactic ──────────────────────────────────────────
+  'N348MS': {
+    name:'VMS Eve', abbr:'VMS Eve',
+    operator:'Virgin Galactic', role:'SpaceShipTwo mothership',
+    model:'Scaled Composites White Knight Two', type:'carrier', background:true,
+    notes:'Four-engine carrier aircraft for VSS Unity (SpaceShipTwo). Lifts Unity to ~50,000ft over Mojave Desert for rocket motor ignition. Currently grounded while Virgin Galactic develops Delta-class spacecraft. Based at Mojave Air & Space Port.',
+  },
 };
 
-const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff', 'NASA':'#ff6600', 'CNSA':'#ff4444' };
+const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff', 'NASA':'#ff6600', 'CNSA':'#ff4444', 'Stratolaunch':'#cc44ff', 'Northrop Grumman':'#dd8800', 'Virgin Galactic':'#2277ff' };
 function opColor(op) { return OP_COLORS[op]||'#aaaaaa'; }
 
 // ── Event config ──────────────────────────────────────────────

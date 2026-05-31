@@ -852,7 +852,14 @@ function renderFleet(){
       if(ra!==rb) return ra-rb;
       return (b.ts||0)-(a.ts||0);   // most recent first within same rank
     });
-  const aircraftRows = Object.keys(AIRCRAFT_DB).map(reg => buildAircraftRow(reg)).join('');
+  // Background aircraft only appear when they've been spotted this session (or recently active)
+  const visibleAC = Object.keys(AIRCRAFT_DB).filter(reg => {
+    const db = AIRCRAFT_DB[reg];
+    if (!db.background) return true;
+    const ac = S.aircraft[reg];
+    return !!ac; // has been seen at least once this session
+  });
+  const aircraftRows = visibleAC.map(reg => buildAircraftRow(reg)).join('');
   document.getElementById('fleet').innerHTML =
     rows.map(buildVesselRow).join('') +
     `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>` +
