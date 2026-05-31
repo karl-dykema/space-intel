@@ -1353,7 +1353,6 @@ function updateHeaderStats(){
   } else {
     const live=Object.values(S.vessels).filter(v=>v.lat&&!v._historical&&!v._vapi&&v.ts&&(now-v.ts<600000));
     const moving=live.filter(v=>v.sog>0.5).length;
-    const ops=[...new Set(live.map(v=>v.operator))].length;
     const liveMMSIs    =live.map(v=>v.mmsi);
     const underwayMMSIs=live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
     const airborneRegs =Object.keys(AIRCRAFT_DB).filter(r=>{ const ac=S.aircraft[r]; return ac&&!ac._stale&&ac.alt!=='ground'; });
@@ -1362,7 +1361,6 @@ function updateHeaderStats(){
       [live.length,        'VESSELS', '#00ff88',`cycleVessels(${safeArr(liveMMSIs)},'live')`],
       [moving,             'UNDERWAY','#00d4ff',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
       [airborneRegs.length,'AIRBORNE','#ffcc00',`cycleAircraft(${safeArr(airborneRegs)},'airborne')`],
-      [ops,                'OPS',     '#ff9900',`setTab('events')`],
     ];
     if(S.ws) {
       const parts=[`${KNOWN_MMSIS.length} vessels`];
