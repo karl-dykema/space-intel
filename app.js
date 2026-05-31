@@ -132,6 +132,14 @@ const SB = {
   },
 };
 
+// Suppress GPS noise for stationary vessels: hold display position if new reading
+// is within ~55m and SOG ≤ 0.5 kn. Big jumps (repositioning at dock) still accepted.
+function smoothPos(prevLat, prevLon, rawLat, rawLon, sog) {
+  if (!prevLat || sog > 0.5) return [rawLat, rawLon];
+  const dlat = Math.abs(rawLat - prevLat), dlon = Math.abs(rawLon - prevLon);
+  return (dlat < 0.0005 && dlon < 0.0005) ? [prevLat, prevLon] : [rawLat, rawLon];
+}
+
 // Throttle: one position write per vessel per 5 min
 const sbLastPos = {};
 function maybeSBPos(mmsi, lat, lon, sog, cog, ts) {
@@ -290,8 +298,8 @@ function initSBRealtime() {
         if (!S.vessels[mmsi]) S.vessels[mmsi] = { mmsi, ...VESSEL_DB[mmsi] };
         const v = S.vessels[mmsi];
         if (ts <= (v.ts || 0)) return;
-        v.lat = rec.lat; v.lon = rec.lon;
-        v.sog = rec.sog; v.cog = rec.cog;
+        v.sog = rec.sog ?? 0; v.cog = rec.cog ?? 0;
+        [v.lat, v.lon] = smoothPos(v.lat, v.lon, rec.lat, rec.lon, v.sog);
         v.ts = ts; v._stale = false;
         if (!history[mmsi]) history[mmsi] = { positions: [], firstSeen: ts, lastSeen: ts };
         history[mmsi].positions.push({ lat: rec.lat, lon: rec.lon, ts, sog: rec.sog, cog: rec.cog });
@@ -414,7 +422,8 @@ function handleAIS(msg) {
     const lat=pr.Latitude,lon=pr.Longitude;
     if(lat&&lon&&lat!==0&&lon!==0) {
       const wasStopped=!prev||prev.sog<=0.5;
-      v.lat=lat; v.lon=lon; v.sog=pr.Sog??0; v.cog=pr.Cog??0;
+      v.sog=pr.Sog??0; v.cog=pr.Cog??0;
+      [v.lat, v.lon] = smoothPos(prev?.lat, prev?.lon, lat, lon, v.sog);
       v.navStatus=pr.NavigationalStatus; v.ts=now; v._historical=false;
       addLog(`AIS pos  ${info.abbr||mmsi}  ${lat.toFixed(4)}, ${lon.toFixed(4)}  ${v.sog.toFixed(1)} kn  COG ${Math.round(v.cog)}°`, 'ais');
 
