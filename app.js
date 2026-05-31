@@ -1242,7 +1242,7 @@ function connect(key) {
       FiltersShipMMSI:KNOWN_MMSIS, FilterMessageTypes:['PositionReport','ShipStaticData'],
     }));
     S.ws=ws; btn.textContent='DISCONNECT'; btn.disabled=false; btn.classList.add('on');
-    setDot('on','● LIVE — '+KNOWN_MMSIS.length+' vessels globally');
+    setDot('on','● LIVE');
     addLog(`AIS connected — subscribed to ${KNOWN_MMSIS.length} MMSIs globally`, 'ais');
   };
   ws.onmessage=async ev=>{
@@ -1351,11 +1351,18 @@ function updateHeaderStats(){
     const liveMMSIs    =live.map(v=>v.mmsi);
     const underwayMMSIs=live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
     const airborneAC   =Object.keys(AIRCRAFT_DB).filter(r=>{ const ac=S.aircraft[r]; return ac&&!ac._stale&&ac.alt!=='ground'; }).length;
+    const orbitingSC   =Object.keys(S_spacecraft||{}).filter(n=>S_spacecraft[n]?.lat!=null).length;
     rows=[
       [live.length + airborneAC, 'LIVE',    '#00ff88',`cycleVessels(${safeArr(liveMMSIs)},'live')`],
       [moving + airborneAC,      'UNDERWAY','#00d4ff',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
       [ops,                      'OPS',     '#ff9900',`setTab('events')`],
     ];
+    if(S.ws) {
+      const parts=[`${KNOWN_MMSIS.length} vessels`];
+      if(Object.keys(S.aircraft||{}).length) parts.push(`${Object.keys(S.aircraft).length} aircraft`);
+      if(orbitingSC) parts.push(`${orbitingSC} spacecraft`);
+      document.getElementById('cstatus').textContent='● LIVE — '+parts.join(' · ');
+    }
   }
   document.getElementById('hstats').innerHTML=rows
     .map(([v,l,c,fn])=>`<div onclick="${fn}" style="cursor:${v>0?'pointer':'default'};text-align:center" title="${l}">
@@ -1369,8 +1376,10 @@ function renderOpLegend(){}
 
 // ── Fleet roster ──────────────────────────────────────────────
 function renderFleet(){
-  const lc=Object.values(S.vessels).filter(v=>v.lat&&!v._historical).length;
-  document.getElementById('lhdr').textContent=S.ws?`FLEET · ${lc} LIVE`:'FLEET ROSTER';
+  const now2=Date.now();
+  const lc=Object.values(S.vessels).filter(v=>v.lat&&!v._historical&&v.ts&&(now2-v.ts<600000)).length;
+  const total=KNOWN_MMSIS.length;
+  document.getElementById('lhdr').textContent=S.ws?`FLEET · ${lc} LIVE · ${total-lc} OFFLINE`:'FLEET ROSTER';
   const rows=KNOWN_MMSIS
     .map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true})
     .sort((a,b)=>{
