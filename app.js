@@ -739,10 +739,54 @@ function computeGroundTrack(satrec) {
   return pts;
 }
 
-function updateSpacecraftMarker(name, pos, meta, layer) {
-  const col = meta.col || '#ffffff';
-  const isStation = /^ISS|^CSS/.test(name);
+function scDistKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, d2r = Math.PI/180;
+  const dLat = (lat2-lat1)*d2r, dLon = (lon2-lon1)*d2r;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*d2r)*Math.cos(lat2*d2r)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Group spacecraft within 200 km of each other (docked / co-orbiting complex)
+function clusterSpacecraft() {
+  const positioned = Object.entries(S_spacecraft).filter(([,sc]) => sc.lat != null);
+  const used = new Set();
+  const clusters = [];
+  // Station names get priority as cluster primary
+  const STATIONS = ['ISS (ZARYA)', 'CSS (TIANHE)'];
+  for (const [name, sc] of positioned) {
+    if (used.has(name)) continue;
+    const members = [name];
+    used.add(name);
+    for (const [other, osc] of positioned) {
+      if (used.has(other)) continue;
+      if (scDistKm(sc.lat, sc.lon, osc.lat, osc.lon) < 200) {
+        members.push(other);
+        used.add(other);
+      }
+    }
+    // Prefer station as primary; cluster is longterm if primary is
+    const station = members.find(n => STATIONS.includes(n));
+    const primary = station || members[0];
+    const psc = S_spacecraft[primary];
+    clusters.push({ primary, members, longterm: psc.longterm });
+  }
+  return clusters;
+}
+
+function removeSatMarker(name) {
+  [orbitLayer, rocketLayer].forEach(layer => {
+    if (!layer) return;
+    if (spacecraftMarkers[name]) { try { layer.removeLayer(spacecraftMarkers[name]); } catch(e) {} delete spacecraftMarkers[name]; }
+    if (orbitTracks[name])       { try { layer.removeLayer(orbitTracks[name]);       } catch(e) {} delete orbitTracks[name]; }
+  });
+}
+
+function updateSpacecraftMarker(primary, members, layer) {
+  const sc = S_spacecraft[primary];
+  const col = sc.col || '#ffffff';
+  const isStation = /^ISS|^CSS/.test(primary);
   const sz = isStation ? 22 : 16;
+  const docked = members.filter(n => n !== primary);
   const svg = isStation
     ? `<svg width="${sz}" height="${sz}" viewBox="0 0 20 20">
         <rect x="8" y="8" width="4" height="4" fill="${col}"/>
@@ -757,50 +801,60 @@ function updateSpacecraftMarker(name, pos, meta, layer) {
         <line x1="13" y1="10" x2="18" y2="10" stroke="${col}" stroke-width="1.5"/>
       </svg>`;
   const icon = L.divIcon({ html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:'' });
-  const altStr = pos.alt ? ` · ${Math.round(pos.alt)} km` : '';
-  const tip = `<b style="color:${col}">${esc(meta.abbr||name)}</b><br>
-    <span style="color:var(--t5)">${esc(meta.operator)}</span><br>${esc(meta.role)}${altStr}`;
-  if (!spacecraftMarkers[name]) {
-    spacecraftMarkers[name] = L.marker([pos.lat, pos.lon], {icon, zIndexOffset:800})
-      .addTo(layer).on('click', () => showSpacecraftDetail(name));
+  const altStr = sc.alt ? ` · ${Math.round(sc.alt)} km` : '';
+  const dockedHtml = docked.map(n => {
+    const d = S_spacecraft[n]; if (!d) return '';
+    return `<br><span style="color:${d.col||'#aaa'};font-size:10px">↳ ${esc(d.abbr||n)} · ${esc(d.operator)}</span>`;
+  }).join('');
+  const dockedBadge = docked.length ? ` <span style="font-size:9px;color:${col}88">(+${docked.length} docked)</span>` : '';
+  const tip = `<b style="color:${col}">${esc(sc.abbr||primary)}${dockedBadge}</b><br>
+    <span style="color:var(--t5)">${esc(sc.operator)}</span><br>${esc(sc.role)}${altStr}${dockedHtml}`;
+  if (!spacecraftMarkers[primary]) {
+    spacecraftMarkers[primary] = L.marker([sc.lat, sc.lon], {icon, zIndexOffset:800})
+      .addTo(layer).on('click', () => showSpacecraftDetail(primary));
   } else {
-    spacecraftMarkers[name].setLatLng([pos.lat, pos.lon]);
-    spacecraftMarkers[name].setIcon(icon);
+    spacecraftMarkers[primary].setLatLng([sc.lat, sc.lon]);
+    spacecraftMarkers[primary].setIcon(icon);
   }
-  spacecraftMarkers[name].bindTooltip(tip, {className:'ltt', direction:'top'});
-
-  // Ground track (next 90 min)
-  const track = computeGroundTrack(tleData[name].satrec);
-  if (track.length > 1) {
-    const style = { color:col, weight:1, opacity:0.25, dashArray:'4 6' };
-    if (orbitTracks[name]) { orbitTracks[name].setLatLngs(track); orbitTracks[name].setStyle(style); }
-    else orbitTracks[name] = L.polyline(track, style).addTo(layer);
+  spacecraftMarkers[primary].bindTooltip(tip, {className:'ltt', direction:'top'});
+  // Ground track (next 90 min) — use primary TLE
+  if (tleData[primary]) {
+    const track = computeGroundTrack(tleData[primary].satrec);
+    if (track.length > 1) {
+      const style = { color:col, weight:1, opacity:0.25, dashArray:'4 6' };
+      if (orbitTracks[primary]) { orbitTracks[primary].setLatLngs(track); orbitTracks[primary].setStyle(style); }
+      else orbitTracks[primary] = L.polyline(track, style).addTo(layer);
+    }
   }
-}
-
-function removeSatMarker(name) {
-  ['orbitLayer','rocketLayer'].forEach(ln => {
-    const layer = ln === 'orbitLayer' ? orbitLayer : rocketLayer;
-    if (!layer) return;
-    if (spacecraftMarkers[name]) { try { layer.removeLayer(spacecraftMarkers[name]); } catch(e) {} delete spacecraftMarkers[name]; }
-    if (orbitTracks[name])       { try { layer.removeLayer(orbitTracks[name]);       } catch(e) {} delete orbitTracks[name]; }
-  });
 }
 
 function updateOrbits() {
   if (!map || !orbitLayer || !rocketLayer) return;
   const now = new Date();
+  // Propagate all positions first
   for (const [name, tle] of Object.entries(tleData)) {
     const pos = propagateSat(tle.satrec, now);
     if (!pos) continue;
     S_spacecraft[name] = { ...tle.meta, name, lat:pos.lat, lon:pos.lon, alt:pos.alt };
-    const isLongterm = tle.meta.longterm;
-    if (isLongterm && !showSpacecraft) {
-      removeSatMarker(name);
+  }
+  // Cluster and render one marker per cluster
+  const clusters = clusterSpacecraft();
+  const renderedPrimaries = new Set();
+  for (const cluster of clusters) {
+    // Non-primary cluster members get no individual marker
+    cluster.members.forEach(n => { if (n !== cluster.primary) removeSatMarker(n); });
+    if (cluster.longterm && !showSpacecraft) {
+      removeSatMarker(cluster.primary);
       continue;
     }
-    updateSpacecraftMarker(name, pos, tle.meta, isLongterm ? orbitLayer : rocketLayer);
+    const layer = cluster.longterm ? orbitLayer : rocketLayer;
+    updateSpacecraftMarker(cluster.primary, cluster.members, layer);
+    renderedPrimaries.add(cluster.primary);
   }
+  // Remove markers for spacecraft no longer in tleData (e.g. re-entered)
+  Object.keys(spacecraftMarkers).forEach(name => {
+    if (!name.startsWith('__') && !renderedPrimaries.has(name)) removeSatMarker(name);
+  });
   updateBoosterProjections();
 }
 
@@ -808,11 +862,6 @@ function toggleSpacecraft() {
   showSpacecraft = !showSpacecraft;
   const btn = document.getElementById('spacecraft-btn');
   if (btn) btn.style.opacity = showSpacecraft ? '1' : '0.4';
-  if (!showSpacecraft) {
-    Object.keys(S_spacecraft).forEach(name => {
-      if (S_spacecraft[name].longterm) removeSatMarker(name);
-    });
-  }
   updateOrbits();
   renderFleet();
 }
@@ -950,13 +999,24 @@ function buildSpacecraftDetail() {
   </div>`;
 }
 
-function buildSpacecraftRow(name) {
-  const sc = S_spacecraft[name];
+function buildSpacecraftRow(cluster) {
+  const sc = S_spacecraft[cluster.primary];
   if (!sc || sc.lat == null) return '';
   const col = sc.col || '#fff';
-  return `<div class="vrow" data-sc="${esc(name)}" style="border-left-color:${col};background:rgba(0,200,255,.03)">
-    <div class="vn" style="color:${col};text-shadow:0 0 8px ${col}44">${esc(sc.abbr||name)}</div>
+  const docked = cluster.members.filter(n => n !== cluster.primary);
+  const dockedHtml = docked.map(n => {
+    const d = S_spacecraft[n]; if (!d) return '';
+    return `<div style="display:flex;align-items:center;gap:5px;padding-left:10px;margin-top:1px">
+      <div style="width:5px;height:5px;border-radius:50%;background:${d.col||'#888'};flex-shrink:0"></div>
+      <span style="font-size:10px;color:${d.col||'#888'}">${esc(d.abbr||n)}</span>
+      <span style="font-size:10px;color:var(--t4)">${esc(d.operator)} · docked</span>
+    </div>`;
+  }).join('');
+  const badge = docked.length ? ` <span style="font-size:9px;font-weight:400;color:${col}77">+${docked.length}</span>` : '';
+  return `<div class="vrow" data-sc="${esc(cluster.primary)}" style="border-left-color:${col};background:rgba(0,200,255,.03)">
+    <div class="vn" style="color:${col};text-shadow:0 0 8px ${col}44">${esc(sc.abbr||cluster.primary)}${badge}</div>
     <div class="vop" style="color:${col}77">${esc(sc.operator)} · ${esc(sc.role)}</div>
+    ${dockedHtml}
     <div class="vbottom">
       <div class="vdot" style="background:#00ff88;box-shadow:0 0 5px #00ff8888"></div>
       <span style="color:#00ff88;font-size:10px;font-weight:700">IN ORBIT</span>
@@ -1148,13 +1208,10 @@ function renderFleet(){
   });
   const aircraftRows = visibleAC.map(reg => buildAircraftRow(reg)).join('');
 
-  // Spacecraft: active missions always shown; long-term only when toggle ON
-  const visibleSC = Object.keys(S_spacecraft).filter(name => !S_spacecraft[name].longterm || showSpacecraft);
-  visibleSC.sort((a,b) => {
-    const la = S_spacecraft[a].longterm ? 1 : 0, lb = S_spacecraft[b].longterm ? 1 : 0;
-    return la - lb || a.localeCompare(b);
-  });
-  const scRows = visibleSC.map(buildSpacecraftRow).filter(Boolean).join('');
+  // Spacecraft: cluster and filter by toggle
+  const scClusters = clusterSpacecraft().filter(c => !c.longterm || showSpacecraft);
+  scClusters.sort((a,b) => (a.longterm?1:0)-(b.longterm?1:0) || a.primary.localeCompare(b.primary));
+  const scRows = scClusters.map(buildSpacecraftRow).filter(Boolean).join('');
 
   document.getElementById('fleet').innerHTML =
     rows.map(buildVesselRow).join('') +
