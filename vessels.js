@@ -124,6 +124,18 @@ const VESSEL_DB = {
     ],
     notes:'RETIRED 2023. IMO 8987876. [✓ MMSI confirmed]',
   },
+  '369599000': {
+    name:'Signet Warhorse I', abbr:'Warhorse I',
+    operator:'SpaceX', role:'Support Tug (East Coast)',
+    color:'#00d4ff', homePort:'Port Canaveral, FL',
+    imo:'9254018', flag:'USA', verified:true,
+    specs:{ type:'Ocean tug', operator:'Signet Maritime Corporation (contracted)' },
+    history:[
+      'Operated by Signet Maritime Corporation, contracted to SpaceX',
+      'Provides towing and escort services for ASOG on Atlantic deployments',
+    ],
+    notes:'East Coast ASOG support tug. IMO 9254018. [✓ MMSI]',
+  },
   // ── Blue Origin ──────────────────────────────────────────────
   '368368960': {
     name:'Jacklyn', abbr:'Jacklyn',
