@@ -99,6 +99,9 @@ Click **COPY SHARE LINK** in Settings to generate a URL that embeds your Supabas
 
 ## Future / Research
 
+### Starship Indian Ocean Recovery Ship
+IFT-11 and IFT-12 (2025–2026) both splashed down at approximately **19°S, 107°E** northwest of Western Australia. SpaceX has placed Starlink-equipped buoys at this location for live coverage. As the program matures toward full reusability, SpaceX will likely station a dedicated recovery ship (possibly a new JRTI-class vessel or converted platform) in this zone to retrieve the Ship. Watch for new vessel registrations with a homeport near Fremantle, WA or Singapore. The landing zone is already drawn on the map as a dashed blue circle.
+
 ### Aircraft tracking (ADS-B)
 Space operations involve trackable aircraft that would complement vessel tracking:
 

@@ -476,6 +476,11 @@ function drawExclusionZones() {
   L.circle([34.43, 127.54], {radius:20000, ...style})
     .addTo(exclusionLayer)
     .bindTooltip(tipIntl('Naro Space Center Maritime Zone','KARI / Korea Coast Guard notices'),{className:'ltt',direction:'top'});
+
+  // Starship Indian Ocean Landing Zone — consistent splashdown target IFT-11 / IFT-12
+  L.circle([-19.0, 107.0], {radius:150000, color:'#00d4ff', fillColor:'#00d4ff', fillOpacity:0.03, weight:1.0, dashArray:'4 6'})
+    .addTo(exclusionLayer)
+    .bindTooltip('<b style="color:#00d4ff">Starship Indian Ocean Landing Zone</b><br><span style="font-size:11px;color:var(--t5)">~19°S 107°E · IFT-11 &amp; IFT-12 splashdown target<br>Future recovery ship staging area</span>',{className:'ltt',direction:'top'});
 }
 
 function drawZones() {
