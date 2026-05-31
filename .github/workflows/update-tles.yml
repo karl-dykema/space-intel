@@ -1,0 +1,29 @@
+name: Update TLE data
+
+on:
+  schedule:
+    - cron: '15 */2 * * *'  # every 2 hours (TLEs update slowly, this is plenty)
+  workflow_dispatch:          # manual trigger
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Fetch station TLEs
+        run: node scripts/fetch-tles.js
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/stations.tle
+          git diff --cached --quiet || git commit -m "chore: update TLE data [skip ci]"
+          git push

@@ -805,40 +805,72 @@ function updateAircraftMarker(reg) {
 }
 
 // ── Orbit tracker ─────────────────────────────────────────────
-const TLE_URLS = [
-  'https://celestrak.org/NORAD/elements/gp.php?GROUP=STATIONS&FORMAT=TLE',
-  'https://celestrak.org/NORAD/elements/stations.txt',
-  'https://celestrak.org/pub/TLE/catalog/stations.txt',
-];
+// data/stations.tle is refreshed by GitHub Actions every 2h (same origin = no CORS).
+// Ivan API is a CORS-open fallback if the file is missing or stale.
+const IVAN_BASE = 'https://tle.ivanstanojevic.me/api/tle';
+
+function parseTLEText(text) {
+  const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
+  let found = 0;
+  for (let i = 0; i + 2 < lines.length; i += 3) {
+    const name = lines[i], l1 = lines[i+1], l2 = lines[i+2];
+    if (!l1.startsWith('1 ') || !l2.startsWith('2 ')) { i -= 2; continue; }
+    const pat = SPACECRAFT_PATTERNS.find(p => p.match(name));
+    if (!pat) continue;
+    try { tleData[name] = { satrec: satellite.twoline2satrec(l1, l2), meta: pat, name }; found++; } catch(e) {}
+  }
+  return found;
+}
+
+async function fetchTLEsFromIvanAPI() {
+  const queries = [
+    `${IVAN_BASE}/25544`, `${IVAN_BASE}/48274`,  // ISS, Tiangong (stable IDs)
+    `${IVAN_BASE}?search=SOYUZ-MS&page-size=5`,
+    `${IVAN_BASE}?search=PROGRESS-MS&page-size=5`,
+    `${IVAN_BASE}?search=SHENZHOU&page-size=5`,
+    `${IVAN_BASE}?search=TIANZHOU&page-size=5`,
+    `${IVAN_BASE}?search=CREW+DRAGON&page-size=5`,
+    `${IVAN_BASE}?search=DRAGON+CRS&page-size=5`,
+    `${IVAN_BASE}?search=CYGNUS+NG&page-size=5`,
+  ];
+  const results = await Promise.allSettled(queries.map(u => fetch(u).then(r => r.ok ? r.json() : null)));
+  let found = 0;
+  for (const res of results) {
+    if (res.status !== 'fulfilled' || !res.value) continue;
+    const items = Array.isArray(res.value.member) ? res.value.member : [res.value];
+    for (const item of items) {
+      if (!item?.name || !item?.line1 || !item?.line2) continue;
+      if (/DEB|OBJECT|R\/B/i.test(item.name)) continue;
+      const pat = SPACECRAFT_PATTERNS.find(p => p.match(item.name));
+      if (!pat || tleData[item.name]) continue;
+      try { tleData[item.name] = { satrec: satellite.twoline2satrec(item.line1, item.line2), meta: pat, name: item.name }; found++; } catch(e) {}
+    }
+  }
+  return found;
+}
 
 async function fetchTLEs() {
   try {
     if (typeof satellite === 'undefined') { addLog('satellite.js not loaded', 'err'); return; }
-    let text = null;
-    for (const url of TLE_URLS) {
-      try {
-        const res = await fetch(url, { cache: 'no-cache' });
-        if (res.ok) { text = await res.text(); break; }
-        addLog(`TLE HTTP ${res.status} — ${url.split('/').pop().split('?')[0]}`, 'err');
-      } catch (fe) { addLog(`TLE fetch: ${fe.message}`, 'err'); }
-    }
-    if (!text) { addLog('TLE: all sources failed', 'err'); return; }
-    const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
-    let found = 0;
-    for (let i = 0; i + 2 < lines.length; i += 3) {
-      const name = lines[i], l1 = lines[i+1], l2 = lines[i+2];
-      if (!l1.startsWith('1 ') || !l2.startsWith('2 ')) { i -= 2; continue; }
-      const pat = SPACECRAFT_PATTERNS.find(p => p.match(name));
-      if (!pat) continue;
-      try {
-        const satrec = satellite.twoline2satrec(l1, l2);
-        tleData[name] = { satrec, meta: pat, name };
-        found++;
-      } catch(e) {}
-    }
-    addLog(`Orbit: loaded TLEs for ${found} spacecraft`, 'sys');
-    updateOrbits();
-  } catch(e) { addLog(`TLE fetch error: ${e.message}`, 'err'); }
+    // Try same-origin TLE file first (no CORS, updated by GitHub Actions)
+    try {
+      const res = await fetch('data/stations.tle', { cache: 'no-cache' });
+      if (res.ok) {
+        const text = await res.text();
+        const found = parseTLEText(text);
+        if (found > 0) {
+          addLog(`Orbit: loaded ${found} spacecraft TLEs`, 'sys');
+          updateOrbits();
+          return;
+        }
+      }
+    } catch(e) {}
+    // Fallback: Ivan TLE API (CORS-open, JSON)
+    addLog('TLE: trying backup API…', 'sys');
+    const found = await fetchTLEsFromIvanAPI();
+    if (found > 0) { addLog(`Orbit: loaded ${found} spacecraft (backup API)`, 'sys'); updateOrbits(); }
+    else addLog('TLE: all sources failed', 'err');
+  } catch(e) { addLog(`TLE error: ${e.message}`, 'err'); }
 }
 
 function propagateSat(satrec, date) {
