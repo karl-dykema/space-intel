@@ -138,6 +138,33 @@ Best approach: poll FAA TFR feed for airspace restrictions near known launch coo
 
 Integration would require: a second data source alongside AIS, a way to display aircraft icons on the same Leaflet map (different icon shape, altitude label), and registration-to-callsign resolution. The OpenSky API returns lat/lon/altitude/velocity and is REST-based — could poll every 15–30s for the known registrations.
 
+### Rocket Stage Tracking (TODO)
+
+Each launch involves multiple tracked elements across different data sources:
+
+| Stage | Tracking method | Status |
+|-------|----------------|--------|
+| Falcon 9 booster | AIS (on drone ship post-landing) | ✅ live |
+| Dragon capsule | Orbit tracker (Celestrak TLE) | planned |
+| Starship Ship | Orbit tracker / Indian Ocean zone | planned |
+| Starship Booster | AIS (JRTI) or Mechazilla (static landmark) | partial |
+| Electron stage | AIS (Seaworker) / helicopter ADS-B | ✅ live |
+| New Glenn booster | AIS (Jacklyn) | ✅ live |
+| Recovery helicopter | ADS-B (ZK-HEV) | ✅ live |
+
+Ideal view: a per-mission "launch card" that links all fleet elements (vessels, aircraft, spacecraft) that are part of that mission, with live status for each.
+
+### Mission-Centric Ops Panel (TODO)
+
+The `OPS` stat in the header currently counts unique operators with live vessels. A better view would be a mission card that aggregates all related assets:
+- Launch vehicle stages on the map (booster on drone ship, capsule in orbit)
+- Recovery vessels in position
+- Support aircraft in the air
+- Countdown / T+ timer
+- Link to live webcast when active
+
+This would replace or augment the current Events tab during active operations.
+
 ### Mobile / Responsive Layout
 
 Current layout is three-column desktop-only. Options if we ever tackle this:

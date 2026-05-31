@@ -237,7 +237,7 @@ let pastMissionsCache = [];
 const prevZones={};
 let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null, aircraftLayer=null;
 let showLandmarks=false;
-const markers={}, tracks={}, aircraftMarkers={};
+const markers={}, tracks={}, aircraftMarkers={}, aircraftTracks={};
 
 // ── Mission linkage ───────────────────────────────────────────
 function isCarryingBooster(mmsi) {
@@ -529,6 +529,16 @@ function toggleLandmarks() {
   if(btn) btn.style.opacity = showLandmarks ? '1' : '0.4';
 }
 
+function toggleLegend() {
+  const ops  = document.getElementById('mapleg-ops');
+  const chev = document.getElementById('legend-chevron');
+  if (!ops) return;
+  const collapsed = ops.style.display === 'none';
+  ops.style.display  = collapsed ? '' : 'none';
+  if (chev) chev.textContent = collapsed ? '▾' : '▸';
+  try { localStorage.setItem('legend_collapsed', collapsed ? '0' : '1'); } catch(e) {}
+}
+
 function updateMarker(v) {
   if(!map||!layers||!v.lat||!v.lon) return;
   const mmsi=v.mmsi, col=opColor(v.operator), sel=S.selected===mmsi;
@@ -595,6 +605,13 @@ async function pollAircraft() {
         }
         continue;
       }
+      const prevAc = S.aircraft[reg];
+      const _track = prevAc?._track || [];
+      const lastPt = _track[_track.length - 1];
+      if (!lastPt || Math.abs(lastPt[0] - ac.lat) > 0.001 || Math.abs(lastPt[1] - ac.lon) > 0.001) {
+        _track.push([ac.lat, ac.lon]);
+        if (_track.length > 500) _track.shift();
+      }
       S.aircraft[reg] = {
         reg,
         lat: ac.lat, lon: ac.lon,
@@ -604,6 +621,7 @@ async function pollAircraft() {
         hex: ac.hex,
         ts: data.now || Date.now(),
         _stale: false,
+        _track,
       };
       updateAircraftMarker(reg);
     } catch(_) {}
@@ -646,6 +664,17 @@ function updateAircraftMarker(reg) {
     aircraftMarkers[reg].setIcon(icon);
   }
   aircraftMarkers[reg].bindTooltip(tooltip, {className:'ltt', direction:'top'});
+
+  // Draw flight path track
+  if (ac._track && ac._track.length > 1) {
+    const trackStyle = { color: col, weight: 1.5, opacity: ac._stale ? 0.2 : 0.45, dashArray: ac._stale ? '3 6' : null };
+    if (aircraftTracks[reg]) {
+      aircraftTracks[reg].setLatLngs(ac._track);
+      aircraftTracks[reg].setStyle(trackStyle);
+    } else {
+      aircraftTracks[reg] = L.polyline(ac._track, trackStyle).addTo(aircraftLayer).on('click', () => showAircraftDetail(reg));
+    }
+  }
 }
 
 // ── WebSocket ─────────────────────────────────────────────────
@@ -778,10 +807,11 @@ function updateHeaderStats(){
     const ops=[...new Set(live.map(v=>v.operator))].length;
     const liveMMSIs    =live.map(v=>v.mmsi);
     const underwayMMSIs=live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
+    const airborneAC   =Object.keys(AIRCRAFT_DB).filter(r=>{ const ac=S.aircraft[r]; return ac&&!ac._stale&&ac.alt!=='ground'; }).length;
     rows=[
-      [live.length,'LIVE',    '#00ff88',`cycleVessels(${safeArr(liveMMSIs)},'live')`],
-      [moving,     'UNDERWAY','#00d4ff',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
-      [ops,        'OPS',     '#ff9900',`setTab('events')`],
+      [live.length + airborneAC, 'LIVE',    '#00ff88',`cycleVessels(${safeArr(liveMMSIs)},'live')`],
+      [moving + airborneAC,      'UNDERWAY','#00d4ff',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
+      [ops,                      'OPS',     '#ff9900',`setTab('events')`],
     ];
   }
   document.getElementById('hstats').innerHTML=rows
@@ -864,19 +894,22 @@ function buildAircraftRow(reg) {
   const db = AIRCRAFT_DB[reg];
   const ac = S.aircraft[reg];
   const col = opColor(db.operator);
-  const airborne = !!ac && !ac._stale;
+  const hasLive = !!ac && !ac._stale;
+  const airborne = hasLive && ac.alt !== 'ground';
+  const taxiing  = hasLive && ac.alt === 'ground' && (ac.gs || 0) > 3;
   const recentLanded = ac?._stale && ac?.lat && ac?._staleTs && (Date.now() - ac._staleTs < 3600000);
-  const dotCol = airborne ? '#00ff88' : recentLanded ? '#ffcc00' : '#2a4a5a';
-  const status = airborne ? 'AIRBORNE' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : 'ON GROUND';
-  const alt = airborne && ac.alt != null && ac.alt !== 'ground' ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
-  const spd = airborne && ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
-  return `<div class="vrow" data-reg="${esc(reg)}" style="border-left-color:${airborne?col:recentLanded?col+'55':'transparent'}${airborne?';background:rgba(0,200,255,.03)':''}">
-    <div class="vn" style="color:${airborne?col:recentLanded?'var(--t2)':'var(--t3)'}">${esc(db.abbr)}</div>
-    <div class="vop" style="color:${airborne?col+'99':col+'33'}">${esc(db.operator)} · ${esc(db.model)}</div>
+  const dotCol = airborne ? '#00ff88' : taxiing ? '#88dd44' : recentLanded ? '#ffcc00' : '#2a4a5a';
+  const status = airborne ? 'AIRBORNE' : taxiing ? 'TAXIING' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : 'ON GROUND';
+  const alt = airborne && ac.alt != null ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
+  const spd = (airborne || taxiing) && ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
+  const active = airborne || taxiing;
+  return `<div class="vrow" data-reg="${esc(reg)}" style="border-left-color:${active?col:recentLanded?col+'55':'transparent'}${active?';background:rgba(0,200,255,.03)':''}">
+    <div class="vn" style="color:${active?col:recentLanded?'var(--t2)':'var(--t3)'}">${esc(db.abbr)}</div>
+    <div class="vop" style="color:${active?col+'99':col+'33'}">${esc(db.operator)} · ${esc(db.model)}</div>
     <div class="vbottom">
-      <div class="vdot" style="background:${dotCol}${airborne?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
-      <span style="color:${dotCol};font-size:10px;font-weight:${airborne?'700':'400'}">${status}</span>
-      ${airborne?`<span style="color:var(--t4);font-size:10px;margin-left:4px">${alt}${spd}</span>`:''}
+      <div class="vdot" style="background:${dotCol}${active?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
+      <span style="color:${dotCol};font-size:10px;font-weight:${active?'700':'400'}">${status}</span>
+      ${active?`<span style="color:var(--t4);font-size:10px;margin-left:4px">${alt}${spd}</span>`:''}
     </div>
   </div>`;
 }
@@ -921,17 +954,21 @@ function buildAircraftDetail() {
   const db = AIRCRAFT_DB[reg];
   const ac = S.aircraft[reg];
   const col = opColor(db.operator);
-  const airborne = !!ac && !ac._stale;
+  const hasLive = !!ac && !ac._stale;
+  const airborne = hasLive && ac?.alt !== 'ground';
+  const taxiing  = hasLive && ac?.alt === 'ground' && (ac?.gs || 0) > 3;
   const recentLanded = ac?._stale && ac?.lat && ac?._staleTs && (Date.now() - ac._staleTs < 3600000);
   const alt = ac?.alt != null && ac.alt !== 'ground' ? Math.round(ac.alt).toLocaleString()+'ft' : '—';
   const spd = ac?.gs != null ? Math.round(ac.gs)+' kn' : '—';
   const hdg = ac?.track != null ? Math.round(ac.track)+'°' : '—';
   const pos = ac?.lat ? `${ac.lat.toFixed(4)}, ${ac.lon.toFixed(4)}` : 'No position';
+  const statusLabel = airborne ? 'AIRBORNE' : taxiing ? 'TAXIING' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : 'ON GROUND';
+  const statusCol   = airborne ? '#00ff88' : taxiing ? '#88dd44' : recentLanded ? '#ffcc00' : 'var(--t4)';
   return `<div style="padding:14px 16px">
     <div style="font-size:18px;font-weight:700;color:${col};letter-spacing:.04em;margin-bottom:2px">${esc(db.name)}</div>
     <div style="font-size:12px;color:var(--t4);margin-bottom:12px">${esc(db.operator)} · ${esc(db.model)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
-      ${stat('STATUS', airborne?'AIRBORNE':recentLanded?`LANDED ${ageStr(ac._staleTs)}`:'ON GROUND', airborne?'#00ff88':recentLanded?'#ffcc00':'var(--t4)')}
+      ${stat('STATUS', statusLabel, statusCol)}
       ${stat('POSITION', pos, 'var(--t2)')}
       ${stat('ALTITUDE', alt, 'var(--t2)')}
       ${stat('SPEED', spd, 'var(--t2)')}
@@ -1608,6 +1645,12 @@ window.onload=()=>{
   initTZSelect();
   initMap();
   renderOpLegend();
+  if (localStorage.getItem('legend_collapsed') === '1') {
+    const ops  = document.getElementById('mapleg-ops');
+    const chev = document.getElementById('legend-chevron');
+    if (ops)  ops.style.display  = 'none';
+    if (chev) chev.textContent = '▸';
+  }
   renderFleet();
   renderRight();
   updateHeaderStats();
