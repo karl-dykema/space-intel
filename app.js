@@ -236,7 +236,7 @@ let missionsCache = [];
 let pastMissionsCache = [];
 const prevZones={};
 let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null;
-let showLandmarks=true;
+let showLandmarks=false;
 const markers={}, tracks={};
 
 // ── Mission linkage ───────────────────────────────────────────
@@ -330,11 +330,13 @@ function handleAIS(msg) {
       }
 
       const nowZ=new Set(detectZones(lat,lon));
-      const prvZ=prevZones[mmsi]||new Set();
+      const prvZ=prevZones[mmsi];  // undefined on first ping — don't fire events
       const role=(info.role||'').toLowerCase();
       const zoneMatters=z=>!z.silent&&(!z.roles||z.roles.some(r=>role.includes(r)));
-      nowZ.forEach(zid=>{if(!prvZ.has(zid)){const z=ZONES.find(z=>z.id===zid);if(zoneMatters(z))addEvent(mmsi,'ZONE_ENTER',`${info.abbr} entered ${z.name}`,lat,lon);}});
-      prvZ.forEach(zid=>{if(!nowZ.has(zid)){const z=ZONES.find(z=>z.id===zid);if(zoneMatters(z))addEvent(mmsi,'ZONE_EXIT', `${info.abbr} left ${z.name}`,lat,lon);}});
+      if(prvZ) {
+        nowZ.forEach(zid=>{if(!prvZ.has(zid)){const z=ZONES.find(z=>z.id===zid);if(zoneMatters(z))addEvent(mmsi,'ZONE_ENTER',`${info.abbr} entered ${z.name}`,lat,lon);}});
+        prvZ.forEach(zid=>{if(!nowZ.has(zid)){const z=ZONES.find(z=>z.id===zid);if(zoneMatters(z))addEvent(mmsi,'ZONE_EXIT', `${info.abbr} left ${z.name}`,lat,lon);}});
+      }
       prevZones[mmsi]=nowZ;
 
       const lt=v.track.slice(-1)[0];
@@ -639,20 +641,36 @@ function cycleVessels(mmsis, key) {
 
 function updateHeaderStats(){
   const now=Date.now();
-  const live=Object.values(S.vessels).filter(v=>v.lat&&!v._historical&&!v._vapi&&v.ts&&(now-v.ts<600000));
-  const moving=live.filter(v=>v.sog>0.5).length;
-  const ops=[...new Set(live.map(v=>v.operator))].length;
-  const liveMMSIs    = live.map(v=>v.mmsi);
-  const underwayMMSIs= live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
   const safeArr=a=>JSON.stringify(a).replace(/"/g,"'");
-  document.getElementById('hstats').innerHTML=[
-    [live.length, 'LIVE',    '#00ff88', `cycleVessels(${safeArr(liveMMSIs)},'live')`],
-    [moving,      'UNDERWAY','#00d4ff', `cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
-    [ops,         'OPS',     '#ff9900', `setTab('events')`],
-  ].map(([v,l,c,fn])=>`<div onclick="${fn}" style="cursor:${v>0?'pointer':'default'};text-align:center" title="${l}">
-    <div class="sv" style="color:${c}">${v}</div>
-    <div class="sl" style="text-decoration:${v>0?'underline':'none'};text-underline-offset:2px">${l}</div>
-  </div>`).join('');
+  let rows;
+  if(SHARE_MODE) {
+    // share mode: count all vessels with any position data
+    const withPos=Object.values(S.vessels).filter(v=>v.lat&&v.ts);
+    const recent=withPos.filter(v=>now-v.ts<86400000); // seen in last 24h
+    const ops=[...new Set(withPos.map(v=>v.operator))].length;
+    const posMMSIs=withPos.map(v=>v.mmsi);
+    rows=[
+      [withPos.length,'TRACKED','#00d4ff',`cycleVessels(${safeArr(posMMSIs)},'live')`],
+      [recent.length, 'RECENT', '#00ff88',`cycleVessels(${safeArr(posMMSIs)},'live')`],
+      [ops,           'OPS',    '#ff9900',`setTab('events')`],
+    ];
+  } else {
+    const live=Object.values(S.vessels).filter(v=>v.lat&&!v._historical&&!v._vapi&&v.ts&&(now-v.ts<600000));
+    const moving=live.filter(v=>v.sog>0.5).length;
+    const ops=[...new Set(live.map(v=>v.operator))].length;
+    const liveMMSIs    =live.map(v=>v.mmsi);
+    const underwayMMSIs=live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
+    rows=[
+      [live.length,'LIVE',    '#00ff88',`cycleVessels(${safeArr(liveMMSIs)},'live')`],
+      [moving,     'UNDERWAY','#00d4ff',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
+      [ops,        'OPS',     '#ff9900',`setTab('events')`],
+    ];
+  }
+  document.getElementById('hstats').innerHTML=rows
+    .map(([v,l,c,fn])=>`<div onclick="${fn}" style="cursor:${v>0?'pointer':'default'};text-align:center" title="${l}">
+      <div class="sv" style="color:${c}">${v}</div>
+      <div class="sl" style="text-decoration:${v>0?'underline':'none'};text-underline-offset:2px">${l}</div>
+    </div>`).join('');
 }
 
 // ── Operator legend ───────────────────────────────────────────
@@ -671,17 +689,20 @@ function renderFleet(){
   const rows=KNOWN_MMSIS
     .map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true})
     .sort((a,b)=>{
+      const now=Date.now();
       const rank=v=>{
-        const isLive=!!v.lat&&!!v.ts&&!v._historical&&(Date.now()-v.ts<600000);
-        const shareHist=SHARE_MODE&&v._historical&&!!v.lat;
+        const isLive=!!v.lat&&!!v.ts&&!v._historical&&!v._vapi&&(now-v.ts<600000);
+        const hasPos=!!v.lat&&!!v.ts;
         const carrying=!!isCarryingBooster(v.mmsi);
         if(carrying&&isLive) return 0;
         if(isLive) return 1;
-        if(carrying) return 2;          // no AIS lock but booster aboard — above historical
-        if(v._historical||shareHist) return 3;
+        if(carrying) return 2;
+        if(hasPos) return 3;          // historical, vapi, or stale — sort by ts within
         return 4;
       };
-      return rank(a)-rank(b);
+      const ra=rank(a),rb=rank(b);
+      if(ra!==rb) return ra-rb;
+      return (b.ts||0)-(a.ts||0);   // most recent first within same rank
     });
   document.getElementById('fleet').innerHTML=rows.map(buildVesselRow).join('');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
