@@ -588,8 +588,11 @@ async function pollAircraft() {
       const data = await res.json();
       const ac = data.ac?.[0];
       if(!ac?.lat || !ac?.lon) {
-        // Aircraft on ground or not broadcasting — keep last known position, mark stale
-        if(S.aircraft[reg]) S.aircraft[reg]._stale = true;
+        if(S.aircraft[reg] && !S.aircraft[reg]._stale) {
+          S.aircraft[reg]._stale = true;
+          S.aircraft[reg]._staleTs = Date.now(); // record when we lost the signal
+          updateAircraftMarker(reg); // re-render as faded
+        }
         continue;
       }
       S.aircraft[reg] = {
@@ -618,20 +621,22 @@ function updateAircraftMarker(reg) {
   const sz = 16;
   const t = ac.track || 0;
   const isHelo = db.type === 'helicopter';
-  // Airplane: forward-pointing arrow shape; helicopter: circle with cross
+  const opacity = ac._stale ? 0.35 : 1;
+  const fill = ac._stale ? 'none' : col;
   const shape = isHelo
-    ? `<circle cx="10" cy="10" r="5" fill="none" stroke="${col}" stroke-width="1.8"/>
-       <line x1="10" y1="4" x2="10" y2="16" stroke="${col}" stroke-width="1.5"/>
-       <line x1="4" y1="10" x2="16" y2="10" stroke="${col}" stroke-width="1.5"/>`
-    : `<polygon points="10,2 13,16 10,12 7,16" fill="${col}" stroke="${col}" stroke-width="0.5"/>`;
+    ? `<circle cx="10" cy="10" r="5" fill="none" stroke="${col}" stroke-width="1.8" opacity="${opacity}"/>
+       <line x1="10" y1="4" x2="10" y2="16" stroke="${col}" stroke-width="1.5" opacity="${opacity}"/>
+       <line x1="4" y1="10" x2="16" y2="10" stroke="${col}" stroke-width="1.5" opacity="${opacity}"/>`
+    : `<polygon points="10,2 13,16 10,12 7,16" fill="${fill}" stroke="${col}" stroke-width="0.5" opacity="${opacity}"/>`;
   const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 20 20" style="transform:rotate(${t}deg);transform-origin:50% 50%;display:block">
     ${shape}
   </svg>`;
   const icon = L.divIcon({html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:''});
-  const alt = ac.alt != null ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
-  const spd = ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
+  const staleNote = ac._stale && ac._staleTs ? ` · last seen ${ageStr(ac._staleTs)}` : '';
+  const alt = !ac._stale && ac.alt != null ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
+  const spd = !ac._stale && ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
   const tooltip = `<b style="color:${col}">${esc(db.abbr)}</b><br>
-    <span style="color:var(--t5)">${esc(db.operator)}</span><br>${esc(db.role)}<br>${esc(db.model)}${alt}${spd}`;
+    <span style="color:var(--t5)">${esc(db.operator)}</span><br>${esc(db.role)}<br>${esc(db.model)}${alt}${spd}${staleNote}`;
   if(!aircraftMarkers[reg]) {
     aircraftMarkers[reg] = L.marker([ac.lat, ac.lon], {icon, zIndexOffset:500})
       .addTo(aircraftLayer)
@@ -859,12 +864,13 @@ function buildAircraftRow(reg) {
   const ac = S.aircraft[reg];
   const col = opColor(db.operator);
   const airborne = !!ac && !ac._stale;
-  const dotCol = airborne ? '#00ff88' : '#2a4a5a';
-  const status = airborne ? 'AIRBORNE' : 'ON GROUND';
+  const recentLanded = ac?._stale && ac?.lat && ac?._staleTs && (Date.now() - ac._staleTs < 3600000);
+  const dotCol = airborne ? '#00ff88' : recentLanded ? '#ffcc00' : '#2a4a5a';
+  const status = airborne ? 'AIRBORNE' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : 'ON GROUND';
   const alt = airborne && ac.alt != null && ac.alt !== 'ground' ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
   const spd = airborne && ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
-  return `<div class="vrow" style="border-left-color:${airborne?col:'transparent'}${airborne?';background:rgba(0,200,255,.03)':''}">
-    <div class="vn" style="color:${airborne?col:'var(--t3)'}">${esc(db.abbr)}</div>
+  return `<div class="vrow" style="border-left-color:${airborne?col:recentLanded?col+'55':'transparent'}${airborne?';background:rgba(0,200,255,.03)':''}">
+    <div class="vn" style="color:${airborne?col:recentLanded?'var(--t2)':'var(--t3)'}">${esc(db.abbr)}</div>
     <div class="vop" style="color:${airborne?col+'99':col+'33'}">${esc(db.operator)} · ${esc(db.model)}</div>
     <div class="vbottom">
       <div class="vdot" style="background:${dotCol}${airborne?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
@@ -915,6 +921,7 @@ function buildAircraftDetail() {
   const ac = S.aircraft[reg];
   const col = opColor(db.operator);
   const airborne = !!ac && !ac._stale;
+  const recentLanded = ac?._stale && ac?.lat && ac?._staleTs && (Date.now() - ac._staleTs < 3600000);
   const alt = ac?.alt != null && ac.alt !== 'ground' ? Math.round(ac.alt).toLocaleString()+'ft' : '—';
   const spd = ac?.gs != null ? Math.round(ac.gs)+' kn' : '—';
   const hdg = ac?.track != null ? Math.round(ac.track)+'°' : '—';
@@ -923,7 +930,7 @@ function buildAircraftDetail() {
     <div style="font-size:18px;font-weight:700;color:${col};letter-spacing:.04em;margin-bottom:2px">${esc(db.name)}</div>
     <div style="font-size:12px;color:var(--t4);margin-bottom:12px">${esc(db.operator)} · ${esc(db.model)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
-      ${stat('STATUS', airborne?'AIRBORNE':'ON GROUND', airborne?'#00ff88':'var(--t4)')}
+      ${stat('STATUS', airborne?'AIRBORNE':recentLanded?`LANDED ${ageStr(ac._staleTs)}`:'ON GROUND', airborne?'#00ff88':recentLanded?'#ffcc00':'var(--t4)')}
       ${stat('POSITION', pos, 'var(--t2)')}
       ${stat('ALTITUDE', alt, 'var(--t2)')}
       ${stat('SPEED', spd, 'var(--t2)')}
