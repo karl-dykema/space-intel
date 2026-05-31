@@ -327,21 +327,6 @@ const VESSEL_DB = {
     ],
     notes:'Massive semi-sub radar platform. Rarely moves but AIS-visible. Primarily BMDS / Pacific range. [✓ MMSI]',
   },
-  // ── Test vessel ───────────────────────────────────────────────
-  '353136000': {
-    name:'Ever Given', abbr:'Ever Given',
-    operator:'TEST', role:'AIS Test Vessel',
-    color:'#556677', homePort:'Panama',
-    imo:'9811000', flag:'Panama', built:2018, verified:true,
-    specs:{ length:'400m', beam:'59m', type:'Ultra-large container ship (ULCS)', capacity:'20,124 TEU' },
-    history:[
-      'Operated by Evergreen Marine Corp; built by Imabari Shipbuilding',
-      'Blocked Suez Canal for 6 days in March 2021 causing global shipping disruption',
-      'One of the most-tracked vessels in the world; reliable AIS test target',
-    ],
-    notes:'AIS test vessel. [✓ MMSI confirmed]',
-  },
-
   // ── China (CNSA / CASC) — Yuanwang Tracking Fleet ───────────
   // Global tracking ships supporting Long March launches, crewed missions, lunar/Mars probes.
   // VesselAPI returns 404 (not in their DB); will appear via aisstream when at sea.

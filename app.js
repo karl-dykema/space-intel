@@ -624,7 +624,7 @@ function updateAircraftMarker(reg) {
        <line x1="10" y1="4" x2="10" y2="16" stroke="${col}" stroke-width="1.5"/>
        <line x1="4" y1="10" x2="16" y2="10" stroke="${col}" stroke-width="1.5"/>`
     : `<polygon points="10,2 13,16 10,12 7,16" fill="${col}" stroke="${col}" stroke-width="0.5"/>`;
-  const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 20 20" transform="rotate(${t})" style="transform-origin:center;transform:rotate(${t}deg)">
+  const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 20 20" style="transform:rotate(${t}deg);transform-origin:50% 50%;display:block">
     ${shape}
   </svg>`;
   const icon = L.divIcon({html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:''});
@@ -634,12 +634,13 @@ function updateAircraftMarker(reg) {
     <span style="color:var(--t5)">${esc(db.operator)}</span><br>${esc(db.role)}<br>${esc(db.model)}${alt}${spd}`;
   if(!aircraftMarkers[reg]) {
     aircraftMarkers[reg] = L.marker([ac.lat, ac.lon], {icon, zIndexOffset:500})
-      .addTo(aircraftLayer).bindTooltip(tooltip, {className:'ltt', direction:'top'});
+      .addTo(aircraftLayer)
+      .on('click', () => showAircraftDetail(reg));
   } else {
     aircraftMarkers[reg].setLatLng([ac.lat, ac.lon]);
     aircraftMarkers[reg].setIcon(icon);
-    aircraftMarkers[reg].bindTooltip(tooltip, {className:'ltt', direction:'top'});
   }
+  aircraftMarkers[reg].bindTooltip(tooltip, {className:'ltt', direction:'top'});
 }
 
 // ── WebSocket ─────────────────────────────────────────────────
@@ -888,11 +889,58 @@ function setTab(t){
 }
 function renderRight(){
   const el=document.getElementById('rpanel');
-  if(S.tab==='events')  el.innerHTML=buildEventFeed();
-  if(S.tab==='vessel')  { el.innerHTML=buildVesselDetail(); startCountdowns(); }
-  if(S.tab==='history') el.innerHTML=buildHistoryTab();
-  if(S.tab==='log')     el.innerHTML=buildLogTab();
+  if(S.tab==='events')   el.innerHTML=buildEventFeed();
+  if(S.tab==='vessel')   { el.innerHTML=buildVesselDetail(); startCountdowns(); }
+  if(S.tab==='aircraft') el.innerHTML=buildAircraftDetail();
+  if(S.tab==='history')  el.innerHTML=buildHistoryTab();
+  if(S.tab==='log')      el.innerHTML=buildLogTab();
 }
+
+function showAircraftDetail(reg) {
+  S.selectedAircraft = reg;
+  const ac = S.aircraft[reg];
+  if(ac?.lat && ac?.lon && map) map.setView([ac.lat, ac.lon], 7);
+  S.tab = 'aircraft';
+  ['events','vessel','history','log'].forEach(id => {
+    document.getElementById('rtab-'+id).classList.toggle('act', false);
+  });
+  document.getElementById('rtab-vessel').classList.add('act');
+  renderRight();
+}
+
+function buildAircraftDetail() {
+  const reg = S.selectedAircraft;
+  if(!reg) return '<div style="padding:16px;color:var(--t4);font-size:12px">No aircraft selected.</div>';
+  const db = AIRCRAFT_DB[reg];
+  const ac = S.aircraft[reg];
+  const col = opColor(db.operator);
+  const airborne = !!ac && !ac._stale;
+  const alt = ac?.alt != null && ac.alt !== 'ground' ? Math.round(ac.alt).toLocaleString()+'ft' : '—';
+  const spd = ac?.gs != null ? Math.round(ac.gs)+' kn' : '—';
+  const hdg = ac?.track != null ? Math.round(ac.track)+'°' : '—';
+  const pos = ac?.lat ? `${ac.lat.toFixed(4)}, ${ac.lon.toFixed(4)}` : 'No position';
+  return `<div style="padding:14px 16px">
+    <div style="font-size:18px;font-weight:700;color:${col};letter-spacing:.04em;margin-bottom:2px">${esc(db.name)}</div>
+    <div style="font-size:12px;color:var(--t4);margin-bottom:12px">${esc(db.operator)} · ${esc(db.model)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+      ${stat('STATUS', airborne?'AIRBORNE':'ON GROUND', airborne?'#00ff88':'var(--t4)')}
+      ${stat('POSITION', pos, 'var(--t2)')}
+      ${stat('ALTITUDE', alt, 'var(--t2)')}
+      ${stat('SPEED', spd, 'var(--t2)')}
+      ${stat('HEADING', hdg, 'var(--t2)')}
+      ${stat('REG', reg, col)}
+    </div>
+    <div style="font-size:11px;color:var(--t4);line-height:1.6">${esc(db.notes||'')}</div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <a href="https://www.flightradar24.com/data/aircraft/${encodeURIComponent(reg.toLowerCase())}" target="_blank"
+        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">FLIGHTRADAR24 ↗</a>
+      <a href="https://globe.adsbexchange.com/?icao=${esc(ac?.hex||'')}" target="_blank"
+        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none${!ac?.hex?';opacity:.4;pointer-events:none':''}">ADSBEXCHANGE ↗</a>
+    </div>
+  </div>`;
+}
+function stat(label,val,col){return`<div style="background:var(--bg3);padding:8px 10px;border-radius:2px"><div style="font-size:9px;color:var(--t4);letter-spacing:.08em;margin-bottom:2px">${label}</div><div style="font-size:12px;font-weight:600;color:${col}">${val}</div></div>`;}
+
 
 // ── Event feed ────────────────────────────────────────────────
 function buildBoosterCards() {
@@ -1541,7 +1589,7 @@ window.onload=()=>{
   if(SHARE_MODE) {
     document.body.classList.add('share-mode');
     const sub=document.getElementById('hsubtitle');
-    if(sub) sub.textContent='GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA';
+    if(sub) sub.textContent='GLOBAL FLEET · AIS + ADS-B · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA';
     const p=new URLSearchParams(location.search);
     const sbUrl=p.get('sb_url'), sbKey=p.get('sb_key');
     if(sbUrl) localStorage.setItem(LS.SB_URL, sbUrl);
