@@ -1365,13 +1365,7 @@ function updateHeaderStats(){
 }
 
 // ── Operator legend ───────────────────────────────────────────
-function renderOpLegend(){
-  document.getElementById('opleg').innerHTML=
-    Object.entries(OP_COLORS).map(([op,c])=>
-      `<div class="opleg-item"><div class="opleg-dot" style="background:${c}"></div>
-      <span style="color:${c}">${op}</span></div>`
-    ).join('');
-}
+function renderOpLegend(){}
 
 // ── Fleet roster ──────────────────────────────────────────────
 function renderFleet(){
