@@ -426,6 +426,7 @@ const LANDMARKS = [
 
   // ── Cape Canaveral / KSC ─────────────────────────────────────
   { id:'lc39a',           lat:28.608,  lon:-80.604,  name:'LC-39A (SpaceX)',                 type:'launch',   desc:'Apollo-era pad leased by SpaceX. Falcon 9, Falcon Heavy, future Starship East.' },
+  { id:'lc39b',           lat:28.627,  lon:-80.621,  name:'LC-39B (NASA — SLS/Artemis)',     type:'launch',   desc:'NASA Space Launch System pad. Used for Artemis crewed lunar missions. Originally Apollo, then Shuttle Pad B.' },
   { id:'lc40',            lat:28.562,  lon:-80.577,  name:'SLC-40 (SpaceX)',                 type:'launch',   desc:'Primary Falcon 9 workhorse pad at Cape Canaveral SFS.' },
   { id:'lz1',             lat:28.485,  lon:-80.545,  name:'LZ-1 — Falcon RTLS (SpaceX)',    type:'launch',   desc:'Landing Zone 1 at Cape Canaveral SFS. Booster return-to-launch-site landing pad for LC-39A / SLC-40 missions. Former SLC-13.' },
   { id:'lz2',             lat:28.486,  lon:-80.543,  name:'LZ-2 — Falcon Heavy RTLS',       type:'launch',   desc:'Landing Zone 2 adjacent to LZ-1. Used for Falcon Heavy side-booster simultaneous landings.' },
@@ -699,6 +700,15 @@ const VEHICLE_TIMELINES = {
     { t:600,        label:'T+10:00  Fairing recovery', vessel:'367532790', highlight:true },
     { t:48*3600,    label:'~T+48h  R/V Retrieval returns to port', vessel:'367532790', highlight:true },
   ],
+  'Space Launch System': [
+    { t:0,          label:'T+0:00  SLS launch from LC-39B' },
+    { t:126,        label:'T+2:06  SRB separation' },
+    { t:495,        label:'T+8:15  Core stage separation' },
+    { t:520,        label:'T+8:40  Orion/ICPS separation — trans-lunar coast begins' },
+    { t:2*3600,     label:'~T+2h   Trans-Lunar Injection burn', highlight:true },
+    { t:4*86400,    label:'~T+4d   Lunar orbit insertion', highlight:true },
+    { t:21*86400,   label:'~T+21d  Orion reentry — Pacific splashdown', highlight:true },
+  ],
 };
 
 function timelineForVehicle(vehicleName) {
@@ -720,11 +730,13 @@ const SPACECRAFT_PATTERNS = [
   { match:n=>/^DRAGON CRS-\d/.test(n),                   abbr:'Dragon',   operator:'SpaceX',           role:'Cargo capsule',     col:'#00d4ff', longterm:false },
   { match:n=>/^CYGNUS NG-\d/.test(n),                    abbr:'Cygnus',   operator:'Northrop Grumman', role:'Cargo spacecraft',  col:'#dd8800', longterm:false },
   { match:n=>/^HTV-\d/.test(n),                          abbr:'HTV',      operator:'JAXA',             role:'Cargo spacecraft',  col:'#ffcc00', longterm:false },
+  { match:n=>/^ORION\b/i.test(n)&&!/DEB/i.test(n),      abbr:'Orion',    operator:'NASA',             role:'Crewed capsule',     col:'#ff6600', longterm:false },
 ];
 
 // ── Launch pad coordinates ────────────────────────────────────
 const LAUNCH_PADS = {
   'lc39a':    { lat:28.608, lon:-80.604 },
+  'lc39b':    { lat:28.627, lon:-80.621 },
   'slc40':    { lat:28.562, lon:-80.577 },
   'slc4e':    { lat:34.632, lon:-120.611 },
   'starbase': { lat:25.997, lon:-97.159 },
@@ -756,6 +768,31 @@ const BOOSTER_PROFILES = {
     boosterSecs: 150,                           // ~T+2:30 sep, falls in ocean
     boosterMMSI: '512440000',                   // Seaworker approximate zone
   },
+};
+
+// ── Mission press kits & external links ──────────────────────
+// Keyed by substring matching against launch name. First match wins.
+const MISSION_LINKS = {
+  'Artemis III':   { page:'https://www.nasa.gov/mission/artemis-iii/',   pressKit: null },
+  'Artemis II':    { page:'https://www.nasa.gov/mission/artemis-ii/',    pressKit:'https://www.nasa.gov/wp-content/uploads/2024/04/artemis-ii-media-kit-may-2024.pdf' },
+  'Artemis I':     { page:'https://www.nasa.gov/mission/artemis-i/',     pressKit:'https://www.nasa.gov/wp-content/uploads/2022/02/artemis1mediakitfinal.pdf' },
+  'Crew-':         { page:'https://www.nasa.gov/commercial-crew-program/', pressKit: null },
+  'CRS-':          { page:'https://www.nasa.gov/commercial-resupply/',   pressKit: null },
+  'Europa Clipper':{ page:'https://europa.nasa.gov/',                    pressKit:'https://www.nasa.gov/press-kit/europa-clipper-launch-press-kit/' },
+  'GOES-':         { page:'https://www.nasa.gov/mission/goes/',          pressKit: null },
+  'SPHEREx':       { page:'https://www.nasa.gov/mission/spherex/',       pressKit: null },
+};
+
+// Program-level links (from Space Devs program array)
+const PROGRAM_LINKS = {
+  'Artemis':                'https://www.nasa.gov/artemis/',
+  'Commercial Crew Program':'https://www.nasa.gov/commercial-crew-program/',
+  'Commercial Resupply Services':'https://www.nasa.gov/commercial-resupply/',
+  'Starlink':               'https://www.spacex.com/starlink/',
+  'New Glenn':              'https://www.blueorigin.com/new-glenn',
+  'Vulcan':                 'https://www.ulalaunch.com/rockets/vulcan-centaur',
+  'Electron':               'https://www.rocketlabusa.com/launch/electron/',
+  'Neutron':                'https://www.rocketlabusa.com/launch/neutron/',
 };
 
 function vesselHintsForLaunch(op, padName, locName='') {

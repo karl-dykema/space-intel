@@ -26,7 +26,7 @@
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE FLEET INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.52</span></div>
+      <div class="ht">SPACE FLEET INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.53</span></div>
       <div class="hs" id="hsubtitle">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -50,6 +50,7 @@
     <button class="cbtn" id="spacecraft-btn" onclick="toggleSpacecraft()" title="Toggle ISS, Tiangong, X-37B and other long-term orbital assets" style="opacity:0.4">SPACECRAFT</button>
     <button class="cbtn admin-only" onclick="clearEvents()" style="color:var(--t4);margin-left:auto">CLEAR EVENTS</button>
     <button class="cbtn share-only" onclick="showSuggestModal()" style="margin-left:auto;color:var(--grn);border-color:var(--grn)33">SUGGESTIONS</button>
+    <button class="cbtn" onclick="showSources()" style="color:var(--t4)" title="Data sources, APIs, and references">SOURCES</button>
   </div>
 
   <div id="body">
@@ -170,6 +171,55 @@
   </div>
   <div class="missions-src" id="missions-src">Loading from The Space Devs launch database…</div>
   <div id="missions-content"></div>
+</div>
+
+<!-- Sources / References modal -->
+<div id="sourcesmodal" style="display:none">
+  <div class="modal-box" style="max-width:560px">
+    <div class="modal-title" style="color:var(--t3)">SOURCES &amp; REFERENCES</div>
+
+    <div class="modal-sec">LIVE DATA FEEDS</div>
+    <div class="modal-desc" style="line-height:1.9">
+      <b style="color:var(--acc)">AIS (vessel positions)</b> — <a href="https://aisstream.io" target="_blank" style="color:var(--t3)">aisstream.io</a> · WebSocket, admin key, global terrestrial AIS<br>
+      <b style="color:var(--acc)">Vessel snapshots</b> — <a href="https://vesselapi.com" target="_blank" style="color:var(--t3)">VesselAPI.com</a> · GitHub Actions every 3 days, free tier<br>
+      <b style="color:var(--acc)">Aircraft (ADS-B)</b> — <a href="https://airplanes.live" target="_blank" style="color:var(--t3)">airplanes.live</a> · REST, no key required, polled every 60s<br>
+      <b style="color:var(--acc)">Orbital TLEs</b> — <a href="https://celestrak.org" target="_blank" style="color:var(--t3)">Celestrak</a> (US Space Force) · refreshed hourly<br>
+      <b style="color:var(--acc)">Mission &amp; launch data</b> — <a href="https://thespacedevs.com" target="_blank" style="color:var(--t3)">The Space Devs / Launch Library 2</a> · free tier
+    </div>
+
+    <div class="modal-sec">INFRASTRUCTURE</div>
+    <div class="modal-desc" style="line-height:1.9">
+      <b style="color:var(--acc)">Position history</b> — <a href="https://supabase.com" target="_blank" style="color:var(--t3)">Supabase</a> PostgreSQL · free tier<br>
+      <b style="color:var(--acc)">Map rendering</b> — <a href="https://leafletjs.com" target="_blank" style="color:var(--t3)">Leaflet.js 1.9</a> · tiles © <a href="https://www.openstreetmap.org/copyright" target="_blank" style="color:var(--t3)">OpenStreetMap contributors</a><br>
+      <b style="color:var(--acc)">Orbital math</b> — <a href="https://github.com/shashwatak/satellite-js" target="_blank" style="color:var(--t3)">satellite.js 4.1</a> SGP4/SDP4<br>
+      <b style="color:var(--acc)">Analytics</b> — <a href="https://www.goatcounter.com" target="_blank" style="color:var(--t3)">GoatCounter</a> · privacy-focused, no cookies, no personal data<br>
+      <b style="color:var(--acc)">Hosting</b> — <a href="https://pages.github.com" target="_blank" style="color:var(--t3)">GitHub Pages</a> · static, free
+    </div>
+
+    <div class="modal-sec">EXTERNAL LOOKUPS</div>
+    <div class="modal-desc" style="line-height:1.9">
+      <a href="https://www.marinetraffic.com" target="_blank" style="color:var(--t3)">MarineTraffic</a> ·
+      <a href="https://www.vesselfinder.com" target="_blank" style="color:var(--t3)">VesselFinder</a> ·
+      <a href="https://www.flightaware.com" target="_blank" style="color:var(--t3)">FlightAware</a> ·
+      <a href="https://www.flightradar24.com" target="_blank" style="color:var(--t3)">FlightRadar24</a><br>
+      <a href="https://www.nasa.gov/artemis/" target="_blank" style="color:var(--t3)">NASA Artemis</a> ·
+      <a href="https://nextspaceflight.com" target="_blank" style="color:var(--t3)">NextSpaceFlight</a> ·
+      <a href="https://www.nasaspaceflight.com" target="_blank" style="color:var(--t3)">NASASpaceFlight.com</a> ·
+      <a href="https://spaceflightnow.com" target="_blank" style="color:var(--t3)">Spaceflight Now</a>
+    </div>
+
+    <div class="modal-sec">PROJECT</div>
+    <div class="modal-desc" style="line-height:1.9">
+      Open source · <a href="https://github.com/karl-dykema/space-intel" target="_blank" style="color:var(--acc)">github.com/karl-dykema/space-intel</a><br>
+      Vessel data curated from public AIS records, MarineTraffic, and VesselFinder.<br>
+      All vessel positions are public AIS radio broadcasts.<br>
+      <span style="color:var(--t5)">Not affiliated with SpaceX, NASA, or any tracked operator.</span>
+    </div>
+
+    <div style="margin-top:16px">
+      <button class="modal-btn sec" onclick="closeSources()">CLOSE</button>
+    </div>
+  </div>
 </div>
 
 <script data-goatcounter="https://space-intel.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>

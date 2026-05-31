@@ -1178,7 +1178,7 @@ function saveSettings() {
 
 document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('settingsmodal').style.display!=='none') saveSettings();
-  if(e.key==='Escape'){ closeSettings(); closeSuggestModal(); }
+  if(e.key==='Escape'){ closeSettings(); closeSuggestModal(); closeSources(); }
 });
 
 // ── Header stats ──────────────────────────────────────────────
@@ -1650,6 +1650,21 @@ function fmtTime(ts) {
   return d.toLocaleString([], { ...opts, timeZone:currentTZ });
 }
 
+// Parse ISO 8601 duration e.g. "-PT38M" → -2280000 ms
+function parseISODuration(s) {
+  if (!s) return 0;
+  const neg = s.startsWith('-');
+  const m = s.replace(/^-/, '').match(/P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?/);
+  if (!m) return 0;
+  const ms = ((+m[1]||0)*86400 + (+m[2]||0)*3600 + (+m[3]||0)*60 + (+m[4]||0)) * 1000;
+  return neg ? -ms : ms;
+}
+function formatDur(ms) {
+  const abs = Math.abs(ms);
+  const h = Math.floor(abs/3600000), mn = Math.floor((abs%3600000)/60000), s = Math.floor((abs%60000)/1000);
+  return h ? `${h}:${String(mn).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${mn}:${String(s).padStart(2,'0')}`;
+}
+
 // ── Missions (The Space Devs API) ─────────────────────────────
 let countdownTimer = null;
 function startCountdowns() {
@@ -1803,40 +1818,132 @@ async function showMissions() {
 }
 
 function buildMissionCard(l, isPast=false) {
-  const lsp      = l.launch_service_provider?.name||'';
-  const op       = Object.entries(OPERATOR_MATCH).find(([k])=>lsp.includes(k))?.[1]||lsp;
-  const col      = opColor(op);
-  const net      = l.net ? new Date(l.net).getTime() : null;
-  const netStr   = net ? fmtTime(net) : 'TBD';
-  const pad      = l.pad?.name||'';
-  const loc      = l.pad?.location?.name||'';
-  const status   = l.status?.name||'';
-  const statusCol= /Go|Success/i.test(status)?'#00ff88':/Hold|Delay/i.test(status)?'#ff4444':'#ff8800';
-  const vehicle  = l.rocket?.configuration?.name||'';
+  const lsp       = l.launch_service_provider?.name||'';
+  const op        = Object.entries(OPERATOR_MATCH).find(([k])=>lsp.includes(k))?.[1]||lsp;
+  const col       = opColor(op);
+  const net       = l.net ? new Date(l.net).getTime() : null;
+  const netStr    = net ? fmtTime(net) : 'TBD';
+  const pad       = l.pad?.name||'';
+  const loc       = l.pad?.location?.name||'';
+  const status    = l.status?.name||'';
+  const statusCol = /Go|Success/i.test(status)?'#00ff88':/Hold|Delay/i.test(status)?'#ff4444':'#ff8800';
+  const vehicle   = l.rocket?.configuration?.name||'';
   const missionType = l.mission?.type||'';
-  const desc     = l.mission?.description||'';
-  const vessels  = vesselHintsForLaunch(op, pad, loc);
-  const timeline = timelineForVehicle(vehicle);
-  const uncertain= !l.net || /TBD|NET|No Earlier/i.test(l.net_precision?.name||'');
+  const desc      = l.mission?.description||'';
+  const orbit     = l.mission?.orbit?.name||'';
+  const prob      = l.probability != null ? l.probability : null;
+  const winStart  = l.window_start ? new Date(l.window_start).getTime() : null;
+  const winEnd    = l.window_end   ? new Date(l.window_end).getTime()   : null;
+  const uncertain = !l.net || /TBD|NET|No Earlier/i.test(l.net_precision?.name||'');
+  const vessels   = vesselHintsForLaunch(op, pad, loc);
+  const timeline  = timelineForVehicle(vehicle);
 
-  // Override hardcoded ASDS in timeline with pad-aware vessel; flag if corrected
+  // Space Devs extras
+  const patch    = l.mission_patches?.[0]?.image_url || null;
+  const webcast  = l.vid_urls?.find(v=>/youtube|nasa\.gov/i.test(v.url||''))
+                || l.vid_urls?.find(v=>v.type?.name==='Official Webcast')
+                || l.vid_urls?.[0] || null;
+  const crew     = l.launch_crew || [];
+  const programs = l.program || [];
+  const apiTL    = (l.timeline||[]).sort((a,b)=>parseISODuration(a.relative_time)-parseISODuration(b.relative_time));
+
+  // Press kit lookup
+  const missionLinks = Object.entries(MISSION_LINKS).find(([k])=>(l.name||'').includes(k))?.[1] || null;
+
+  // Vessel timeline — patch drone ship to pad-aware MMSI
   const isLandingPlatform = m => { const r=(VESSEL_DB[m]?.role||'').toLowerCase(); return r.includes('drone')||r.includes('landing platform'); };
-  const droneMMSI = vessels.find(isLandingPlatform);
+  const droneMMSI    = vessels.find(isLandingPlatform);
   const apiDroneMMSI = (timeline||[]).find(e=>e.highlight&&e.vessel&&isLandingPlatform(e.vessel))?.vessel;
-  const hasMismatch = apiDroneMMSI && droneMMSI && apiDroneMMSI !== droneMMSI;
-  const patchedTimeline = timeline ? timeline.map(e =>
-    (e.vessel && isLandingPlatform(e.vessel) && droneMMSI && e.vessel !== droneMMSI)
-      ? {...e, vessel:droneMMSI} : e
-  ) : null;
+  const hasMismatch  = apiDroneMMSI && droneMMSI && apiDroneMMSI !== droneMMSI;
+  const patchedTL    = timeline ? timeline.map(e =>
+    (e.vessel && isLandingPlatform(e.vessel) && droneMMSI && e.vessel!==droneMMSI)
+      ? {...e, vessel:droneMMSI} : e) : null;
+  const catchEvents  = (patchedTL||[]).filter(e=>e.highlight&&e.vessel&&VESSEL_DB[e.vessel]);
+  const catchVessel  = catchEvents[0]?.vessel;
+  const catchV       = catchVessel ? VESSEL_DB[catchVessel] : null;
 
-  const catchEvents = (patchedTimeline||[]).filter(e=>e.highlight&&e.vessel&&VESSEL_DB[e.vessel]);
-  const catchVessel = catchEvents[0]?.vessel;
-  const catchV = catchVessel ? VESSEL_DB[catchVessel] : null;
+  // ── HTML sections ─────────────────────────────────────────────
+  const headerHTML = `
+    <div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:8px">
+      ${patch?`<img src="${esc(patch)}" style="width:54px;height:54px;object-fit:contain;flex-shrink:0;border-radius:4px;background:#0a1a2a;padding:2px" loading="lazy">` : ''}
+      <div style="flex:1;min-width:0">
+        <div class="mcard-name" style="color:${col}">${esc(l.name||'Unknown Mission')}</div>
+        <div class="mcard-sub">${esc(vehicle)}${vehicle&&(loc||pad)?' · ':''}${esc(loc||pad)}</div>
+        <div class="mcard-meta" style="margin-top:5px">
+          <span class="mtag" style="background:${col}22;color:${col}">${esc(op)}</span>
+          ${missionType?`<span class="mtag" style="background:#1a2a3a;color:var(--t5)">${esc(missionType)}</span>`:''}
+          ${orbit?`<span class="mtag" style="background:#1a2a3a;color:var(--t5)">${esc(orbit)}</span>`:''}
+          <span class="mtag" style="background:${statusCol}22;color:${statusCol}">${esc(status)}</span>
+          ${prob!=null?`<span class="mtag" style="background:#1a3a2a;color:#44dd88">${prob}% go</span>`:''}
+        </div>
+      </div>
+    </div>`;
 
-  const timelineHTML = patchedTimeline ? `
+  const countdownHTML = `
+    <div class="mcountdown" style="color:${isPast?'var(--t5)':col}" ${net?`data-net="${net}"`:''}>${net?'calculating…':'Date TBD'}</div>
+    <div class="mcountdown-lbl">${esc(netStr)}${isPast?` · <span style="color:${/Success/i.test(status)?'#00ff88':'#ff4444'};font-weight:700">${esc(status)}</span>`:''}
+      ${winStart&&winEnd&&!isPast?`<span style="color:var(--t5);font-size:10px"> · window ${fmtTime(winStart)}–${fmtTime(winEnd)}</span>`:''}
+    </div>`;
+
+  const programsHTML = programs.length ? `
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 4px">
+      ${programs.map(p=>{
+        const link = typeof PROGRAM_LINKS !== 'undefined' && PROGRAM_LINKS[p.name];
+        const chip = `<span style="font-size:10px;padding:2px 8px;background:#1a2535;border:1px solid #2a3a50;color:var(--t3);border-radius:10px;white-space:nowrap">${esc(p.name)}</span>`;
+        return link?`<a href="${esc(link)}" target="_blank" style="text-decoration:none">${chip}</a>`:chip;
+      }).join('')}
+    </div>` : '';
+
+  const linksHTML = (webcast||missionLinks||l.url||l.flightclub_url) ? `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 6px">
+      ${webcast?`<a href="${esc(webcast.url)}" target="_blank"
+        style="font-size:11px;font-weight:700;padding:5px 11px;background:${col}25;border:1px solid ${col}55;color:${col};text-decoration:none;border-radius:2px;white-space:nowrap">▶ WATCH LIVE</a>`:''}
+      ${missionLinks?.pressKit?`<a href="${esc(missionLinks.pressKit)}" target="_blank"
+        style="font-size:11px;padding:5px 11px;background:#1a2a1a;border:1px solid #335533;color:#77bb77;text-decoration:none;border-radius:2px;white-space:nowrap">📄 PRESS KIT</a>`:''}
+      ${missionLinks?.page?`<a href="${esc(missionLinks.page)}" target="_blank"
+        style="font-size:11px;padding:5px 11px;background:#1a2030;border:1px solid #2a3a50;color:var(--t3);text-decoration:none;border-radius:2px;white-space:nowrap">NASA ↗</a>`:''}
+      ${l.url?`<a href="${esc(l.url)}" target="_blank"
+        style="font-size:11px;padding:5px 11px;background:#1a2030;border:1px solid #2a3a50;color:var(--t4);text-decoration:none;border-radius:2px;white-space:nowrap">Space Devs ↗</a>`:''}
+      ${l.flightclub_url?`<a href="${esc(l.flightclub_url)}" target="_blank"
+        style="font-size:11px;padding:5px 11px;background:#1a2030;border:1px solid #2a3a50;color:var(--t4);text-decoration:none;border-radius:2px;white-space:nowrap">FlightClub ↗</a>`:''}
+    </div>` : '';
+
+  const descHTML = desc ? `<div class="mcard-desc" style="-webkit-line-clamp:unset;max-height:none">${esc(desc)}</div>` : '';
+
+  const crewHTML = crew.length ? `
     <div style="margin:12px 0 4px">
-      <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:8px">${isPast?'ACTUAL TIMELINE (projected vessel times)':'PROJECTED TIMELINE'}</div>
-      ${patchedTimeline.map(e=>{
+      <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:8px">CREW (${crew.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${crew.map(c=>{
+          const a = c.astronaut||{};
+          const img = a.profile_image_thumbnail||a.profile_image;
+          const agencyUrl = a.agency?.country_code==='USA'?'https://www.nasa.gov/':null;
+          return `<div style="display:flex;align-items:center;gap:7px;background:#111f2e;border:1px solid #1e3040;padding:7px 9px;border-radius:3px;flex:1;min-width:150px">
+            ${img?`<img src="${esc(img)}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid #2a4a6a" loading="lazy">`:
+                  `<div style="width:34px;height:34px;border-radius:50%;background:#1a3a5a;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#4488aa;font-size:15px">◈</div>`}
+            <div>
+              <div style="font-size:12px;font-weight:600;color:var(--t)">${esc(a.name||'—')}</div>
+              <div style="font-size:10px;color:var(--t4);margin-top:1px">${esc(c.role||'')}${a.agency?.abbrev?' · <b style="color:var(--t3)">'+esc(a.agency.abbrev)+'</b>':''}</div>
+              ${a.nationality?`<div style="font-size:10px;color:var(--t5)">${esc(a.nationality)}</div>`:''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>` : '';
+
+  const catchHTML = catchV ? `
+    <div class="vessel-link" onclick="openVesselFromMission('${catchVessel}')"
+      style="margin-top:10px;padding:10px 12px;background:${opColor(catchV.operator)}11;border:1px solid ${opColor(catchV.operator)}44;border-radius:2px;cursor:pointer">
+      <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:4px">PROJECTED CATCH VESSEL ↗</div>
+      <div style="font-size:15px;font-weight:700;color:${opColor(catchV.operator)}">${esc(catchV.name||catchV.abbr)}</div>
+      <div style="font-size:12px;color:var(--t5);margin-top:2px">${esc(catchV.role)} · ${esc(catchV.homePort||'')}</div>
+      <div style="font-size:12px;color:var(--t4);margin-top:3px">${esc(catchEvents[0].label)}</div>
+    </div>` : '';
+
+  const vesselTLHTML = patchedTL ? `
+    <div style="margin:12px 0 4px">
+      <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:8px">${isPast?'TIMELINE (projected vessel times)':'PROJECTED TIMELINE'}</div>
+      ${patchedTL.map(e=>{
         const tv = e.vessel&&VESSEL_DB[e.vessel];
         const absTime = (net&&e.t>60) ? fmtTime(net+e.t*1000) : null;
         return `<div style="display:flex;align-items:baseline;gap:8px;padding:5px 0;border-bottom:1px solid var(--bdr2)${e.highlight?';background:'+col+'08':''};border-radius:2px">
@@ -1847,33 +1954,47 @@ function buildMissionCard(l, isPast=false) {
       }).join('')}
     </div>` : '';
 
-  return `<div class="mcard" style="border-left-color:${col}">
-    <div class="mcard-name" style="color:${col}">${esc(l.name||'Unknown Mission')}</div>
-    <div class="mcard-sub">${esc(vehicle)} · ${esc(loc||pad)}</div>
-    <div class="mcard-meta">
-      <span class="mtag" style="background:${col}22;color:${col}">${esc(op)}</span>
-      ${missionType?`<span class="mtag" style="background:#1a2a3a;color:var(--t5)">${esc(missionType)}</span>`:''}
-      <span class="mtag" style="background:${statusCol}22;color:${statusCol}">${esc(status)}</span>
-    </div>
-    <div class="mcountdown" style="color:${isPast?'var(--t5)':col}" ${net?`data-net="${net}"`:''}>${net?'calculating…':'Date TBD'}</div>
-    <div class="mcountdown-lbl">${esc(netStr)}${isPast?` · <span style="color:${/Success/i.test(status)?'#00ff88':'#ff4444'};font-weight:700">${esc(status)}</span>`:''}</div>
-    ${catchV?`<div class="vessel-link" onclick="openVesselFromMission('${catchVessel}')"
-      style="margin-top:10px;padding:10px 12px;background:${opColor(catchV.operator)}11;border:1px solid ${opColor(catchV.operator)}44;border-radius:2px;cursor:pointer">
-      <div style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;margin-bottom:4px">PROJECTED CATCH VESSEL ↗</div>
-      <div style="font-size:15px;font-weight:700;color:${opColor(catchV.operator)}">${esc(catchV.name||catchV.abbr)}</div>
-      <div style="font-size:12px;color:var(--t5);margin-top:2px">${esc(catchV.role)} · ${esc(catchV.homePort||'')}</div>
-      <div style="font-size:12px;color:var(--t4);margin-top:3px">${esc(catchEvents[0].label)}</div>
-    </div>`:''}
-    ${hasMismatch?`<div style="background:rgba(255,140,0,.07);border:1px solid #553300;padding:7px 10px;font-size:12px;color:#cc7700;margin-top:8px">⚠ API assigned ${esc(VESSEL_DB[apiDroneMMSI]?.abbr||apiDroneMMSI)} — corrected to ${esc(VESSEL_DB[droneMMSI]?.abbr||droneMMSI)} based on launch site</div>`:''}
-    ${uncertain?`<div class="mcard-uncertain">⚠ Launch window may shift — verify at nextspaceflight.com</div>`:''}
-    ${desc?`<div class="mcard-desc">${esc(desc.slice(0,300))}${desc.length>300?'…':''}</div>`:''}
-    ${timelineHTML}
-    ${vessels.length&&!catchV?`<div class="mcard-vessels">
+  const withinWindow = net && Math.abs(net-Date.now()) < 48*3600000;
+  const apiTLHTML = apiTL.length ? `
+    <details style="margin:10px 0" ${withinWindow?'open':''}>
+      <summary style="font-size:11px;font-weight:600;color:var(--t4);letter-spacing:.06em;cursor:pointer;user-select:none;list-style:none;display:flex;justify-content:space-between">
+        <span>COUNTDOWN EVENTS</span><span style="color:var(--t5)">${apiTL.length} events ▾</span>
+      </summary>
+      <div style="margin-top:6px;max-height:200px;overflow-y:auto">
+        ${apiTL.map(e=>{
+          const ms = parseISODuration(e.relative_time);
+          const tStr = ms<0?`T-${formatDur(-ms)}`:ms===0?'T+0':`T+${formatDur(ms)}`;
+          const absT = net ? fmtTime(net+ms) : null;
+          return `<div style="display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--bdr2)">
+            <span style="font-family:var(--fm);font-size:11px;color:var(--acc);flex-shrink:0;min-width:64px">${esc(tStr)}</span>
+            <span style="font-size:11px;color:var(--t3);flex:1">${esc(e.type?.abbrev||e.type?.description||'')}</span>
+            ${absT?`<span style="font-size:10px;color:var(--t5);flex-shrink:0">${esc(absT)}</span>`:''}
+          </div>`;
+        }).join('')}
+      </div>
+    </details>` : '';
+
+  const vesselListHTML = vessels.length&&!catchV ? `
+    <div class="mcard-vessels">
       <div style="font-size:11px;color:var(--t4);font-weight:600;letter-spacing:.06em;margin-bottom:6px">VESSELS DEPLOYED</div>
       ${vessels.map(m=>{const v=VESSEL_DB[m];return`<div class="vessel-link" onclick="openVesselFromMission('${m}')" style="font-size:13px;color:${opColor(v.operator)};padding:3px 0;cursor:pointer">
         ${esc(v.abbr||v.name)} <span style="color:var(--t5);font-size:11px">· ${esc(v.role)}</span> <span style="font-size:11px">↗</span>
       </div>`;}).join('')}
-    </div>`:''}
+    </div>` : '';
+
+  return `<div class="mcard" style="border-left-color:${col}">
+    ${headerHTML}
+    ${countdownHTML}
+    ${programsHTML}
+    ${linksHTML}
+    ${descHTML}
+    ${crewHTML}
+    ${catchHTML}
+    ${hasMismatch?`<div style="background:rgba(255,140,0,.07);border:1px solid #553300;padding:7px 10px;font-size:12px;color:#cc7700;margin-top:8px">⚠ API assigned ${esc(VESSEL_DB[apiDroneMMSI]?.abbr||apiDroneMMSI)} — corrected to ${esc(VESSEL_DB[droneMMSI]?.abbr||droneMMSI)} based on launch site</div>`:''}
+    ${uncertain?`<div class="mcard-uncertain">⚠ Launch window may shift — verify at <a href="https://nextspaceflight.com" target="_blank" style="color:inherit">nextspaceflight.com</a></div>`:''}
+    ${vesselTLHTML}
+    ${vesselListHTML}
+    ${apiTLHTML}
   </div>`;
 }
 
@@ -1891,6 +2012,15 @@ function showSuggestModal() {
 }
 function closeSuggestModal() {
   document.getElementById('suggestmodal').style.display='none';
+}
+
+function showSources() {
+  const m = document.getElementById('sourcesmodal');
+  m.style.display = 'flex';
+  m.onclick = e => { if(e.target===m) closeSources(); };
+}
+function closeSources() {
+  document.getElementById('sourcesmodal').style.display = 'none';
 }
 
 async function submitSuggestion() {
