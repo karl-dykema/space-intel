@@ -252,6 +252,71 @@ async function loadSBData() {
   updateSBStatus();
 }
 
+function initSBRealtime() {
+  if (!SB.ready) return;
+  const wsUrl = SB.url.replace(/^https?/, 'wss') + '/realtime/v1/websocket?apikey=' + encodeURIComponent(SB.akey) + '&vsn=1.0.0';
+  let ws, hbTimer, ref = 0;
+
+  function connect() {
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      addLog('Realtime: connected', 'db');
+      ws.send(JSON.stringify({
+        topic: 'realtime:public:positions',
+        event: 'phx_join',
+        payload: {
+          config: {
+            broadcast: { self: false },
+            presence: { key: '' },
+            postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'positions' }],
+          },
+        },
+        ref: String(++ref),
+      }));
+      hbTimer = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN)
+          ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(++ref) }));
+      }, 25000);
+    };
+
+    ws.onmessage = ev => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.event !== 'postgres_changes') return;
+        const rec = msg.payload?.data?.record;
+        if (!rec?.mmsi) return;
+        const mmsi = String(rec.mmsi);
+        if (!VESSEL_DB[mmsi]) return;
+        const ts = new Date(rec.ts).getTime();
+        if (!S.vessels[mmsi]) S.vessels[mmsi] = { mmsi, ...VESSEL_DB[mmsi] };
+        const v = S.vessels[mmsi];
+        if (ts <= (v.ts || 0)) return;
+        v.lat = rec.lat; v.lon = rec.lon;
+        v.sog = rec.sog; v.cog = rec.cog;
+        v.ts = ts; v._stale = false;
+        if (!history[mmsi]) history[mmsi] = { positions: [], firstSeen: ts, lastSeen: ts };
+        history[mmsi].positions.push({ lat: rec.lat, lon: rec.lon, ts, sog: rec.sog, cog: rec.cog });
+        history[mmsi].lastSeen = ts;
+        v.track = history[mmsi].positions.map(p => [p.lat, p.lon]);
+        updateMarker(v);
+        renderFleet();
+        addLog(`Realtime ← ${VESSEL_DB[mmsi]?.abbr || mmsi} ${rec.lat?.toFixed(3)},${rec.lon?.toFixed(3)}`, 'ais');
+      } catch(e) {}
+    };
+
+    ws.onerror = () => addLog('Realtime: WebSocket error', 'err');
+
+    ws.onclose = () => {
+      clearInterval(hbTimer);
+      addLog('Realtime: disconnected — reconnect in 30s', 'sys');
+      setTimeout(connect, 30000);
+    };
+  }
+
+  connect();
+}
+
 function updateSBStatus() {
   const dot=document.getElementById('sbdot');
   const lbl=document.getElementById('sbstatus');
@@ -740,14 +805,23 @@ function updateAircraftMarker(reg) {
 }
 
 // ── Orbit tracker ─────────────────────────────────────────────
-const TLE_URL = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=STATIONS&FORMAT=TLE';
+const TLE_URLS = [
+  'https://celestrak.org/NORAD/elements/gp.php?GROUP=STATIONS&FORMAT=TLE',
+  'https://celestrak.org/NORAD/elements/stations.txt',
+];
 
 async function fetchTLEs() {
   try {
     if (typeof satellite === 'undefined') { addLog('satellite.js not loaded', 'err'); return; }
-    const res = await fetch(TLE_URL);
-    if (!res.ok) return;
-    const text = await res.text();
+    let text = null;
+    for (const url of TLE_URLS) {
+      try {
+        const res = await fetch(url, { cache: 'no-cache' });
+        if (res.ok) { text = await res.text(); break; }
+        addLog(`TLE HTTP ${res.status} — ${url.split('/').pop().split('?')[0]}`, 'err');
+      } catch (fe) { addLog(`TLE fetch: ${fe.message}`, 'err'); }
+    }
+    if (!text) { addLog('TLE: all sources failed', 'err'); return; }
     const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
     let found = 0;
     for (let i = 0; i + 2 < lines.length; i += 3) {
@@ -1701,8 +1775,10 @@ async function fetchMissionsBackground() {
   try {
     const cachedUp   = JSON.parse(localStorage.getItem(LS.MISSIONS)     ||'null');
     const cachedPast = JSON.parse(localStorage.getItem(LS.MISSIONS_PAST)||'null');
-    const upFresh   = cachedUp?.ts   && Date.now() - cachedUp.ts   < 600000;
-    const pastFresh = cachedPast?.ts && Date.now() - cachedPast.ts < 600000;
+    const rateUntil = parseInt(localStorage.getItem('space_intel_429_until')||'0');
+    const blocked = rateUntil > Date.now();
+    const upFresh   = blocked || (cachedUp?.ts   && Date.now() - cachedUp.ts   < 1800000);
+    const pastFresh = blocked || (cachedPast?.ts && Date.now() - cachedPast.ts < 1800000);
 
     if(upFresh && pastFresh) {
       if(!missionsCache.length     && cachedUp.data)   missionsCache     = cachedUp.data;
@@ -1753,9 +1829,10 @@ async function showMissions() {
   const panel = document.getElementById('missions-panel');
   panel.style.display = 'block';
 
-  // Serve from cache if < 10 minutes old — avoids burning rate limit on every open
+  // Serve from cache if < 30 minutes old — avoids burning rate limit on every open
   const cachedMeta = (() => { try { return JSON.parse(localStorage.getItem(LS.MISSIONS)||'null'); } catch(e){return null;} })();
-  if(cachedMeta?.ts && Date.now() - cachedMeta.ts < 600000 && missionsCache.length) {
+  const _rateUntil = parseInt(localStorage.getItem('space_intel_429_until')||'0');
+  if((cachedMeta?.ts && Date.now() - cachedMeta.ts < 1800000 && missionsCache.length) || (_rateUntil > Date.now() && missionsCache.length)) {
     const ageMin = Math.round((Date.now() - cachedMeta.ts) / 60000);
     document.getElementById('missions-src').textContent =
       `${missionsCache.length} upcoming · cached ${ageMin}m ago · The Space Devs API`;
@@ -1814,11 +1891,12 @@ async function showMissions() {
     addLog(`Missions fetch error: ${e.message}`, 'err');
     if(missionsCache.length) {
       const is429 = e.message.includes('429');
+      if (is429) localStorage.setItem('space_intel_429_until', String(Date.now() + 1800000));
       document.getElementById('missions-src').textContent =
         `${is429?'Rate limited':'Error'} — showing cached data · The Space Devs API`;
       document.getElementById('missions-content').innerHTML =
         `<div style="background:rgba(255,140,0,.07);border-bottom:1px solid #553300;padding:9px 18px;font-size:12px;color:#cc7700">
-          ⚠ ${is429?'API rate limited (429) — try again in a few minutes':'Could not reach API'} · displaying cached missions
+          ⚠ ${is429?'API rate limited (429) — showing cached data, retry in 30 min':'Could not reach API'} · displaying cached missions
         </div>` +
         `<div style="padding:10px 18px 6px;font-size:11px;font-weight:700;color:var(--t4);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--bdr2)">UPCOMING</div>` +
         missionsCache.map(buildMissionCard).join('');
@@ -2247,5 +2325,5 @@ window.onload=()=>{
   setInterval(()=>{ updateOrbits(); renderFleet(); }, 15000); // update positions every 15s
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
-  if(SHARE_MODE) setInterval(loadSBData, 180000);
+  if(SHARE_MODE) { loadSBData().then(() => { initSBRealtime(); }); setInterval(loadSBData, 300000); }
 };
