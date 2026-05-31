@@ -512,9 +512,40 @@ const AIRCRAFT_DB = {
     model:'Gulfstream G450', type:'jet',
     notes:'Heavy business jet for fast point-to-point transit.',
   },
+  // ── NASA ─────────────────────────────────────────────────────
+  'N926NA': {
+    name:'NASA WB-57F (926)', abbr:'WB-57 926',
+    operator:'NASA', role:'High-altitude launch observation',
+    model:'Martin WB-57F', type:'research',
+    notes:'Based at Ellington Field (JSC), Houston, TX. Flies at 60,000ft+ to observe launches, re-entries, and atmospheric phenomena. Used for Shuttle, SLS, Starship coverage. WAVE camera in nose.',
+  },
+  'N927NA': {
+    name:'NASA WB-57F (927)', abbr:'WB-57 927',
+    operator:'NASA', role:'High-altitude launch observation',
+    model:'Martin WB-57F', type:'research',
+    notes:'Based at Ellington Field (JSC). Sister ship to N926NA. Occasionally deployed to Vandenberg or overseas for mission support.',
+  },
+  'N928NA': {
+    name:'NASA WB-57F (928)', abbr:'WB-57 928',
+    operator:'NASA', role:'High-altitude research',
+    model:'Martin WB-57F', type:'research',
+    notes:'Third NASA WB-57F. Based at Ellington Field (JSC). Shares launch observation role with 926/927.',
+  },
+  'N806NA': {
+    name:'NASA ER-2 (806)', abbr:'ER-2 806',
+    operator:'NASA', role:'High-altitude research',
+    model:'Lockheed ER-2', type:'research',
+    notes:'Based at Armstrong AFRC, Edwards AFB, CA. Civilian U-2 variant. Flies at 70,000ft for atmospheric research and Earth observation. Occasionally repositions near launch corridors.',
+  },
+  'N809NA': {
+    name:'NASA ER-2 (809)', abbr:'ER-2 809',
+    operator:'NASA', role:'High-altitude research',
+    model:'Lockheed ER-2', type:'research',
+    notes:'Sister ship to N806NA. Based at Armstrong AFRC, Edwards AFB.',
+  },
 };
 
-const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff', 'CNSA':'#ff4444' };
+const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff', 'NASA':'#ff6600', 'CNSA':'#ff4444' };
 function opColor(op) { return OP_COLORS[op]||'#aaaaaa'; }
 
 // ── Event config ──────────────────────────────────────────────
