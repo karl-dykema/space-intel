@@ -100,7 +100,7 @@ button{font-family:var(--f);cursor:pointer;}
 .hist-box{background:rgba(68,119,255,.06);border:1px solid #112244;padding:8px 11px;font-size:13px;color:#4466aa;margin-top:6px;}
 
 /* ── Settings modal ── */
-#settingsmodal{position:fixed;inset:0;background:rgba(2,12,24,.92);z-index:20000;display:flex;align-items:center;justify-content:center;}
+#settingsmodal,#sourcesmodal{position:fixed;inset:0;background:rgba(2,12,24,.92);z-index:20000;display:flex;align-items:center;justify-content:center;}
 .modal-box{background:var(--bg2);border:1px solid var(--bdr);padding:28px 32px;max-width:520px;width:94%;max-height:90vh;overflow-y:auto;}
 .modal-title{font-family:var(--fh);color:var(--acc);font-size:18px;font-weight:700;letter-spacing:.04em;margin-bottom:18px;}
 .modal-sec{font-size:12px;font-weight:600;color:var(--t4);letter-spacing:.07em;text-transform:uppercase;margin:20px 0 9px;padding-bottom:5px;border-bottom:1px solid var(--bdr2);}

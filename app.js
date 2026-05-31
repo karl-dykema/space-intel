@@ -808,6 +808,7 @@ function updateAircraftMarker(reg) {
 const TLE_URLS = [
   'https://celestrak.org/NORAD/elements/gp.php?GROUP=STATIONS&FORMAT=TLE',
   'https://celestrak.org/NORAD/elements/stations.txt',
+  'https://celestrak.org/pub/TLE/catalog/stations.txt',
 ];
 
 async function fetchTLEs() {
@@ -1006,6 +1007,10 @@ function toggleSpacecraft() {
   showSpacecraft = !showSpacecraft;
   const btn = document.getElementById('spacecraft-btn');
   if (btn) btn.style.opacity = showSpacecraft ? '1' : '0.4';
+  if (showSpacecraft && !Object.keys(tleData).length) {
+    addLog('Spacecraft: no TLE data loaded — retrying Celestrak…', 'err');
+    fetchTLEs();
+  }
   updateOrbits();
   renderFleet();
 }
@@ -1994,8 +1999,6 @@ function buildMissionCard(l, isPast=false) {
         style="font-size:11px;padding:5px 11px;background:#1a2a1a;border:1px solid #335533;color:#77bb77;text-decoration:none;border-radius:2px;white-space:nowrap">📄 PRESS KIT</a>`:''}
       ${missionLinks?.page?`<a href="${esc(missionLinks.page)}" target="_blank"
         style="font-size:11px;padding:5px 11px;background:#1a2030;border:1px solid #2a3a50;color:var(--t3);text-decoration:none;border-radius:2px;white-space:nowrap">NASA ↗</a>`:''}
-      ${l.url?`<a href="${esc(l.url)}" target="_blank"
-        style="font-size:11px;padding:5px 11px;background:#1a2030;border:1px solid #2a3a50;color:var(--t4);text-decoration:none;border-radius:2px;white-space:nowrap">Space Devs ↗</a>`:''}
       ${l.flightclub_url?`<a href="${esc(l.flightclub_url)}" target="_blank"
         style="font-size:11px;padding:5px 11px;background:#1a2030;border:1px solid #2a3a50;color:var(--t4);text-decoration:none;border-radius:2px;white-space:nowrap">FlightClub ↗</a>`:''}
     </div>` : '';
