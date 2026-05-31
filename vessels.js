@@ -672,6 +672,59 @@ function timelineForVehicle(vehicleName) {
   return Object.entries(VEHICLE_TIMELINES).find(([k])=>vehicleName&&vehicleName.includes(k))?.[1] || null;
 }
 
+// ── Spacecraft TLE matching ───────────────────────────────────
+// longterm:true → only shown when SPACECRAFT toggle is ON
+// longterm:false → always visible (active missions)
+const SPACECRAFT_PATTERNS = [
+  { match:n=>n.startsWith('ISS'),          abbr:'ISS',        operator:'NASA',             role:'Space Station',     col:'#00aaff', longterm:true  },
+  { match:n=>n.startsWith('CSS'),          abbr:'Tiangong',   operator:'CNSA',             role:'Space Station',     col:'#ff4444', longterm:true  },
+  { match:n=>n.startsWith('SOYUZ-MS'),     abbr:'Soyuz',      operator:'Roscosmos',        role:'Crewed spacecraft', col:'#9966ff', longterm:true  },
+  { match:n=>n.startsWith('PROGRESS-MS'),  abbr:'Progress',   operator:'Roscosmos',        role:'Cargo spacecraft',  col:'#9966ff', longterm:true  },
+  { match:n=>n.startsWith('SHENZHOU'),     abbr:'Shenzhou',   operator:'CNSA',             role:'Crewed spacecraft', col:'#ff6644', longterm:true  },
+  { match:n=>n.startsWith('TIANZHOU'),     abbr:'Tianzhou',   operator:'CNSA',             role:'Cargo spacecraft',  col:'#ff6644', longterm:true  },
+  { match:n=>n.startsWith('CREW DRAGON'),  abbr:'Dragon',     operator:'SpaceX',           role:'Crewed capsule',    col:'#00d4ff', longterm:false },
+  { match:n=>n.startsWith('DRAGON CRS'),   abbr:'Dragon',     operator:'SpaceX',           role:'Cargo capsule',     col:'#00d4ff', longterm:false },
+  { match:n=>/^CYGNUS/i.test(n),           abbr:'Cygnus',     operator:'Northrop Grumman', role:'Cargo spacecraft',  col:'#dd8800', longterm:false },
+  { match:n=>/STARSHIP/i.test(n),          abbr:'Starship',   operator:'SpaceX',           role:'Spacecraft',        col:'#00d4ff', longterm:false },
+  { match:n=>/^HTV/i.test(n),              abbr:'HTV',        operator:'JAXA',             role:'Cargo spacecraft',  col:'#ffcc00', longterm:false },
+];
+
+// ── Launch pad coordinates ────────────────────────────────────
+const LAUNCH_PADS = {
+  'lc39a':    { lat:28.608, lon:-80.604 },
+  'slc40':    { lat:28.562, lon:-80.577 },
+  'slc4e':    { lat:34.632, lon:-120.611 },
+  'starbase': { lat:25.997, lon:-97.159 },
+  'mahia':    { lat:-39.262,lon:177.864 },
+  'lc36':     { lat:28.467, lon:-80.537 }, // New Glenn LC-36
+  'kourou':   { lat:5.239,  lon:-52.768 },
+};
+
+// ── Booster projection profiles ───────────────────────────────
+const BOOSTER_PROFILES = {
+  'Falcon 9': {
+    boosterSecs: 480,                           // T+8min to drone ship
+    // drone ship MMSI looked up from live AIS at runtime
+  },
+  'Falcon Heavy': {
+    boosterSecs: 480,
+  },
+  'Starship': {
+    boosterSecs: 430,                           // T+7:10 to Mechazilla
+    boosterTarget: { lat:25.997, lon:-97.159 }, // Mechazilla
+    shipSecs: 4800,                             // T+80min to Indian Ocean
+    shipTarget: { lat:-19.0, lon:107.0 },
+  },
+  'New Glenn': {
+    boosterSecs: 480,
+    boosterMMSI: '368368960',                   // Jacklyn
+  },
+  'Electron': {
+    boosterSecs: 150,                           // ~T+2:30 sep, falls in ocean
+    boosterMMSI: '512440000',                   // Seaworker approximate zone
+  },
+};
+
 function vesselHintsForLaunch(op, padName, locName='') {
   const h = VESSEL_HINTS[op]; if(!h) return [];
   const search = `${padName} ${locName}`;

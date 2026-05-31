@@ -236,8 +236,12 @@ let missionsCache = [];
 let pastMissionsCache = [];
 const prevZones={};
 let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null, aircraftLayer=null;
-let showLandmarks=false;
+let orbitLayer=null, rocketLayer=null;
+let showLandmarks=false, showSpacecraft=false;
 const markers={}, tracks={}, aircraftMarkers={}, aircraftTracks={};
+const spacecraftMarkers={}, orbitTracks={};
+const S_spacecraft={};  // name → { abbr, operator, role, col, longterm, lat, lon, alt, satrec }
+let tleData={};         // name → { satrec, meta }
 
 // ── Mission linkage ───────────────────────────────────────────
 function isCarryingBooster(mmsi) {
@@ -390,6 +394,8 @@ function initMap() {
   }).addTo(map);
   exclusionLayer=L.layerGroup().addTo(map);
   landmarkLayer=L.layerGroup().addTo(map);
+  orbitLayer=L.layerGroup().addTo(map);
+  rocketLayer=L.layerGroup().addTo(map);
   aircraftLayer=L.layerGroup().addTo(map);
   layers=L.layerGroup().addTo(map);
   zoneLayer=L.layerGroup().addTo(map);
@@ -677,6 +683,288 @@ function updateAircraftMarker(reg) {
   }
 }
 
+// ── Orbit tracker ─────────────────────────────────────────────
+const TLE_URL = 'https://celestrak.org/NORAD/elements/gp.php?GROUP=STATIONS&FORMAT=TLE';
+
+async function fetchTLEs() {
+  try {
+    if (typeof satellite === 'undefined') { addLog('satellite.js not loaded', 'err'); return; }
+    const res = await fetch(TLE_URL);
+    if (!res.ok) return;
+    const text = await res.text();
+    const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
+    let found = 0;
+    for (let i = 0; i + 2 < lines.length; i += 3) {
+      const name = lines[i], l1 = lines[i+1], l2 = lines[i+2];
+      if (!l1.startsWith('1 ') || !l2.startsWith('2 ')) { i -= 2; continue; }
+      const pat = SPACECRAFT_PATTERNS.find(p => p.match(name));
+      if (!pat) continue;
+      try {
+        const satrec = satellite.twoline2satrec(l1, l2);
+        tleData[name] = { satrec, meta: pat, name };
+        found++;
+      } catch(e) {}
+    }
+    addLog(`Orbit: loaded TLEs for ${found} spacecraft`, 'sys');
+    updateOrbits();
+  } catch(e) { addLog(`TLE fetch error: ${e.message}`, 'err'); }
+}
+
+function propagateSat(satrec, date) {
+  try {
+    const pv = satellite.propagate(satrec, date);
+    if (!pv?.position) return null;
+    const gmst = satellite.gstime(date);
+    const gd = satellite.eciToGeodetic(pv.position, gmst);
+    return {
+      lat: satellite.radiansToDegrees(gd.latitude),
+      lon: satellite.radiansToDegrees(gd.longitude),
+      alt: gd.height,
+    };
+  } catch(e) { return null; }
+}
+
+function computeGroundTrack(satrec) {
+  const now = Date.now();
+  const pts = [];
+  for (let i = 0; i <= 92; i += 2) {
+    const pos = propagateSat(satrec, new Date(now + i * 60000));
+    if (pos) pts.push([pos.lat, pos.lon]);
+  }
+  // Normalize longitudes to avoid antimeridian lines across the map
+  for (let i = 1; i < pts.length; i++) {
+    while (pts[i][1] - pts[i-1][1] >  180) pts[i][1] -= 360;
+    while (pts[i-1][1] - pts[i][1] >  180) pts[i][1] += 360;
+  }
+  return pts;
+}
+
+function updateSpacecraftMarker(name, pos, meta, layer) {
+  const col = meta.col || '#ffffff';
+  const isStation = /^ISS|^CSS/.test(name);
+  const sz = isStation ? 22 : 16;
+  const svg = isStation
+    ? `<svg width="${sz}" height="${sz}" viewBox="0 0 20 20">
+        <rect x="8" y="8" width="4" height="4" fill="${col}"/>
+        <line x1="0" y1="10" x2="8" y2="10" stroke="${col}" stroke-width="2"/>
+        <line x1="12" y1="10" x2="20" y2="10" stroke="${col}" stroke-width="2"/>
+        <line x1="10" y1="0" x2="10" y2="8" stroke="${col}" stroke-width="1.5" opacity="0.5"/>
+        <line x1="10" y1="12" x2="10" y2="20" stroke="${col}" stroke-width="1.5" opacity="0.5"/>
+      </svg>`
+    : `<svg width="${sz}" height="${sz}" viewBox="0 0 20 20">
+        <circle cx="10" cy="10" r="3.5" fill="${col}"/>
+        <line x1="2" y1="10" x2="7" y2="10" stroke="${col}" stroke-width="1.5"/>
+        <line x1="13" y1="10" x2="18" y2="10" stroke="${col}" stroke-width="1.5"/>
+      </svg>`;
+  const icon = L.divIcon({ html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:'' });
+  const altStr = pos.alt ? ` · ${Math.round(pos.alt)} km` : '';
+  const tip = `<b style="color:${col}">${esc(meta.abbr||name)}</b><br>
+    <span style="color:var(--t5)">${esc(meta.operator)}</span><br>${esc(meta.role)}${altStr}`;
+  if (!spacecraftMarkers[name]) {
+    spacecraftMarkers[name] = L.marker([pos.lat, pos.lon], {icon, zIndexOffset:800})
+      .addTo(layer).on('click', () => showSpacecraftDetail(name));
+  } else {
+    spacecraftMarkers[name].setLatLng([pos.lat, pos.lon]);
+    spacecraftMarkers[name].setIcon(icon);
+  }
+  spacecraftMarkers[name].bindTooltip(tip, {className:'ltt', direction:'top'});
+
+  // Ground track (next 90 min)
+  const track = computeGroundTrack(tleData[name].satrec);
+  if (track.length > 1) {
+    const style = { color:col, weight:1, opacity:0.25, dashArray:'4 6' };
+    if (orbitTracks[name]) { orbitTracks[name].setLatLngs(track); orbitTracks[name].setStyle(style); }
+    else orbitTracks[name] = L.polyline(track, style).addTo(layer);
+  }
+}
+
+function removeSatMarker(name) {
+  ['orbitLayer','rocketLayer'].forEach(ln => {
+    const layer = ln === 'orbitLayer' ? orbitLayer : rocketLayer;
+    if (!layer) return;
+    if (spacecraftMarkers[name]) { try { layer.removeLayer(spacecraftMarkers[name]); } catch(e) {} delete spacecraftMarkers[name]; }
+    if (orbitTracks[name])       { try { layer.removeLayer(orbitTracks[name]);       } catch(e) {} delete orbitTracks[name]; }
+  });
+}
+
+function updateOrbits() {
+  if (!map || !orbitLayer || !rocketLayer) return;
+  const now = new Date();
+  for (const [name, tle] of Object.entries(tleData)) {
+    const pos = propagateSat(tle.satrec, now);
+    if (!pos) continue;
+    S_spacecraft[name] = { ...tle.meta, name, lat:pos.lat, lon:pos.lon, alt:pos.alt };
+    const isLongterm = tle.meta.longterm;
+    if (isLongterm && !showSpacecraft) {
+      removeSatMarker(name);
+      continue;
+    }
+    updateSpacecraftMarker(name, pos, tle.meta, isLongterm ? orbitLayer : rocketLayer);
+  }
+  updateBoosterProjections();
+}
+
+function toggleSpacecraft() {
+  showSpacecraft = !showSpacecraft;
+  const btn = document.getElementById('spacecraft-btn');
+  if (btn) btn.style.opacity = showSpacecraft ? '1' : '0.4';
+  if (!showSpacecraft) {
+    Object.keys(S_spacecraft).forEach(name => {
+      if (S_spacecraft[name].longterm) removeSatMarker(name);
+    });
+  }
+  updateOrbits();
+  renderFleet();
+}
+
+// ── Booster projection ─────────────────────────────────────────
+function updateBoosterProjections() {
+  if (!rocketLayer) return;
+  const now = Date.now();
+  // Find any launch within T-5min to T+90min
+  const active = [...missionsCache, ...pastMissionsCache].find(l => {
+    const net = l.net ? new Date(l.net).getTime() : null;
+    if (!net) return false;
+    const el = now - net;
+    return el > -5*60000 && el < 90*60000;
+  });
+  const key = '__booster__';
+  const shipKey = '__ship__';
+  if (!active) {
+    [key, shipKey].forEach(k => {
+      if (spacecraftMarkers[k]) { try { rocketLayer.removeLayer(spacecraftMarkers[k]); } catch(e) {} delete spacecraftMarkers[k]; }
+    });
+    return;
+  }
+  const net = new Date(active.net).getTime();
+  const elapsed = (now - net) / 1000;
+  const lspName = active.launch_service_provider?.name || '';
+  const padName  = (active.pad?.name || '') + ' ' + (active.pad?.location?.name || '');
+
+  let prof = null, padCoords = null, boosterTarget = null;
+  if (lspName.includes('SpaceX')) {
+    if (/Starbase|Boca Chica/i.test(padName)) {
+      prof = BOOSTER_PROFILES['Starship'];
+      padCoords = LAUNCH_PADS['starbase'];
+      boosterTarget = prof.boosterTarget;
+    } else if (/Vandenberg|SLC-4/i.test(padName)) {
+      prof = BOOSTER_PROFILES['Falcon 9'];
+      padCoords = LAUNCH_PADS['slc4e'];
+      const ds = S.vessels['368351350']; boosterTarget = ds?.lat ? {lat:ds.lat,lon:ds.lon} : {lat:32.5,lon:-122.0};
+    } else {
+      prof = BOOSTER_PROFILES['Falcon 9'];
+      padCoords = /LC-39A/i.test(padName) ? LAUNCH_PADS['lc39a'] : LAUNCH_PADS['slc40'];
+      const ds = S.vessels['368219910']; boosterTarget = ds?.lat ? {lat:ds.lat,lon:ds.lon} : {lat:30.5,lon:-76.5};
+    }
+  } else if (lspName.includes('Blue Origin')) {
+    prof = BOOSTER_PROFILES['New Glenn'];
+    padCoords = LAUNCH_PADS['lc36'];
+    const ds = S.vessels['368368960']; boosterTarget = ds?.lat ? {lat:ds.lat,lon:ds.lon} : {lat:30.0,lon:-77.5};
+  } else if (lspName.includes('Rocket Lab')) {
+    prof = BOOSTER_PROFILES['Electron'];
+    padCoords = LAUNCH_PADS['mahia'];
+    boosterTarget = {lat:-39.5, lon:179.5};
+  }
+
+  if (!prof || !padCoords || !boosterTarget) return;
+
+  // Project booster position
+  if (elapsed >= 0 && elapsed <= prof.boosterSecs) {
+    const frac = elapsed / prof.boosterSecs;
+    const lat = padCoords.lat + (boosterTarget.lat - padCoords.lat) * frac;
+    const lon = padCoords.lon + (boosterTarget.lon - padCoords.lon) * frac;
+    const tStr = `T+${Math.floor(elapsed/60)}:${String(Math.round(elapsed%60)).padStart(2,'0')}`;
+    const col = '#ff8800';
+    const svg = `<svg width="18" height="18" viewBox="0 0 20 20">
+      <polygon points="10,2 13,10 10,8 7,10" fill="${col}"/>
+      <circle cx="10" cy="14" r="2.5" fill="none" stroke="${col}" stroke-width="1.2"/>
+    </svg>`;
+    const icon = L.divIcon({html:svg, iconSize:[18,18], iconAnchor:[9,9], className:''});
+    if (!spacecraftMarkers[key]) {
+      spacecraftMarkers[key] = L.marker([lat,lon], {icon, zIndexOffset:1200}).addTo(rocketLayer);
+    } else { spacecraftMarkers[key].setLatLng([lat,lon]); spacecraftMarkers[key].setIcon(icon); }
+    spacecraftMarkers[key].bindTooltip(
+      `<b style="color:${col}">BOOSTER · ${esc(active.name||'')}</b><br>
+      <span style="color:var(--t4)">Estimated · ${tStr} · ~${Math.round(frac*100)}% to landing</span>`,
+      {className:'ltt', direction:'top'});
+  } else if (elapsed > prof.boosterSecs) {
+    if (spacecraftMarkers[key]) { try { rocketLayer.removeLayer(spacecraftMarkers[key]); } catch(e) {} delete spacecraftMarkers[key]; }
+  }
+
+  // Project Starship Ship position
+  if (prof === BOOSTER_PROFILES['Starship'] && elapsed > 0 && elapsed <= prof.shipSecs) {
+    const frac = elapsed / prof.shipSecs;
+    const lat = padCoords.lat + (prof.shipTarget.lat - padCoords.lat) * frac;
+    const lon = padCoords.lon + (prof.shipTarget.lon - padCoords.lon) * frac;
+    const tStr = `T+${Math.floor(elapsed/60)}:${String(Math.round(elapsed%60)).padStart(2,'0')}`;
+    const col = '#00d4ff';
+    const svg = `<svg width="18" height="18" viewBox="0 0 20 20">
+      <polygon points="10,2 14,18 10,14 6,18" fill="${col}"/>
+    </svg>`;
+    const icon = L.divIcon({html:svg, iconSize:[18,18], iconAnchor:[9,9], className:''});
+    if (!spacecraftMarkers[shipKey]) {
+      spacecraftMarkers[shipKey] = L.marker([lat,lon], {icon, zIndexOffset:1200}).addTo(rocketLayer);
+    } else { spacecraftMarkers[shipKey].setLatLng([lat,lon]); spacecraftMarkers[shipKey].setIcon(icon); }
+    spacecraftMarkers[shipKey].bindTooltip(
+      `<b style="color:${col}">STARSHIP SHIP · ${esc(active.name||'')}</b><br>
+      <span style="color:var(--t4)">Estimated · ${tStr}</span>`,
+      {className:'ltt', direction:'top'});
+  }
+}
+
+// ── Spacecraft detail panel ────────────────────────────────────
+function showSpacecraftDetail(name) {
+  S.selectedSpacecraft = name;
+  const sc = S_spacecraft[name];
+  if (sc?.lat && sc?.lon && map) map.setView([sc.lat, sc.lon], 3);
+  S.tab = 'spacecraft';
+  ['events','vessel','history','log'].forEach(id => {
+    document.getElementById('rtab-'+id).classList.toggle('act', false);
+  });
+  document.getElementById('rtab-vessel').classList.add('act');
+  renderRight();
+}
+
+function buildSpacecraftDetail() {
+  const name = S.selectedSpacecraft;
+  if (!name || !S_spacecraft[name]) return '<div style="padding:16px;color:var(--t4);font-size:12px">No spacecraft selected.</div>';
+  const sc = S_spacecraft[name];
+  const col = sc.col || '#fff';
+  const alt = sc.alt ? `${Math.round(sc.alt)} km` : '—';
+  const pos = sc.lat != null ? `${sc.lat.toFixed(2)}, ${sc.lon.toFixed(2)}` : '—';
+  return `<div style="padding:14px 16px">
+    <div style="font-size:18px;font-weight:700;color:${col};letter-spacing:.04em;margin-bottom:2px">${esc(name)}</div>
+    <div style="font-size:12px;color:var(--t4);margin-bottom:12px">${esc(sc.operator)} · ${esc(sc.role)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+      ${stat('STATUS','IN ORBIT','#00ff88')}
+      ${stat('POSITION',pos,'var(--t2)')}
+      ${stat('ALTITUDE',alt,'var(--t2)')}
+      ${stat('ABBR',esc(sc.abbr||name),col)}
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+      <a href="https://heavens-above.com/orbit.aspx" target="_blank"
+        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">HEAVENS-ABOVE ↗</a>
+      <a href="https://www.n2yo.com" target="_blank"
+        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">N2YO ↗</a>
+    </div>
+  </div>`;
+}
+
+function buildSpacecraftRow(name) {
+  const sc = S_spacecraft[name];
+  if (!sc || sc.lat == null) return '';
+  const col = sc.col || '#fff';
+  return `<div class="vrow" data-sc="${esc(name)}" style="border-left-color:${col};background:rgba(0,200,255,.03)">
+    <div class="vn" style="color:${col};text-shadow:0 0 8px ${col}44">${esc(sc.abbr||name)}</div>
+    <div class="vop" style="color:${col}77">${esc(sc.operator)} · ${esc(sc.role)}</div>
+    <div class="vbottom">
+      <div class="vdot" style="background:#00ff88;box-shadow:0 0 5px #00ff8888"></div>
+      <span style="color:#00ff88;font-size:10px;font-weight:700">IN ORBIT</span>
+      ${sc.alt ? `<span style="color:var(--t4);font-size:10px;margin-left:4px">${Math.round(sc.alt)} km</span>` : ''}
+    </div>
+  </div>`;
+}
+
 // ── WebSocket ─────────────────────────────────────────────────
 function toggleConnect() {
   if(S.ws){disconnect();return;}
@@ -852,20 +1140,30 @@ function renderFleet(){
       if(ra!==rb) return ra-rb;
       return (b.ts||0)-(a.ts||0);   // most recent first within same rank
     });
-  // Background aircraft only appear when they've been spotted this session (or recently active)
+  // Background aircraft only appear when they've been spotted this session
   const visibleAC = Object.keys(AIRCRAFT_DB).filter(reg => {
     const db = AIRCRAFT_DB[reg];
     if (!db.background) return true;
-    const ac = S.aircraft[reg];
-    return !!ac; // has been seen at least once this session
+    return !!S.aircraft[reg];
   });
   const aircraftRows = visibleAC.map(reg => buildAircraftRow(reg)).join('');
+
+  // Spacecraft: active missions always shown; long-term only when toggle ON
+  const visibleSC = Object.keys(S_spacecraft).filter(name => !S_spacecraft[name].longterm || showSpacecraft);
+  visibleSC.sort((a,b) => {
+    const la = S_spacecraft[a].longterm ? 1 : 0, lb = S_spacecraft[b].longterm ? 1 : 0;
+    return la - lb || a.localeCompare(b);
+  });
+  const scRows = visibleSC.map(buildSpacecraftRow).filter(Boolean).join('');
+
   document.getElementById('fleet').innerHTML =
     rows.map(buildVesselRow).join('') +
     `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>` +
-    aircraftRows;
+    aircraftRows +
+    (scRows ? `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">SPACECRAFT</div>${scRows}` : '');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
   document.querySelectorAll('.vrow[data-reg]').forEach(el=>{el.onclick=()=>showAircraftDetail(el.dataset.reg);});
+  document.querySelectorAll('.vrow[data-sc]').forEach(el=>{el.onclick=()=>showSpacecraftDetail(el.dataset.sc);});
 }
 
 function buildVesselRow(v){
@@ -876,8 +1174,9 @@ function buildVesselRow(v){
   const stale=!!v.lat&&!isLive&&!isHist;
   const isOffline=v._offline||(!v.lat&&!isHist);
   const carrying=isCarryingBooster(v.mmsi);
+  const stationary=isLive&&(v.sog==null||v.sog<=0.1);
   const dotCol=isLive?'#00ff88':carrying?'#ff8c00':shareHist?'#4477ff':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
-  const status=isLive?'LIVE':carrying&&!isLive?'NO AIS LOCK':shareHist?ageStr(v.ts):isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
+  const status=isLive?(stationary?'STATIONARY':'LIVE'):carrying&&!isLive?'NO AIS LOCK':shareHist?ageStr(v.ts):isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
   const nameCol=isLive||shareHist?col:isHist?col+'66':'var(--t3)';
   const roleCol=isLive||shareHist?col+'99':col+'33';
   const bg=isLive||shareHist?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):sel?'var(--bg4)':'';
@@ -936,11 +1235,12 @@ function setTab(t){
 }
 function renderRight(){
   const el=document.getElementById('rpanel');
-  if(S.tab==='events')   el.innerHTML=buildEventFeed();
-  if(S.tab==='vessel')   { el.innerHTML=buildVesselDetail(); startCountdowns(); }
-  if(S.tab==='aircraft') el.innerHTML=buildAircraftDetail();
-  if(S.tab==='history')  el.innerHTML=buildHistoryTab();
-  if(S.tab==='log')      el.innerHTML=buildLogTab();
+  if(S.tab==='events')     el.innerHTML=buildEventFeed();
+  if(S.tab==='vessel')     { el.innerHTML=buildVesselDetail(); startCountdowns(); }
+  if(S.tab==='aircraft')   el.innerHTML=buildAircraftDetail();
+  if(S.tab==='spacecraft') el.innerHTML=buildSpacecraftDetail();
+  if(S.tab==='history')    el.innerHTML=buildHistoryTab();
+  if(S.tab==='log')        el.innerHTML=buildLogTab();
 }
 
 function showAircraftDetail(reg) {
@@ -984,6 +1284,8 @@ function buildAircraftDetail() {
     </div>
     <div style="font-size:11px;color:var(--t4);line-height:1.6">${esc(db.notes||'')}</div>
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <a href="https://www.flightaware.com/live/flight/${encodeURIComponent(reg.replace(/-/g,''))}" target="_blank"
+        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">FLIGHTAWARE ↗</a>
       <a href="https://www.flightradar24.com/data/aircraft/${encodeURIComponent(reg.toLowerCase())}" target="_blank"
         style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">FLIGHTRADAR24 ↗</a>
       <a href="https://globe.adsbexchange.com/?icao=${esc(ac?.hex||'')}" target="_blank"
@@ -1664,9 +1966,12 @@ window.onload=()=>{
   setInterval(()=>{renderFleet();updateHeaderStats();},5000);
 
   loadSBData().then(()=>loadVapiPositions());
-  fetchMissionsBackground().then(()=>renderLaunchBanner());
+  fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); });
   pollAircraft();
   setInterval(pollAircraft, AIRCRAFT_POLL_MS);
+  fetchTLEs();
+  setInterval(()=>{ fetchTLEs(); }, 3600000);   // re-fetch TLEs every hour
+  setInterval(()=>{ updateOrbits(); renderFleet(); }, 15000); // update positions every 15s
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
   if(SHARE_MODE) setInterval(loadSBData, 180000);
