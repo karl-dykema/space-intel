@@ -599,7 +599,7 @@ async function pollAircraft() {
         gs: ac.gs,
         track: ac.track ?? 0,
         hex: ac.hex,
-        ts: data.now ? data.now * 1000 : Date.now(),
+        ts: data.now || Date.now(),
         _stale: false,
       };
       updateAircraftMarker(reg);
@@ -816,7 +816,11 @@ function renderFleet(){
       if(ra!==rb) return ra-rb;
       return (b.ts||0)-(a.ts||0);   // most recent first within same rank
     });
-  document.getElementById('fleet').innerHTML=rows.map(buildVesselRow).join('');
+  const aircraftRows = Object.keys(AIRCRAFT_DB).map(reg => buildAircraftRow(reg)).join('');
+  document.getElementById('fleet').innerHTML =
+    rows.map(buildVesselRow).join('') +
+    `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>` +
+    aircraftRows;
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
 }
 
@@ -845,6 +849,26 @@ function buildVesselRow(v){
       ${v.sog!=null&&isLive?`<span style="color:var(--t2);font-size:11px;margin-left:4px">${v.sog.toFixed(1)} kn</span>`:''}
       ${isHist&&!shareHist?`<span style="color:var(--t4);font-size:10px;margin-left:auto">${ageStr(v.ts)}</span>`:''}
       ${v.dest&&!v._historical?`<span style="color:${isLive?'var(--t)':'var(--t5)'};font-size:10px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">→ ${esc(v.dest)}</span>`:''}
+    </div>
+  </div>`;
+}
+
+function buildAircraftRow(reg) {
+  const db = AIRCRAFT_DB[reg];
+  const ac = S.aircraft[reg];
+  const col = opColor(db.operator);
+  const airborne = !!ac && !ac._stale;
+  const dotCol = airborne ? '#00ff88' : '#2a4a5a';
+  const status = airborne ? 'AIRBORNE' : 'ON GROUND';
+  const alt = airborne && ac.alt != null && ac.alt !== 'ground' ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
+  const spd = airborne && ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
+  return `<div class="vrow" style="border-left-color:${airborne?col:'transparent'}${airborne?';background:rgba(0,200,255,.03)':''}">
+    <div class="vn" style="color:${airborne?col:'var(--t3)'}">${esc(db.abbr)}</div>
+    <div class="vop" style="color:${airborne?col+'99':col+'33'}">${esc(db.operator)} · ${esc(db.model)}</div>
+    <div class="vbottom">
+      <div class="vdot" style="background:${dotCol}${airborne?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
+      <span style="color:${dotCol};font-size:10px;font-weight:${airborne?'700':'400'}">${status}</span>
+      ${airborne?`<span style="color:var(--t4);font-size:10px;margin-left:4px">${alt}${spd}</span>`:''}
     </div>
   </div>`;
 }
