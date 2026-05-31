@@ -627,8 +627,8 @@ const LS = {
   EVENTS:       'space_intel_events',
   SB_URL:       'space_intel_sb_url',
   SB_AKEY:      'space_intel_sb_akey',
-  MISSIONS:     'space_intel_missions',
-  MISSIONS_PAST:'space_intel_missions_past',
+  MISSIONS:     'space_intel_missions_v2',
+  MISSIONS_PAST:'space_intel_missions_past_v2',
 };
 const MAX_EVENTS = 500;
 const MAX_POS    = 3000;

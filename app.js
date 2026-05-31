@@ -1716,8 +1716,8 @@ async function fetchMissionsBackground() {
     const opFilter = l => Object.keys(OPERATOR_MATCH).some(k=>(l.launch_service_provider?.name||'').includes(k));
 
     const fetches = [];
-    if(!upFresh)   fetches.push(fetch(`${base}upcoming/?limit=30&ordering=net`));
-    if(!pastFresh) fetches.push(fetch(`${base}previous/?limit=20&ordering=-net`));
+    if(!upFresh)   fetches.push(fetch(`${base}upcoming/?limit=30&ordering=net&mode=detailed`));
+    if(!pastFresh) fetches.push(fetch(`${base}previous/?limit=20&ordering=-net&mode=detailed`));
     const results = await Promise.all(fetches);
 
     let i = 0;
@@ -1773,8 +1773,8 @@ async function showMissions() {
   try {
     const base = 'https://ll.thespacedevs.com/2.3.0/launches/';
     const [upResp, pastResp] = await Promise.all([
-      fetch(`${base}upcoming/?limit=30&ordering=net`),
-      fetch(`${base}previous/?limit=20&ordering=-net`),
+      fetch(`${base}upcoming/?limit=30&ordering=net&mode=detailed`),
+      fetch(`${base}previous/?limit=20&ordering=-net&mode=detailed`),
     ]);
     if(!upResp.ok) throw new Error(`HTTP ${upResp.status}`);
     const upData   = await upResp.json();
