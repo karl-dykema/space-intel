@@ -103,17 +103,19 @@ Click **COPY SHARE LINK** in Settings to generate a URL that embeds your Supabas
 IFT-11 and IFT-12 (2025–2026) both splashed down at approximately **19°S, 107°E** northwest of Western Australia. SpaceX has placed Starlink-equipped buoys at this location for live coverage. As the program matures toward full reusability, SpaceX will likely station a dedicated recovery ship (possibly a new JRTI-class vessel or converted platform) in this zone to retrieve the Ship. Watch for new vessel registrations with a homeport near Fremantle, WA or Singapore. The landing zone is already drawn on the map as a dashed blue circle.
 
 ### Aircraft tracking (ADS-B)
-Space operations involve trackable aircraft that would complement vessel tracking:
+Live ADS-B polling via [airplanes.live](https://airplanes.live/api-guide/) (free, no key, 1 req/s, CORS-open). Currently tracked:
 
-- **Rocket Lab ZK-HEV** — Sikorsky S-92A, used for mid-air Electron booster recovery off NZ
-- **Blue Origin recovery helicopter** — catches New Shepard capsules after descent
-- **SpaceX Gulfstreams** (N628TS, N629TS etc.) — crew/executive transport, often position near launch sites pre-launch
-- **SpaceX chase planes** — track booster descents
+| Registration | Aircraft | Operator | Role |
+|---|---|---|---|
+| ZK-HEV | Sikorsky S-92A | Rocket Lab | Mid-air Electron recovery off Māhia |
+| N628TS | Gulfstream G650ER | SpaceX | Executive transport |
+| N8628 | Gulfstream G800 | SpaceX | Executive transport (acquired 2025) |
+| N272BG | Gulfstream G550 | SpaceX | Executive transport |
+| N502SX | Gulfstream G550 | SpaceX | Executive transport |
+| N154TS | Boeing 737-800 | SpaceX | Personnel transport (custom livery) |
+| N152QS | Gulfstream G450 | SpaceX | Executive transport |
 
-ADS-B data sources to evaluate:
-- [OpenSky Network](https://opensky-network.org) — free REST API, no WebSocket key needed
-- [ADS-B Exchange](https://www.adsbexchange.com) — unfiltered, includes military
-- [FlightAware AeroAPI](https://flightaware.com/commercial/aeroapi/) — paid, higher fidelity
+Note: Blue Origin New Shepard capsules land via parachute + airbags — no helicopter catch. New Glenn booster uses propulsive landing.
 
 ### NOTAMs / Maritime Safety Notices
 Launch exclusion zones are already drawn on the map (static, from 33 CFR). Dynamic notices are harder:

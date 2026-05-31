@@ -482,6 +482,53 @@ const LANDMARKS = [
 ];
 
 
+// ── Aircraft Database ─────────────────────────────────────────
+// Keyed by registration. Polled live from airplanes.live every 60s.
+const AIRCRAFT_DB = {
+  'ZK-HEV': {
+    name:'Rocket Lab Capture Helicopter', abbr:'ZK-HEV',
+    operator:'Rocket Lab', role:'Electron mid-air recovery',
+    model:'Sikorsky S-92A', type:'helicopter',
+    notes:'Operated by Advanced Flight Ltd on behalf of Rocket Lab. Used for mid-air catch of Electron first stage off Māhia Peninsula, NZ.',
+  },
+  'N628TS': {
+    name:'SpaceX Gulfstream G650ER', abbr:'N628TS',
+    operator:'SpaceX', role:'Executive transport',
+    model:'Gulfstream G650ER', type:'jet',
+    notes:'Registered to Falcon Landing LLC. Primary SpaceX executive jet. N628 = June 28 (Elon birthday).',
+  },
+  'N272BG': {
+    name:'SpaceX Gulfstream G550 (I)', abbr:'N272BG',
+    operator:'SpaceX', role:'Executive transport',
+    model:'Gulfstream G550', type:'jet',
+    notes:'Registered to Falcon Landing LLC.',
+  },
+  'N502SX': {
+    name:'SpaceX Gulfstream G550 (II)', abbr:'N502SX',
+    operator:'SpaceX', role:'Executive transport',
+    model:'Gulfstream G550', type:'jet',
+    notes:'Registered to Falcon Landing LLC.',
+  },
+  'N8628': {
+    name:'SpaceX Gulfstream G800', abbr:'N8628',
+    operator:'SpaceX', role:'Executive transport',
+    model:'Gulfstream G800', type:'jet',
+    notes:'Acquired 2025. Registered to Falcon Landing LLC. Most capable in fleet.',
+  },
+  'N154TS': {
+    name:'SpaceX Boeing 737-800', abbr:'N154TS',
+    operator:'SpaceX', role:'Personnel transport',
+    model:'Boeing 737-800', type:'jet',
+    notes:'Narrow-body airliner for shuttling engineers and personnel between SpaceX sites. Custom SpaceX livery.',
+  },
+  'N152QS': {
+    name:'SpaceX Gulfstream G450', abbr:'N152QS',
+    operator:'SpaceX', role:'Executive transport',
+    model:'Gulfstream G450', type:'jet',
+    notes:'Heavy business jet for fast point-to-point transit.',
+  },
+};
+
 const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff', 'CNSA':'#ff4444' };
 function opColor(op) { return OP_COLORS[op]||'#aaaaaa'; }
 

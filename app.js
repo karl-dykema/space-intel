@@ -231,13 +231,13 @@ function updateSBStatus() {
 }
 
 // ── App state ─────────────────────────────────────────────────
-const S = { ws:null, vessels:{}, selected:null, tab:'events' };
+const S = { ws:null, vessels:{}, aircraft:{}, selected:null, tab:'events' };
 let missionsCache = [];
 let pastMissionsCache = [];
 const prevZones={};
-let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null;
+let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null, aircraftLayer=null;
 let showLandmarks=false;
-const markers={}, tracks={};
+const markers={}, tracks={}, aircraftMarkers={};
 
 // ── Mission linkage ───────────────────────────────────────────
 function isCarryingBooster(mmsi) {
@@ -390,6 +390,7 @@ function initMap() {
   }).addTo(map);
   exclusionLayer=L.layerGroup().addTo(map);
   landmarkLayer=L.layerGroup().addTo(map);
+  aircraftLayer=L.layerGroup().addTo(map);
   layers=L.layerGroup().addTo(map);
   zoneLayer=L.layerGroup().addTo(map);
   map.setView([20,0],2);
@@ -571,6 +572,74 @@ function selectVessel(mmsi) {
   Object.values(S.vessels).forEach(vv=>{if(vv.lat)updateMarker(vv);});
   renderFleet();
   setTab('vessel');
+}
+
+// ── Aircraft tracking ─────────────────────────────────────────
+const AIRCRAFT_API = 'https://api.airplanes.live/v2/reg/';
+const AIRCRAFT_POLL_MS = 60000;
+
+async function pollAircraft() {
+  if(!map) return;
+  const regs = Object.keys(AIRCRAFT_DB);
+  for(const reg of regs) {
+    try {
+      const res = await fetch(AIRCRAFT_API + encodeURIComponent(reg));
+      if(!res.ok) continue;
+      const data = await res.json();
+      const ac = data.ac?.[0];
+      if(!ac?.lat || !ac?.lon) {
+        // Aircraft on ground or not broadcasting — keep last known position, mark stale
+        if(S.aircraft[reg]) S.aircraft[reg]._stale = true;
+        continue;
+      }
+      S.aircraft[reg] = {
+        reg,
+        lat: ac.lat, lon: ac.lon,
+        alt: ac.alt_baro,
+        gs: ac.gs,
+        track: ac.track ?? 0,
+        hex: ac.hex,
+        ts: data.now ? data.now * 1000 : Date.now(),
+        _stale: false,
+      };
+      updateAircraftMarker(reg);
+    } catch(_) {}
+    await new Promise(r => setTimeout(r, 300));
+  }
+  renderFleet();
+}
+
+function updateAircraftMarker(reg) {
+  if(!map || !aircraftLayer) return;
+  const ac = S.aircraft[reg];
+  const db = AIRCRAFT_DB[reg];
+  if(!ac?.lat || !ac?.lon || !db) return;
+  const col = opColor(db.operator);
+  const sz = 16;
+  const t = ac.track || 0;
+  const isHelo = db.type === 'helicopter';
+  // Airplane: forward-pointing arrow shape; helicopter: circle with cross
+  const shape = isHelo
+    ? `<circle cx="10" cy="10" r="5" fill="none" stroke="${col}" stroke-width="1.8"/>
+       <line x1="10" y1="4" x2="10" y2="16" stroke="${col}" stroke-width="1.5"/>
+       <line x1="4" y1="10" x2="16" y2="10" stroke="${col}" stroke-width="1.5"/>`
+    : `<polygon points="10,2 13,16 10,12 7,16" fill="${col}" stroke="${col}" stroke-width="0.5"/>`;
+  const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 20 20" transform="rotate(${t})" style="transform-origin:center;transform:rotate(${t}deg)">
+    ${shape}
+  </svg>`;
+  const icon = L.divIcon({html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:''});
+  const alt = ac.alt != null ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
+  const spd = ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
+  const tooltip = `<b style="color:${col}">${esc(db.abbr)}</b><br>
+    <span style="color:var(--t5)">${esc(db.operator)}</span><br>${esc(db.role)}<br>${esc(db.model)}${alt}${spd}`;
+  if(!aircraftMarkers[reg]) {
+    aircraftMarkers[reg] = L.marker([ac.lat, ac.lon], {icon, zIndexOffset:500})
+      .addTo(aircraftLayer).bindTooltip(tooltip, {className:'ltt', direction:'top'});
+  } else {
+    aircraftMarkers[reg].setLatLng([ac.lat, ac.lon]);
+    aircraftMarkers[reg].setIcon(icon);
+    aircraftMarkers[reg].bindTooltip(tooltip, {className:'ltt', direction:'top'});
+  }
 }
 
 // ── WebSocket ─────────────────────────────────────────────────
@@ -1466,6 +1535,8 @@ window.onload=()=>{
 
   loadSBData().then(()=>loadVapiPositions());
   fetchMissionsBackground().then(()=>renderLaunchBanner());
+  pollAircraft();
+  setInterval(pollAircraft, AIRCRAFT_POLL_MS);
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
   if(SHARE_MODE) setInterval(loadSBData, 180000);
