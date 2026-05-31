@@ -409,7 +409,7 @@ function initMap() {
         <div style="width:12px;height:3px;background:${c};border-radius:1px"></div>${op}</div>`
     ).join('') +
     `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:#ff8c00;margin-top:5px;padding-top:5px;border-top:1px solid var(--bdr2)">
-      <div style="width:12px;height:3px;background:#ff8c00;border-radius:1px;opacity:0.7"></div>USCG Safety Zone</div>
+      <div style="width:12px;height:3px;background:#ff8c00;border-radius:1px;opacity:0.7"></div>Safety Zone</div>
     <div style="margin-top:8px;padding-top:5px;border-top:1px solid var(--bdr2);font-size:9px;color:var(--t4);letter-spacing:.06em;margin-bottom:3px">LANDMARKS</div>` +
     [['#ff4400','🚀 Launch pad'],['#ffcc00','👁 Viewing area'],['#00aaff','🏛 NASA / facility'],['#00cc88','⚓ Port']].map(([c,l])=>
       `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:${c};margin-bottom:2px">
