@@ -414,30 +414,63 @@ const LANDMARKS = [
   { id:'andy_bowie',      lat:26.141,  lon:-97.172,  name:'Andy Bowie Park (SPI)',           type:'viewing',  desc:'North SPI county park — good angle on the launch corridor.' },
   { id:'port_brownsville',lat:25.945,  lon:-97.405,  name:'Port of Brownsville',             type:'port',     desc:'Deep-water port where SpaceX receives Starship hardware by ship.' },
 
+  // ── Starbase — additional facilities ────────────────────────
+  { id:'starbase_build',  lat:26.017,  lon:-97.156,  name:'Starbase — Production & Tank Farm', type:'facility', desc:'SpaceX Starbase main production area. Starship and Super Heavy sections are fabricated, stacked, and tested here before rollout to the OLM.' },
+  { id:'boca_chica_village',lat:25.973,lon:-97.207,  name:'Boca Chica Village (SpaceX)',     type:'facility', desc:'Former beach community leased by SpaceX. Worker housing and support facilities for Starbase operations.' },
+
+  // ── SpaceX facilities ─────────────────────────────────────────
+  { id:'spacex_hq',       lat:33.920,  lon:-118.328, name:'SpaceX HQ — Hawthorne, CA',       type:'facility', desc:'SpaceX headquarters and primary manufacturing. Falcon 9/Heavy integration, Dragon production, Merlin engine assembly.' },
+  { id:'spacex_mcgregor',  lat:31.404,  lon:-97.453,  name:'SpaceX Rocket Engine Test — McGregor, TX', type:'facility', desc:'SpaceX Rocket Development and Test Facility. All Merlin and Raptor engines are acceptance-tested here before delivery.' },
+  { id:'spacex_redmond',  lat:47.673,  lon:-122.109, name:'SpaceX Redmond — Starlink',       type:'facility', desc:'SpaceX Redmond Development Center. Starlink satellite design, manufacturing, and testing.' },
+  { id:'spacex_seattle',  lat:47.624,  lon:-122.336, name:'SpaceX Seattle (Legacy)',          type:'facility', desc:'Original Starlink office. Consolidated into Redmond campus.' },
+
   // ── Cape Canaveral / KSC ─────────────────────────────────────
   { id:'lc39a',           lat:28.608,  lon:-80.604,  name:'LC-39A (SpaceX)',                 type:'launch',   desc:'Apollo-era pad leased by SpaceX. Falcon 9, Falcon Heavy, future Starship East.' },
   { id:'lc40',            lat:28.562,  lon:-80.577,  name:'SLC-40 (SpaceX)',                 type:'launch',   desc:'Primary Falcon 9 workhorse pad at Cape Canaveral SFS.' },
-  { id:'slc41',           lat:28.583,  lon:-80.583,  name:'SLC-41 (ULA)',                    type:'launch',   desc:'United Launch Alliance Vulcan Centaur and Atlas V pad.' },
-  { id:'slc37b',          lat:28.532,  lon:-80.567,  name:'SLC-37B (ULA)',                   type:'launch',   desc:'ULA Delta IV Heavy pad. Last Delta IV Heavy launch 2024.' },
+  { id:'lz1',             lat:28.485,  lon:-80.545,  name:'LZ-1 — Falcon RTLS (SpaceX)',    type:'launch',   desc:'Landing Zone 1 at Cape Canaveral SFS. Booster return-to-launch-site landing pad for LC-39A / SLC-40 missions. Former SLC-13.' },
+  { id:'lz2',             lat:28.486,  lon:-80.543,  name:'LZ-2 — Falcon Heavy RTLS',       type:'launch',   desc:'Landing Zone 2 adjacent to LZ-1. Used for Falcon Heavy side-booster simultaneous landings.' },
+  { id:'vab',             lat:28.586,  lon:-80.650,  name:'VAB — Vehicle Assembly Building', type:'facility', desc:'NASA\'s iconic 160m tall assembly building. Artemis/SLS stack assembly. One of the largest buildings by volume on Earth.' },
+  { id:'slc41',           lat:28.583,  lon:-80.583,  name:'SLC-41 (ULA)',                    type:'launch',   desc:'United Launch Alliance Vulcan Centaur pad. Atlas V retired here after 100 launches.' },
+  { id:'slc37b',          lat:28.532,  lon:-80.567,  name:'SLC-37B (ULA)',                   type:'launch',   desc:'ULA Delta IV Heavy pad. Last Delta IV Heavy launch April 2024.' },
+  { id:'lc36',            lat:28.467,  lon:-80.537,  name:'LC-36 (Blue Origin)',             type:'launch',   desc:'Blue Origin New Glenn orbital launch pad. Former Atlas Centaur site, rebuilt 2024.' },
+  { id:'slc46',           lat:28.457,  lon:-80.528,  name:'SLC-46 (Firefly / DoD)',          type:'launch',   desc:'Multi-user pad. Firefly Alpha, potential DoD missions.' },
   { id:'ksc_visitor',     lat:28.522,  lon:-80.682,  name:'KSC Visitor Complex',             type:'facility', desc:'Public entrance to KSC — Apollo/Saturn V Center, shuttle Atlantis, paid launch viewing.' },
   { id:'space_view_park', lat:28.606,  lon:-80.805,  name:'Space View Park, Titusville',     type:'viewing',  desc:'Best free public viewing, 12 mi from pads. Riverside park with PA feed during launches.' },
   { id:'jetty_park',      lat:28.407,  lon:-80.592,  name:'Jetty Park',                      type:'viewing',  desc:'Port Canaveral beachfront. Eastern angle on the pads, cruise ships for scale.' },
   { id:'playalinda',      lat:28.655,  lon:-80.632,  name:'Playalinda Beach',                type:'viewing',  desc:'Canaveral National Seashore — closest public beach to LC-39. Often gated on launch days.' },
   { id:'banana_creek',    lat:28.605,  lon:-80.669,  name:'Banana Creek Viewing (KSC)',      type:'viewing',  desc:'Paid KSC bleacher seating 3.9 mi from pads. Best close-up view available to public.' },
 
+  // ── ULA facilities ────────────────────────────────────────────
+  { id:'ula_decatur',     lat:34.665,  lon:-87.019,  name:'ULA Manufacturing — Decatur, AL', type:'facility', desc:'United Launch Alliance rocket manufacturing plant. Atlas V, Delta IV, and Vulcan Centaur produced here. RocketShip loads from adjacent river port.' },
+  { id:'ula_hq',          lat:39.572,  lon:-104.851, name:'ULA HQ — Centennial, CO',         type:'facility', desc:'United Launch Alliance headquarters.' },
+
   // ── Vandenberg SFB ───────────────────────────────────────────
-  { id:'slc4e',           lat:34.633,  lon:-120.613, name:'SLC-4E (SpaceX)',                 type:'launch',   desc:'SpaceX Falcon 9 / Falcon Heavy. Polar and sun-synchronous orbit missions.' },
-  { id:'slc6',            lat:34.576,  lon:-120.623, name:'SLC-6 (ULA/SpaceX)',              type:'launch',   desc:'Former Shuttle West pad. ULA and now SpaceX transition for future missions.' },
+  { id:'slc4e',           lat:34.633,  lon:-120.613, name:'SLC-4E (SpaceX)',                 type:'launch',   desc:'SpaceX Falcon 9 / Falcon Heavy west coast pad. Polar and sun-synchronous orbit missions.' },
+  { id:'slc3e',           lat:34.644,  lon:-120.589, name:'SLC-3E (ULA)',                    type:'launch',   desc:'ULA Atlas V west coast pad. Used for NRO, GPS, and government payloads. Being decommissioned after Vulcan transition.' },
+  { id:'slc6',            lat:34.576,  lon:-120.623, name:'SLC-6 (SpaceX future)',            type:'launch',   desc:'Former Shuttle West pad. Being rebuilt by SpaceX for Falcon 9 / future west coast operations.' },
+  { id:'slc2w',           lat:34.754,  lon:-120.627, name:'SLC-2W (defunct)',                type:'launch',   desc:'Former Delta II pad. Retired 2018.' },
   { id:'jalama_beach',    lat:34.512,  lon:-120.503, name:'Jalama Beach',                    type:'viewing',  desc:'Santa Barbara County park. Nearest legal public viewing of Vandenberg launches, ~12 mi.' },
   { id:'lompoc_viewing',  lat:34.624,  lon:-120.447, name:'W. Ocean Ave, Lompoc',            type:'viewing',  desc:'Common roadside viewing corridor near base perimeter for SLC launches.' },
 
-  // ── Wallops Island, VA ───────────────────────────────────────
-  { id:'wallops_pad',     lat:37.940,  lon:-75.466,  name:'Wallops Flight Facility',         type:'launch',   desc:'NASA / Mid-Atlantic Regional Spaceport. Antares, Minotaur, small commercial launch site.' },
+  // ── Blue Origin facilities ────────────────────────────────────
+  { id:'bo_kent',         lat:47.398,  lon:-122.233, name:'Blue Origin HQ — Kent, WA',       type:'facility', desc:'Blue Origin headquarters and manufacturing. New Glenn, New Shepard, BE-4 engine production.' },
+  { id:'bo_van_horn',     lat:31.413,  lon:-104.757, name:'Blue Origin — Van Horn, TX',       type:'launch',   desc:'New Shepard suborbital launch site. West Texas desert. Crew capsule parachute landings nearby.' },
+  { id:'bo_huntsville',   lat:34.729,  lon:-86.585,  name:'Blue Origin Engine — Huntsville, AL', type:'facility', desc:'BE-4 engine test facility adjacent to NASA Marshall. Engines for New Glenn and ULA Vulcan.' },
+
+  // ── Rocket Lab facilities ─────────────────────────────────────
+  { id:'rl_hq',           lat:33.775,  lon:-118.195, name:'Rocket Lab HQ — Long Beach, CA',  type:'facility', desc:'Rocket Lab global headquarters and spacecraft manufacturing. Neutron rocket development. Photon spacecraft production.' },
+  { id:'rl_wallops',      lat:37.833,  lon:-75.488,  name:'Rocket Lab LC-2 — Wallops, VA',   type:'launch',   desc:'Rocket Lab\'s east coast Electron launch site at MARS (Mid-Atlantic Regional Spaceport). Active since 2023. Supports US government/NRO missions.' },
+  { id:'wallops_pad',     lat:37.940,  lon:-75.466,  name:'Wallops Flight Facility (NASA/NG)',type:'launch',   desc:'NASA / Northrop Grumman Antares pad. Cygnus cargo missions to ISS. Also Minotaur small orbital launcher.' },
   { id:'wallops_visitor', lat:37.939,  lon:-75.456,  name:'NASA Wallops Visitor Center',     type:'facility', desc:'Free NASA visitor center with exhibits. Open on launch days for viewing.' },
 
   // ── Rocket Lab Māhia, NZ ─────────────────────────────────────
-  { id:'rl_lc1',          lat:-39.262, lon:177.865,  name:'Rocket Lab LC-1 (Māhia)',        type:'launch',   desc:'Rocket Lab Electron smallsat launch complex. World\'s first private orbital launch site.' },
+  { id:'rl_lc1',          lat:-39.262, lon:177.865,  name:'Rocket Lab LC-1 (Māhia)',        type:'launch',   desc:'Rocket Lab Electron primary launch complex. World\'s first private orbital launch site, operational since 2017.' },
   { id:'mahia_lookout',   lat:-39.200, lon:177.900,  name:'Māhia Peninsula Lookout',        type:'viewing',  desc:'Public scenic reserve with view over launch complex.' },
+
+  // ── Other commercial spaceports ───────────────────────────────
+  { id:'mojave',          lat:34.981,  lon:-118.151, name:'Mojave Air & Space Port',         type:'launch',   desc:'First FAA-licensed spaceport for horizontal launches. Stratolaunch Roc operations. Virgin Galactic, Scaled Composites, many test programs.' },
+  { id:'spaceport_america',lat:32.990, lon:-106.968, name:'Spaceport America — NM',          type:'launch',   desc:'Virgin Galactic primary gateway. SpaceShipTwo horizontal runway launches. World\'s first purpose-built commercial spaceport.' },
+  { id:'kwajalein',       lat:9.048,   lon:167.739,  name:'Reagan Test Site — Kwajalein',    type:'launch',   desc:'Marshall Islands atoll. Historic SpaceX Falcon 1 launch site (first orbital success 2008). Now US Army missile defense test range.' },
 
   // ── NASA Centers ─────────────────────────────────────────────
   { id:'jsc',             lat:29.559,  lon:-95.094,  name:'NASA JSC — Houston',              type:'facility', desc:'Johnson Space Center. Mission Control, astronaut training, human spaceflight hub.' },
