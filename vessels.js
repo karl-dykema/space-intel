@@ -675,18 +675,18 @@ function timelineForVehicle(vehicleName) {
 // ── Spacecraft TLE matching ───────────────────────────────────
 // longterm:true → only shown when SPACECRAFT toggle is ON
 // longterm:false → always visible (active missions)
+// Patterns are precise to avoid debris objects ("ISS DEB", "ISS OBJECT XY", etc.)
 const SPACECRAFT_PATTERNS = [
-  { match:n=>n.startsWith('ISS'),          abbr:'ISS',        operator:'NASA',             role:'Space Station',     col:'#00aaff', longterm:true  },
-  { match:n=>n.startsWith('CSS'),          abbr:'Tiangong',   operator:'CNSA',             role:'Space Station',     col:'#ff4444', longterm:true  },
-  { match:n=>n.startsWith('SOYUZ-MS'),     abbr:'Soyuz',      operator:'Roscosmos',        role:'Crewed spacecraft', col:'#9966ff', longterm:true  },
-  { match:n=>n.startsWith('PROGRESS-MS'),  abbr:'Progress',   operator:'Roscosmos',        role:'Cargo spacecraft',  col:'#9966ff', longterm:true  },
-  { match:n=>n.startsWith('SHENZHOU'),     abbr:'Shenzhou',   operator:'CNSA',             role:'Crewed spacecraft', col:'#ff6644', longterm:true  },
-  { match:n=>n.startsWith('TIANZHOU'),     abbr:'Tianzhou',   operator:'CNSA',             role:'Cargo spacecraft',  col:'#ff6644', longterm:true  },
-  { match:n=>n.startsWith('CREW DRAGON'),  abbr:'Dragon',     operator:'SpaceX',           role:'Crewed capsule',    col:'#00d4ff', longterm:false },
-  { match:n=>n.startsWith('DRAGON CRS'),   abbr:'Dragon',     operator:'SpaceX',           role:'Cargo capsule',     col:'#00d4ff', longterm:false },
-  { match:n=>/^CYGNUS/i.test(n),           abbr:'Cygnus',     operator:'Northrop Grumman', role:'Cargo spacecraft',  col:'#dd8800', longterm:false },
-  { match:n=>/STARSHIP/i.test(n),          abbr:'Starship',   operator:'SpaceX',           role:'Spacecraft',        col:'#00d4ff', longterm:false },
-  { match:n=>/^HTV/i.test(n),              abbr:'HTV',        operator:'JAXA',             role:'Cargo spacecraft',  col:'#ffcc00', longterm:false },
+  { match:n=>n==='ISS (ZARYA)',                           abbr:'ISS',      operator:'NASA',             role:'Space Station',     col:'#00aaff', longterm:true  },
+  { match:n=>n==='CSS (TIANHE)',                          abbr:'Tiangong', operator:'CNSA',             role:'Space Station',     col:'#ff4444', longterm:true  },
+  { match:n=>/^SOYUZ-MS \d/.test(n),                     abbr:'Soyuz',    operator:'Roscosmos',        role:'Crewed spacecraft', col:'#9966ff', longterm:true  },
+  { match:n=>/^PROGRESS-MS \d/.test(n),                  abbr:'Progress', operator:'Roscosmos',        role:'Cargo spacecraft',  col:'#9966ff', longterm:true  },
+  { match:n=>/^SHENZHOU-\d/.test(n),                     abbr:'Shenzhou', operator:'CNSA',             role:'Crewed spacecraft', col:'#ff6644', longterm:true  },
+  { match:n=>/^TIANZHOU-\d/.test(n),                     abbr:'Tianzhou', operator:'CNSA',             role:'Cargo spacecraft',  col:'#ff6644', longterm:true  },
+  { match:n=>/^CREW DRAGON\b/.test(n)&&!/DEB/i.test(n), abbr:'Dragon',   operator:'SpaceX',           role:'Crewed capsule',    col:'#00d4ff', longterm:false },
+  { match:n=>/^DRAGON CRS-\d/.test(n),                   abbr:'Dragon',   operator:'SpaceX',           role:'Cargo capsule',     col:'#00d4ff', longterm:false },
+  { match:n=>/^CYGNUS NG-\d/.test(n),                    abbr:'Cygnus',   operator:'Northrop Grumman', role:'Cargo spacecraft',  col:'#dd8800', longterm:false },
+  { match:n=>/^HTV-\d/.test(n),                          abbr:'HTV',      operator:'JAXA',             role:'Cargo spacecraft',  col:'#ffcc00', longterm:false },
 ];
 
 // ── Launch pad coordinates ────────────────────────────────────
