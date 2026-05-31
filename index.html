@@ -26,7 +26,7 @@
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE FLEET INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.53</span></div>
+      <div class="ht">SPACE FLEET INTEL <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.54</span></div>
       <div class="hs" id="hsubtitle">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -47,7 +47,9 @@
     <button class="cbtn" onclick="showMissions()">MISSIONS</button>
     <button class="cbtn admin-only" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS</button>
     <button class="cbtn" id="landmark-btn" onclick="toggleLandmarks()" title="Toggle launch sites &amp; viewing areas">LANDMARKS &amp; FACILITIES</button>
-    <button class="cbtn" id="spacecraft-btn" onclick="toggleSpacecraft()" title="Toggle ISS, Tiangong, X-37B and other long-term orbital assets" style="opacity:0.4">SPACECRAFT</button>
+    <button class="cbtn" id="vessels-btn"   onclick="toggleVessels()"   title="Toggle marine vessels">VESSELS</button>
+    <button class="cbtn" id="aircraft-btn"  onclick="toggleAircraft()"  title="Toggle aircraft">AIRCRAFT</button>
+    <button class="cbtn" id="spacecraft-btn" onclick="toggleSpacecraft()" title="Toggle ISS, Tiangong, and other long-term orbital assets" style="opacity:0.4">SPACECRAFT</button>
     <button class="cbtn admin-only" onclick="clearEvents()" style="color:var(--t4);margin-left:auto">CLEAR EVENTS</button>
     <button class="cbtn share-only" onclick="showSuggestModal()" style="margin-left:auto;color:var(--grn);border-color:var(--grn)33">SUGGESTIONS</button>
     <button class="cbtn" onclick="showSources()" style="color:var(--t4)" title="Data sources, APIs, and references">SOURCES</button>
@@ -196,16 +198,31 @@
       <b style="color:var(--acc)">Hosting</b> — <a href="https://pages.github.com" target="_blank" style="color:var(--t3)">GitHub Pages</a> · static, free
     </div>
 
-    <div class="modal-sec">EXTERNAL LOOKUPS</div>
+    <div class="modal-sec">COMMUNITY &amp; MEDIA</div>
+    <div class="modal-desc" style="line-height:2">
+      <a href="https://www.twitch.tv/ej_sa" target="_blank" style="color:var(--acc);font-weight:600">EJ_SA</a> — live mission streams on Twitch<br>
+      <a href="https://www.nasaspaceflight.com" target="_blank" style="color:var(--t3)">NASASpaceFlight.com</a> ·
+      <a href="https://everydayastronaut.com" target="_blank" style="color:var(--t3)">Everyday Astronaut</a> ·
+      <a href="https://spaceflightnow.com" target="_blank" style="color:var(--t3)">Spaceflight Now</a><br>
+      <a href="https://www.space.com" target="_blank" style="color:var(--t3)">Space.com</a> ·
+      <a href="https://arstechnica.com/science/" target="_blank" style="color:var(--t3)">Ars Technica Science</a> ·
+      <a href="https://nextspaceflight.com" target="_blank" style="color:var(--t3)">NextSpaceFlight</a><br>
+      <b style="color:var(--t4)">Reddit:</b>
+      <a href="https://reddit.com/r/spacex" target="_blank" style="color:var(--t3)">r/spacex</a> ·
+      <a href="https://reddit.com/r/nasa" target="_blank" style="color:var(--t3)">r/nasa</a> ·
+      <a href="https://reddit.com/r/space" target="_blank" style="color:var(--t3)">r/space</a> ·
+      <a href="https://reddit.com/r/rocketlab" target="_blank" style="color:var(--t3)">r/rocketlab</a> ·
+      <a href="https://reddit.com/r/blueorigin" target="_blank" style="color:var(--t3)">r/blueorigin</a>
+    </div>
+
+    <div class="modal-sec">VESSEL &amp; FLIGHT LOOKUPS</div>
     <div class="modal-desc" style="line-height:1.9">
       <a href="https://www.marinetraffic.com" target="_blank" style="color:var(--t3)">MarineTraffic</a> ·
       <a href="https://www.vesselfinder.com" target="_blank" style="color:var(--t3)">VesselFinder</a> ·
       <a href="https://www.flightaware.com" target="_blank" style="color:var(--t3)">FlightAware</a> ·
       <a href="https://www.flightradar24.com" target="_blank" style="color:var(--t3)">FlightRadar24</a><br>
       <a href="https://www.nasa.gov/artemis/" target="_blank" style="color:var(--t3)">NASA Artemis</a> ·
-      <a href="https://nextspaceflight.com" target="_blank" style="color:var(--t3)">NextSpaceFlight</a> ·
-      <a href="https://www.nasaspaceflight.com" target="_blank" style="color:var(--t3)">NASASpaceFlight.com</a> ·
-      <a href="https://spaceflightnow.com" target="_blank" style="color:var(--t3)">Spaceflight Now</a>
+      <a href="https://www.esa.int" target="_blank" style="color:var(--t3)">ESA</a>
     </div>
 
     <div class="modal-sec">PROJECT</div>

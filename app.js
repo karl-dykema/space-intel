@@ -276,7 +276,7 @@ let pastMissionsCache = [];
 const prevZones={};
 let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null, aircraftLayer=null;
 let orbitLayer=null, rocketLayer=null;
-let showLandmarks=false, showSpacecraft=false;
+let showLandmarks=false, showSpacecraft=false, showVessels=true, showAircraft=true;
 const markers={}, tracks={}, aircraftMarkers={}, aircraftTracks={};
 const spacecraftMarkers={}, orbitTracks={};
 const S_spacecraft={};  // name → { abbr, operator, role, col, longterm, lat, lon, alt, satrec }
@@ -914,6 +914,20 @@ function updateOrbits() {
   updateBoosterProjections();
 }
 
+function toggleVessels() {
+  showVessels = !showVessels;
+  if (showVessels) layers.addTo(map); else map.removeLayer(layers);
+  const btn = document.getElementById('vessels-btn');
+  if (btn) btn.style.opacity = showVessels ? '1' : '0.4';
+  renderFleet();
+}
+function toggleAircraft() {
+  showAircraft = !showAircraft;
+  if (showAircraft) aircraftLayer.addTo(map); else map.removeLayer(aircraftLayer);
+  const btn = document.getElementById('aircraft-btn');
+  if (btn) btn.style.opacity = showAircraft ? '1' : '0.4';
+  renderFleet();
+}
 function toggleSpacecraft() {
   showSpacecraft = !showSpacecraft;
   const btn = document.getElementById('spacecraft-btn');
@@ -1278,7 +1292,7 @@ function renderFleet(){
     const tsB = S.aircraft[b]?._staleTs || S.aircraft[b]?.ts || 0;
     return tsB - tsA;
   });
-  const aircraftRows = visibleAC.map(reg => buildAircraftRow(reg)).join('');
+  const aircraftRows = showAircraft ? visibleAC.map(reg => buildAircraftRow(reg)).join('') : '';
 
   // Spacecraft: cluster and filter by toggle
   const scClusters = clusterSpacecraft().filter(c => !c.longterm || showSpacecraft);
@@ -1286,9 +1300,9 @@ function renderFleet(){
   const scRows = scClusters.map(buildSpacecraftRow).filter(Boolean).join('');
 
   document.getElementById('fleet').innerHTML =
-    rows.map(buildVesselRow).join('') +
+    (showVessels ? rows.map(buildVesselRow).join('') : `<div style="padding:8px 12px;font-size:11px;color:var(--t5)">Vessels hidden</div>`) +
     `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>` +
-    aircraftRows +
+    (showAircraft ? aircraftRows : `<div style="padding:4px 12px;font-size:11px;color:var(--t5)">Aircraft hidden</div>`) +
     (scRows ? `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">SPACECRAFT</div>${scRows}` : '');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
   document.querySelectorAll('.vrow[data-reg]').forEach(el=>{el.onclick=()=>showAircraftDetail(el.dataset.reg);});
