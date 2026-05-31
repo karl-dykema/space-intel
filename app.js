@@ -1328,6 +1328,12 @@ function cycleVessels(mmsis, key) {
   selectVessel(mmsis[_cycleIdx[key]]);
   _cycleIdx[key]++;
 }
+function cycleAircraft(regs, key) {
+  if(!regs.length) return;
+  _cycleIdx[key] = ((_cycleIdx[key]||0) % regs.length);
+  showAircraftDetail(regs[_cycleIdx[key]]);
+  _cycleIdx[key]++;
+}
 
 function updateHeaderStats(){
   const now=Date.now();
@@ -1350,13 +1356,13 @@ function updateHeaderStats(){
     const ops=[...new Set(live.map(v=>v.operator))].length;
     const liveMMSIs    =live.map(v=>v.mmsi);
     const underwayMMSIs=live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
-    const airborneAC   =Object.keys(AIRCRAFT_DB).filter(r=>{ const ac=S.aircraft[r]; return ac&&!ac._stale&&ac.alt!=='ground'; }).length;
+    const airborneRegs =Object.keys(AIRCRAFT_DB).filter(r=>{ const ac=S.aircraft[r]; return ac&&!ac._stale&&ac.alt!=='ground'; });
     const orbitingSC   =Object.keys(S_spacecraft||{}).filter(n=>S_spacecraft[n]?.lat!=null).length;
     rows=[
-      [live.length,  'VESSELS', '#00ff88',`cycleVessels(${safeArr(liveMMSIs)},'live')`],
-      [moving,       'UNDERWAY','#00d4ff',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
-      [airborneAC,   'AIRBORNE','#ffcc00',`setTab('events')`],
-      [ops,          'OPS',     '#ff9900',`setTab('events')`],
+      [live.length,        'VESSELS', '#00ff88',`cycleVessels(${safeArr(liveMMSIs)},'live')`],
+      [moving,             'UNDERWAY','#00d4ff',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
+      [airborneRegs.length,'AIRBORNE','#ffcc00',`cycleAircraft(${safeArr(airborneRegs)},'airborne')`],
+      [ops,                'OPS',     '#ff9900',`setTab('events')`],
     ];
     if(S.ws) {
       const parts=[`${KNOWN_MMSIS.length} vessels`];
