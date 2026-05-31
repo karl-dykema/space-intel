@@ -204,15 +204,13 @@ async function loadSBData() {
     // override VesselAPI fallback if Supabase has real position history
     if(!S.vessels[mmsi] || S.vessels[mmsi]._vapi) {
       const last = history[mmsi].positions[history[mmsi].positions.length-1];
-      if(Date.now()-last.ts < 48*3600000) {
-        S.vessels[mmsi] = {
-          mmsi, ...VESSEL_DB[mmsi],
-          lat:last.lat, lon:last.lon, sog:last.sog||0, cog:last.cog||0, ts:last.ts,
-          track:history[mmsi].positions.map(p=>[p.lat,p.lon]),
-          _historical:true,
-        };
-        updateMarker(S.vessels[mmsi]);
-      }
+      S.vessels[mmsi] = {
+        mmsi, ...VESSEL_DB[mmsi],
+        lat:last.lat, lon:last.lon, sog:last.sog||0, cog:last.cog||0, ts:last.ts,
+        track:history[mmsi].positions.map(p=>[p.lat,p.lon]),
+        _historical:true,
+      };
+      updateMarker(S.vessels[mmsi]);
     }
   }
 
