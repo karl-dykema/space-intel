@@ -19,6 +19,9 @@
 <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
+<div id="stale-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:100000;background:#cc2200;color:#fff;text-align:center;padding:7px 12px;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer;animation:stale-blink 1s step-start infinite" onclick="location.reload(true)">
+  ⚠ NEW VERSION AVAILABLE — CLICK TO REFRESH
+</div>
 <div id="app">
 
   <!-- Launch alert banner — shown when a mission is within 24h -->
@@ -45,7 +48,7 @@
   <div id="cbar">
     <button class="cbtn admin-only" id="cbtn" onclick="toggleConnect()">CONNECT</button>
     <button class="cbtn" onclick="showMissions()">MISSIONS</button>
-    <button class="cbtn admin-only" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS</button>
+    <button class="cbtn admin-only" onclick="showSettings()" style="color:var(--t4)">⚙ SETTINGS<span id="sg-badge" style="display:none;background:#ff8c00;color:#000;font-size:9px;font-weight:700;border-radius:2px;padding:1px 5px;margin-left:5px;vertical-align:middle"></span></button>
     <button class="cbtn" id="landmark-btn" onclick="toggleLandmarks()" title="Toggle launch sites &amp; viewing areas">LANDMARKS &amp; FACILITIES</button>
     <button class="cbtn" id="vessels-btn"   onclick="toggleVessels()"   title="Toggle marine vessels">VESSELS</button>
     <button class="cbtn" id="aircraft-btn"  onclick="toggleAircraft()"  title="Toggle aircraft">AIRCRAFT</button>
@@ -75,6 +78,7 @@
 
     <div id="right">
       <div class="rtabs">
+        <button class="rtab" id="rtab-ops" onclick="setTab('ops')" style="display:none;color:#ff8800;border-bottom-color:#ff8800;animation:ops-pulse 1.5s ease infinite">⚡ OPS</button>
         <button class="rtab act" id="rtab-events"  onclick="setTab('events')">EVENTS</button>
         <button class="rtab"     id="rtab-vessel"  onclick="setTab('vessel')">VESSEL</button>
         <button class="rtab"     id="rtab-history" onclick="setTab('history')">HISTORY</button>

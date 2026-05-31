@@ -300,7 +300,7 @@ function initSBRealtime() {
         if (ts <= (v.ts || 0)) return;
         v.sog = rec.sog ?? 0; v.cog = rec.cog ?? 0;
         [v.lat, v.lon] = smoothPos(v.lat, v.lon, rec.lat, rec.lon, v.sog);
-        v.ts = ts; v._stale = false;
+        v.ts = ts; v._stale = false; v._historical = false;
         if (!history[mmsi]) history[mmsi] = { positions: [], firstSeen: ts, lastSeen: ts };
         history[mmsi].positions.push({ lat: rec.lat, lon: rec.lon, ts, sog: rec.sog, cog: rec.cog });
         history[mmsi].lastSeen = ts;
@@ -683,8 +683,9 @@ function updateMarker(v) {
   const vapi=v._vapi&&!SHARE_MODE;
   const stale=!hist&&!vapi&&!!v.ts&&(Date.now()-v.ts>7200000); // >2h old and not already flagged
   const hollow=hist||vapi||stale;
+  const docked=!hist&&!vapi&&!stale&&!!v.ts&&(Date.now()-v.ts<600000)&&(v.sog==null||v.sog<=0.1);
   const sz=sel?22:14, cog=v.cog||0;
-  const opacity=hist?(sel?0.7:0.45):vapi?(sel?0.8:0.6):stale?(sel?0.65:0.4):(sel?1:0.85);
+  const opacity=hist?(sel?0.7:0.45):vapi?(sel?0.8:0.6):stale?(sel?0.65:0.4):docked?(sel?0.65:0.45):(sel?1:0.85);
   const svg=`<svg width="${sz}" height="${sz}" viewBox="0 0 20 20">
     <polygon points="10,1 14.5,17 10,13.5 5.5,17" fill="${hollow?'none':col}" stroke="${col}"
       stroke-width="1.5" transform="rotate(${cog},10,10)" opacity="${opacity}"/>
@@ -1442,21 +1443,24 @@ function buildVesselRow(v){
   const isOffline=v._offline||(!v.lat&&!isHist);
   const carrying=isCarryingBooster(v.mmsi);
   const stationary=isLive&&(v.sog==null||v.sog<=0.1);
-  const dotCol=isLive?'#00ff88':carrying?'#ff8c00':shareHist?'#4477ff':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
-  const status=isLive?(stationary?'STATIONARY':'LIVE'):carrying&&!isLive?'NO AIS LOCK':shareHist?ageStr(v.ts):isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
-  const nameCol=isLive||shareHist?col:isHist?col+'66':'var(--t3)';
-  const roleCol=isLive||shareHist?col+'99':col+'33';
-  const bg=isLive||shareHist?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):sel?'var(--bg4)':'';
-  const borderCol=isLive?col:shareHist?col+'66':isHist?col+'33':'transparent';
+  const moving=isLive&&!stationary;
+  const shareMoving=shareHist&&(v.sog!=null&&v.sog>0.5);
+  const shareStationary=shareHist&&(v.sog==null||v.sog<=0.5);
+  const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':shareMoving?'#4499ff':shareStationary?'#335577':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
+  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?'NO AIS LOCK':shareMoving?`UNDERWAY · ${ageStr(v.ts)}`:shareStationary?`STATIONARY · ${ageStr(v.ts)}`:isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
+  const nameCol=moving?col:stationary?col+'99':isHist?col+'66':shareHist?col:'var(--t3)';
+  const roleCol=moving?col+'99':stationary?col+'55':isHist?col+'33':shareHist?col+'99':col+'33';
+  const bg=moving?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):stationary?(sel?'var(--bg4)':''):shareHist?(sel?'var(--bg4)':'rgba(0,200,255,.02)'):sel?'var(--bg4)':'';
+  const borderCol=moving?col:stationary?col+'55':shareHist?col+'66':isHist?col+'33':'transparent';
   return `<div class="vrow${sel?' sel':''}" data-mmsi="${esc(v.mmsi)}"
-    style="border-left-color:${borderCol}${bg?';background:'+bg:''}${isLive?';box-shadow:inset 2px 0 8px '+col+'22':''}">
-    <div class="vn" style="color:${nameCol};${isLive?'text-shadow:0 0 12px '+col+'66':''}">${esc(v.abbr||v.name)}</div>
+    style="border-left-color:${borderCol}${bg?';background:'+bg:''}${moving?';box-shadow:inset 2px 0 8px '+col+'22':''}">
+    <div class="vn" style="color:${nameCol};${moving?'text-shadow:0 0 12px '+col+'66':''}">${esc(v.abbr||v.name)}</div>
     <div class="vop" style="color:${roleCol}">${esc(v.operator)} · ${esc(v.role)}</div>
     ${carrying?`<div style="font-size:10px;font-weight:700;color:#ff8c00;letter-spacing:.04em;margin-top:2px">🚀 BOOSTER ABOARD · ${esc(carrying.name||'')}</div>`:''}
     <div class="vbottom">
-      <div class="vdot" style="background:${dotCol}${isLive||shareHist?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
+      <div class="vdot" style="background:${dotCol}${moving||shareHist?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
       <span style="color:${dotCol};font-size:10px;font-weight:${isLive?'700':'400'}">${status}</span>
-      ${v.sog!=null&&isLive?`<span style="color:var(--t2);font-size:11px;margin-left:4px">${v.sog.toFixed(1)} kn</span>`:''}
+      ${v.sog!=null&&moving?`<span style="color:var(--t2);font-size:11px;margin-left:4px">${v.sog.toFixed(1)} kn</span>`:''}
       ${isHist&&!shareHist?`<span style="color:var(--t4);font-size:10px;margin-left:auto">${ageStr(v.ts)}</span>`:''}
       ${v.dest&&!v._historical?`<span style="color:${isLive?'var(--t)':'var(--t5)'};font-size:10px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">→ ${esc(v.dest)}</span>`:''}
     </div>
@@ -1490,14 +1494,16 @@ function buildAircraftRow(reg) {
 // ── Right panel tabs ──────────────────────────────────────────
 function setTab(t){
   S.tab=t;
-  ['events','vessel','history','log'].forEach(id=>{
-    document.getElementById('rtab-'+id).classList.toggle('act',id===t);
+  ['events','vessel','history','log','ops'].forEach(id=>{
+    const b=document.getElementById('rtab-'+id); if(b) b.classList.toggle('act',id===t);
   });
   if(t==='log'){
     logUnread=0;
     const badge=document.getElementById('log-badge');
     if(badge) badge.style.display='none';
   }
+  if(t==='ops') startOpsTicker();
+  else { if(opsTicker){ clearInterval(opsTicker); opsTicker=null; } }
   renderRight();
 }
 function renderRight(){
@@ -1508,6 +1514,7 @@ function renderRight(){
   if(S.tab==='spacecraft') el.innerHTML=buildSpacecraftDetail();
   if(S.tab==='history')    el.innerHTML=buildHistoryTab();
   if(S.tab==='log')        el.innerHTML=buildLogTab();
+  if(S.tab==='ops')        el.innerHTML=buildOpsPanel(getActiveOpsLaunch());
 }
 
 function showAircraftDetail(reg) {
@@ -1715,12 +1722,12 @@ function buildVesselDetail(){
 
       <div class="sec">LOOKUPS</div>
       ${[
-        ['MarineTraffic', `https://www.marinetraffic.com/en/ais/details/ships/mmsi:${mmsi}`],
-        ['VesselFinder',  `https://www.vesselfinder.com/?mmsi=${mmsi}`],
+        ['MarineTraffic', `https://www.marinetraffic.com/en/ais/details/ships/mmsi:${mmsi}/`],
+        ['VesselFinder',  `https://www.vesselfinder.com/vessels/details/${mmsi}`],
         ['space-offshore.com','https://space-offshore.com'],
-        ['Google News',   `https://news.google.com/search?q=${encodeURIComponent((db.abbr||db.name)+' SpaceX')}`],
-      ].map(([l,u])=>`<div class="fr" style="cursor:pointer" onclick="window.open('${u}','_blank')">
-        <span class="fk">${l}</span><span class="fv" style="color:#4488bb">↗</span></div>`).join('')}
+        ['Google News',   `https://news.google.com/search?q=${encodeURIComponent((db.abbr||db.name)+' vessel')}`],
+      ].map(([l,u])=>`<a class="fr" href="${u}" target="_blank" rel="noopener" style="cursor:pointer;text-decoration:none">
+        <span class="fk">${l}</span><span class="fv" style="color:#4488bb">↗</span></a>`).join('')}
     </div>`;
 }
 
@@ -1801,6 +1808,145 @@ function formatDur(ms) {
   const abs = Math.abs(ms);
   const h = Math.floor(abs/3600000), mn = Math.floor((abs%3600000)/60000), s = Math.floor((abs%60000)/1000);
   return h ? `${h}:${String(mn).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${mn}:${String(s).padStart(2,'0')}`;
+}
+
+function formatTPlus(ms) {
+  const sign = ms < 0 ? 'T−' : 'T+';
+  const abs = Math.abs(ms);
+  const h = Math.floor(abs/3600000), m = Math.floor((abs%3600000)/60000), s = Math.floor((abs%60000)/1000);
+  return `${sign}${h ? String(h)+':' : ''}${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+// ── Version check — show refresh banner when new deploy detected ──
+let _versionLastMod = null;
+(async function initVersionCheck() {
+  try {
+    const r = await fetch(location.pathname || '/', { method:'HEAD', cache:'no-store' });
+    _versionLastMod = r.headers.get('last-modified');
+  } catch(e) {}
+})();
+async function checkForNewVersion() {
+  if (!_versionLastMod) return;
+  try {
+    const r = await fetch(location.pathname || '/', { method:'HEAD', cache:'no-store' });
+    const cur = r.headers.get('last-modified');
+    if (cur && cur !== _versionLastMod) {
+      const b = document.getElementById('stale-banner');
+      if (b) b.style.display = '';
+    }
+  } catch(e) {}
+}
+setInterval(checkForNewVersion, 5 * 60000);
+
+// ── Mission Ops ───────────────────────────────────────────────
+let opsTicker = null;
+let _opsAutoId  = null;
+
+function getActiveOpsLaunch() {
+  const now = Date.now();
+  return [...missionsCache, ...pastMissionsCache].find(l => {
+    const net = l.net ? new Date(l.net).getTime() : null;
+    if (!net) return false;
+    const el = now - net;
+    return el > -30*60000 && el < 3*3600000;
+  });
+}
+
+function getOpsTimeline(launch) {
+  const apiTL = (launch.timeline || []);
+  if (apiTL.length > 2) {
+    return apiTL
+      .map(e => ({ t: parseISODuration(e.relative_time)/1000, label: e.type?.name || e.description || '', vessel: null, highlight: false }))
+      .sort((a,b) => a.t - b.t);
+  }
+  const vehicle = launch.rocket?.configuration?.full_name || launch.rocket?.configuration?.name || '';
+  return timelineForVehicle(vehicle) || [];
+}
+
+function buildOpsPanel(launch) {
+  if (!launch) return '<div class="empty">No active mission.</div>';
+  const net = launch.net ? new Date(launch.net).getTime() : null;
+  if (!net) return '<div class="empty">Launch time TBD.</div>';
+  const now = Date.now(), elapsed = now - net;
+  const lsp  = launch.launch_service_provider?.name || '';
+  const vehicle = launch.rocket?.configuration?.full_name || launch.rocket?.configuration?.name || '';
+  const op  = Object.entries(OPERATOR_MATCH).find(([k]) => lsp.includes(k))?.[1] || lsp;
+  const col = opColor(op);
+  const patch   = launch.mission_patches?.[0]?.image_url || launch.image || null;
+  const webcast = launch.vid_urls?.find(v => /youtube|nasa\.gov/i.test(v.url||'')) || launch.vid_urls?.[0];
+  const pad = launch.pad?.name || launch.launch_service_provider?.name || '';
+
+  const events = getOpsTimeline(launch);
+  const pastEvt = events.filter(e => e.t*1000 <= elapsed);
+  const nextEvt = events.find(e => e.t*1000 > elapsed);
+  const curEvt  = pastEvt[pastEvt.length - 1];
+  const phase   = curEvt?.label || (elapsed < 0 ? 'Pre-launch countdown' : 'In flight');
+
+  const tlHTML = events.map(e => {
+    const eMs = e.t * 1000;
+    const isPast = eMs <= elapsed;
+    const isCur  = isPast && e === curEvt;
+    const tStr   = e.t < 0 ? `T−${formatDur(-eMs)}` : e.t === 0 ? 'T+0:00' : `T+${formatDur(eMs)}`;
+    const ttg    = !isPast ? `<span style="color:var(--t5);font-size:10px"> in ${formatDur(eMs-elapsed)}</span>` : '';
+    const vLink  = e.vessel && VESSEL_DB[e.vessel]
+      ? ` <span onclick="selectVesselFromOps('${e.vessel}')" style="cursor:pointer;color:${opColor(VESSEL_DB[e.vessel].operator)};font-size:10px">→ ${VESSEL_DB[e.vessel].abbr}</span>` : '';
+    return `<div class="ops-event${isPast&&!isCur?' past':''}${isCur?' current':''}">
+      <span class="ops-et" style="font-family:var(--fm);font-size:11px;color:${isPast?'var(--t5)':'var(--t3)'};min-width:68px;flex-shrink:0">${tStr}</span>
+      <span class="ops-el" style="font-size:12px;color:${isPast?'var(--t5)':'var(--t2)'};flex:1">${esc(e.label)}${vLink}${ttg}</span>
+      ${isPast ? '<span style="color:#336633;font-size:11px">✓</span>' : ''}
+    </div>`;
+  }).join('');
+
+  return `<div style="display:flex;flex-direction:column;height:100%">
+    <div style="background:linear-gradient(180deg,${col}1a 0%,transparent 90px);border-bottom:2px solid ${col}44;padding:14px 18px 12px;flex-shrink:0">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        ${patch?`<img src="${esc(patch)}" style="width:42px;height:42px;object-fit:contain;border-radius:3px;background:#0a1a2a;padding:2px;flex-shrink:0">` : ''}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10px;color:${col};text-transform:uppercase;letter-spacing:.07em;font-weight:600">${esc(op)} · ${esc(vehicle)}</div>
+          <div style="font-size:13px;font-weight:600;color:#fff;margin:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(launch.name||'')}">${esc(launch.name||'Unknown Mission')}</div>
+          <div style="font-size:10px;color:var(--t4);margin-bottom:3px">${elapsed<0?'COUNTDOWN':'MISSION ELAPSED TIME'}</div>
+          <div id="ops-tplus" class="ops-tplus" style="color:${elapsed<0?'#ff9900':'#fff'}">${formatTPlus(elapsed)}</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;padding-top:7px;border-top:1px solid ${col}33;display:flex;align-items:center;gap:7px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0;animation:pulse 1.2s ease infinite"></span>
+        <span style="font-size:12px;color:var(--t2);flex:1">${esc(phase)}</span>
+        ${nextEvt?`<span id="ops-next" style="font-size:10px;color:var(--t4)">Next: ${formatDur(nextEvt.t*1000-elapsed)}</span>`:''}
+      </div>
+    </div>
+    <div style="padding:4px 18px 8px;overflow-y:auto;flex:1">
+      <div style="font-size:10px;color:var(--t4);letter-spacing:.07em;text-transform:uppercase;margin:10px 0 6px">TIMELINE</div>
+      ${tlHTML||'<div style="color:var(--t5);font-size:12px;padding:8px 0">No timeline data for this vehicle.</div>'}
+    </div>
+    ${webcast?`<div style="padding:10px 18px;border-top:1px solid var(--bdr2);flex-shrink:0">
+      <a href="${esc(webcast.url)}" target="_blank" style="display:inline-block;font-size:12px;font-weight:700;padding:7px 16px;background:${col}22;border:1px solid ${col}55;color:${col};text-decoration:none;border-radius:2px">▶ WATCH LIVE</a>
+    </div>`:''}
+  </div>`;
+}
+
+function startOpsTicker() {
+  if (opsTicker) clearInterval(opsTicker);
+  opsTicker = setInterval(() => {
+    const launch = getActiveOpsLaunch();
+    if (!launch || S.tab !== 'ops') { clearInterval(opsTicker); opsTicker = null; return; }
+    const net = new Date(launch.net).getTime();
+    const elapsed = Date.now() - net;
+    const tEl = document.getElementById('ops-tplus');
+    if (tEl) { tEl.textContent = formatTPlus(elapsed); tEl.style.color = elapsed < 0 ? '#ff9900' : '#fff'; }
+    const nEl = document.getElementById('ops-next');
+    const events = getOpsTimeline(launch);
+    const nextEvt = events.find(e => e.t * 1000 > elapsed);
+    if (nEl && nextEvt) nEl.textContent = `Next: ${formatDur(nextEvt.t*1000 - elapsed)}`;
+    // Re-render if phase crossed
+    const curEvt = events.filter(e => e.t*1000 <= elapsed).slice(-1)[0];
+    if (curEvt?.label !== S._opsPhase) { S._opsPhase = curEvt?.label; renderRight(); }
+  }, 1000);
+}
+
+function selectVesselFromOps(mmsi) {
+  S.selected = mmsi;
+  if (S.vessels[mmsi]?.lat && map) map.setView([S.vessels[mmsi].lat, S.vessels[mmsi].lon], 7);
+  setTab('vessel');
 }
 
 // ── Missions (The Space Devs API) ─────────────────────────────
@@ -2190,6 +2336,18 @@ async function submitSuggestion() {
   }
 }
 
+async function checkSuggestionsBadge() {
+  if(!SB.ready) return;
+  try {
+    const r=await fetch(`${SB.url}/rest/v1/suggestions?status=eq.pending&select=id`,
+      {headers:{'apikey':SB.akey,'Authorization':`Bearer ${SB.akey}`}});
+    if(!r.ok) return;
+    const rows=await r.json();
+    const badge=document.getElementById('sg-badge');
+    if(badge){badge.textContent=rows.length||''; badge.style.display=rows.length?'':'none';}
+  } catch(e) {}
+}
+
 async function loadSuggestions() {
   const el=document.getElementById('sg-list');
   const count=document.getElementById('sg-count');
@@ -2201,6 +2359,8 @@ async function loadSuggestions() {
     if(!r.ok) throw new Error(`HTTP ${r.status}`);
     const rows=await r.json();
     if(count) count.textContent=rows.length?`(${rows.length} pending)`:'(none)';
+    const badge=document.getElementById('sg-badge');
+    if(badge){badge.textContent=rows.length||''; badge.style.display=rows.length?'':'none';}
     if(!rows.length){el.innerHTML='<div style="font-size:12px;color:var(--t4)">No pending suggestions.</div>';return;}
     el.innerHTML=rows.map(s=>{
       const clip=`Type: ${s.type}\nVessel: ${s.vessel_name||'—'}\nMMSI: ${s.mmsi||'—'}\nNotes: ${s.notes||'—'}\nContact: ${s.contact||'—'}\nSubmitted: ${new Date(s.ts).toLocaleString()}`;
@@ -2237,6 +2397,8 @@ async function deleteSuggestion(id) {
     if(el&&!el.children.length) el.innerHTML='<div style="font-size:12px;color:var(--t4)">No pending suggestions.</div>';
     const remaining=el?el.querySelectorAll('[id^=sg-row-]').length:0;
     if(count) count.textContent=remaining?`(${remaining} pending)`:'(none)';
+    const badge=document.getElementById('sg-badge');
+    if(badge){badge.textContent=remaining||''; badge.style.display=remaining?'':'none';}
   } catch(e) {
     alert('Delete failed: '+e.message+'\n\nYou may need to add a DELETE policy to your Supabase suggestions table:\ncreate policy "delete_suggestions" on suggestions for delete using (true);');
   }
@@ -2362,7 +2524,17 @@ window.onload=()=>{
   renderFleet();
   renderRight();
   updateHeaderStats();
-  setInterval(()=>{renderFleet();updateHeaderStats();},5000);
+  setInterval(()=>{
+    renderFleet(); updateHeaderStats();
+    // Show/hide OPS tab and auto-switch on launch entry
+    const active = getActiveOpsLaunch();
+    const opsBtn = document.getElementById('rtab-ops');
+    if (opsBtn) opsBtn.style.display = active ? '' : 'none';
+    if (active && active.id !== _opsAutoId) {
+      _opsAutoId = active.id;
+      if (S.tab === 'events') setTab('ops');
+    }
+  }, 5000);
 
   loadSBData().then(()=>loadVapiPositions());
   fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); });
@@ -2373,5 +2545,6 @@ window.onload=()=>{
   setInterval(()=>{ updateOrbits(); renderFleet(); }, 15000); // update positions every 15s
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
+  if(!SHARE_MODE && SB.ready) checkSuggestionsBadge();
   if(SHARE_MODE) { loadSBData().then(() => { initSBRealtime(); }); setInterval(loadSBData, 300000); }
 };
