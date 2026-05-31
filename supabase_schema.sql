@@ -73,5 +73,6 @@ create policy "read_news"       on news_articles for select using (true);
 create policy "write_news"      on news_articles for insert with check (true);
 
 alter table suggestions enable row level security;
-create policy "read_suggestions"  on suggestions for select using (true);
-create policy "write_suggestions" on suggestions for insert with check (true);
+create policy "read_suggestions"   on suggestions for select using (true);
+create policy "write_suggestions"  on suggestions for insert with check (true);
+create policy "delete_suggestions" on suggestions for delete using (true);

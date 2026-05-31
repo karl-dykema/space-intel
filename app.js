@@ -412,14 +412,15 @@ function initMap() {
 
 function drawExclusionZones() {
   const style = { color:'#ff8c00', fillColor:'#ff8c00', fillOpacity:0.04, weight:1.2, dashArray:'6 3' };
-  const tip = (name, cfr) => `<b style="color:#ff8c00">${name}</b><br><span style="font-size:11px;color:var(--t5)">USCG Safety Zone · ${cfr}</span>`;
+  const tipUSCG = (name, cfr) => `<b style="color:#ff8c00">${name}</b><br><span style="font-size:11px;color:var(--t5)">USCG Safety Zone · ${cfr}</span>`;
+  const tipIntl = (name, auth) => `<b style="color:#ff8c00">${name}</b><br><span style="font-size:11px;color:var(--t5)">Maritime Exclusion Zone · ${auth}</span>`;
 
   // Cape Canaveral — 33 CFR 165.775 (12 nm offshore boundary)
   L.polygon([
     [28.815, -80.478], [28.722, -80.683], [28.422, -80.579],
     [28.183, -80.483], [28.167, -80.354], [28.815, -80.354],
   ], style).addTo(exclusionLayer)
-    .bindTooltip(tip('Cape Canaveral Maritime Safety Zone','33 CFR 165.775'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipUSCG('Cape Canaveral Maritime Safety Zone','33 CFR 165.775'),{className:'ltt',direction:'top'});
 
   // Vandenberg — 33 CFR 334.1130 (3 nm offshore danger zones)
   L.polygon([
@@ -429,17 +430,52 @@ function drawExclusionZones() {
     [34.405, -120.500], [34.393, -120.452], [34.406, -120.411],
     [34.456, -120.411],
   ], style).addTo(exclusionLayer)
-    .bindTooltip(tip('Vandenberg Maritime Danger Zone','33 CFR 334.1130'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipUSCG('Vandenberg Maritime Danger Zone','33 CFR 334.1130'),{className:'ltt',direction:'top'});
 
   // Starbase / Boca Chica — USCG enforces ad-hoc safety zones per launch
   L.circle([26.0, -97.15], {radius:28000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tip('Starbase / Boca Chica Safety Zone','Ad-hoc USCG marine safety notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipUSCG('Starbase / Boca Chica Safety Zone','Ad-hoc USCG marine safety notices'),{className:'ltt',direction:'top'});
 
-  // Mahia Peninsula NZ — Rocket Lab maritime exclusion
+  // Wallops Island (NASA/Northrop Grumman) — FAA/USCG launch safety zones
+  L.circle([37.94, -75.47], {radius:30000, ...style})
+    .addTo(exclusionLayer)
+    .bindTooltip(tipUSCG('Wallops Island Maritime Safety Zone','USCG/FAA launch safety zones'),{className:'ltt',direction:'top'});
+
+  // Māhia Peninsula, NZ — Rocket Lab maritime exclusion
   L.circle([-39.26, 177.87], {radius:20000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tip('Māhia Launch Exclusion Zone','Maritime NZ exclusion notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipIntl('Māhia Launch Exclusion Zone','Maritime NZ exclusion notices'),{className:'ltt',direction:'top'});
+
+  // Kourou / Centre Spatial Guyanais — ESA/Arianespace Atlantic exclusion
+  L.circle([5.24, -52.77], {radius:60000, ...style})
+    .addTo(exclusionLayer)
+    .bindTooltip(tipIntl('Kourou (CSG) Maritime Exclusion Zone','French DGAC / CNES notices'),{className:'ltt',direction:'top'});
+
+  // Alcântara, Brazil — AEB/Itamar
+  L.circle([-2.37, -44.40], {radius:30000, ...style})
+    .addTo(exclusionLayer)
+    .bindTooltip(tipIntl('Alcântara Launch Center Maritime Zone','DECEA/AEB airspace & maritime notices'),{className:'ltt',direction:'top'});
+
+  // Wenchang Space Launch Center — CNSA South China Sea exclusion
+  L.circle([19.61, 110.95], {radius:45000, ...style})
+    .addTo(exclusionLayer)
+    .bindTooltip(tipIntl('Wenchang Maritime Exclusion Zone','CNSA / China MSA notices'),{className:'ltt',direction:'top'});
+
+  // Tanegashima Space Center — JAXA Pacific exclusion
+  L.circle([30.38, 130.97], {radius:35000, ...style})
+    .addTo(exclusionLayer)
+    .bindTooltip(tipIntl('Tanegashima Maritime Exclusion Zone','JAXA / Japan JCG notices'),{className:'ltt',direction:'top'});
+
+  // Satish Dhawan Space Centre (SHAR) — ISRO Bay of Bengal exclusion
+  L.circle([13.73, 80.23], {radius:35000, ...style})
+    .addTo(exclusionLayer)
+    .bindTooltip(tipIntl('SHAR (Sriharikota) Maritime Exclusion Zone','ISRO / India Coast Guard notices'),{className:'ltt',direction:'top'});
+
+  // Naro Space Center, South Korea — KARI exclusion
+  L.circle([34.43, 127.54], {radius:20000, ...style})
+    .addTo(exclusionLayer)
+    .bindTooltip(tipIntl('Naro Space Center Maritime Zone','KARI / Korea Coast Guard notices'),{className:'ltt',direction:'top'});
 }
 
 function drawZones() {
@@ -492,10 +528,12 @@ function updateMarker(v) {
   const mmsi=v.mmsi, col=opColor(v.operator), sel=S.selected===mmsi;
   const hist=v._historical&&!SHARE_MODE; // share mode treats historical as solid
   const vapi=v._vapi&&!SHARE_MODE;
+  const stale=!hist&&!vapi&&!!v.ts&&(Date.now()-v.ts>7200000); // >2h old and not already flagged
+  const hollow=hist||vapi||stale;
   const sz=sel?22:14, cog=v.cog||0;
-  const opacity=hist?(sel?0.7:0.45):vapi?(sel?0.8:0.6):(sel?1:0.85);
+  const opacity=hist?(sel?0.7:0.45):vapi?(sel?0.8:0.6):stale?(sel?0.65:0.4):(sel?1:0.85);
   const svg=`<svg width="${sz}" height="${sz}" viewBox="0 0 20 20">
-    <polygon points="10,1 14.5,17 10,13.5 5.5,17" fill="${(hist||vapi)?'none':col}" stroke="${col}"
+    <polygon points="10,1 14.5,17 10,13.5 5.5,17" fill="${hollow?'none':col}" stroke="${col}"
       stroke-width="1.5" transform="rotate(${cog},10,10)" opacity="${opacity}"/>
     ${sel?`<circle cx="10" cy="10" r="9" fill="none" stroke="${col}" stroke-width="1.2" opacity="0.35"/>`:''}</svg>`;
   const icon=L.divIcon({html:svg,iconSize:[sz,sz],iconAnchor:[sz/2,sz/2],className:''});
@@ -507,15 +545,15 @@ function updateMarker(v) {
     markers[mmsi].setIcon(icon);
     markers[mmsi].setZIndexOffset(sel?1000:0);
   }
-  const age=v._historical&&!SHARE_MODE?` · last seen ${ageStr(v.ts)}`:vapi?` · VesselAPI ${ageStr(v.ts)}`:'';
+  const age=hist?` · last seen ${ageStr(v.ts)}`:vapi?` · VesselAPI ${ageStr(v.ts)}`:stale?` · last seen ${ageStr(v.ts)}`:'';
   markers[mmsi].bindTooltip(
     `<b style="color:${col}">${esc(v.abbr||v.name)}</b><br>
     <span style="color:var(--t5)">${esc(v.operator)}</span><br>${esc(v.role)}<br>
-    ${v.sog!=null&&!hist&&!vapi?v.sog.toFixed(1)+' kn':''}${age}${v.dest&&!hist?' → '+esc(v.dest):''}`,
+    ${v.sog!=null&&!hollow?v.sog.toFixed(1)+' kn':''}${age}${v.dest&&!hollow?' → '+esc(v.dest):''}`,
     {className:'ltt',direction:'top'}
   );
   if(v.track&&v.track.length>1) {
-    const trackStyle={color:col,weight:hist?1:2,opacity:hist?0.25:vapi?0.3:0.5,dashArray:hist||vapi?'3 5':null};
+    const trackStyle={color:col,weight:hollow?1:2,opacity:hist?0.25:vapi?0.3:stale?0.2:0.5,dashArray:hollow?'3 5':null};
     if(tracks[mmsi]) { tracks[mmsi].setLatLngs(v.track); tracks[mmsi].setStyle(trackStyle); }
     else tracks[mmsi]=L.polyline(v.track,trackStyle).addTo(layers).on('click',()=>selectVessel(mmsi));
   }
@@ -1267,12 +1305,14 @@ async function loadSuggestions() {
     if(!rows.length){el.innerHTML='<div style="font-size:12px;color:var(--t4)">No pending suggestions.</div>';return;}
     el.innerHTML=rows.map(s=>{
       const clip=`Type: ${s.type}\nVessel: ${s.vessel_name||'—'}\nMMSI: ${s.mmsi||'—'}\nNotes: ${s.notes||'—'}\nContact: ${s.contact||'—'}\nSubmitted: ${new Date(s.ts).toLocaleString()}`;
-      return`<div style="padding:10px 0;border-bottom:1px solid var(--bdr2)">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      return`<div id="sg-row-${s.id}" style="padding:10px 0;border-bottom:1px solid var(--bdr2)">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap">
           <span style="font-size:10px;font-weight:700;color:var(--acc);letter-spacing:.06em">${esc(s.type.replace('_',' ').toUpperCase())}</span>
           <span style="font-size:10px;color:var(--t4)">${new Date(s.ts).toLocaleString()}</span>
           <button onclick="navigator.clipboard.writeText(${JSON.stringify(clip).replace(/"/g,"'")})"
             style="margin-left:auto;background:none;border:1px solid var(--bdr);color:var(--t4);font-size:10px;padding:2px 8px;cursor:pointer">COPY</button>
+          <button onclick="deleteSuggestion(${s.id})"
+            style="background:none;border:1px solid var(--hi)44;color:var(--hi);font-size:10px;padding:2px 8px;cursor:pointer">DELETE</button>
         </div>
         ${s.vessel_name?`<div style="font-size:13px;font-weight:600;color:var(--t2)">${esc(s.vessel_name)}</div>`:''}
         ${s.mmsi?`<div style="font-size:12px;color:var(--acc);font-family:var(--fm)">${esc(s.mmsi)}</div>`:''}
@@ -1282,6 +1322,24 @@ async function loadSuggestions() {
     }).join('');
   } catch(e) {
     el.innerHTML=`<div style="font-size:12px;color:var(--hi)">Error loading suggestions: ${esc(e.message)}</div>`;
+  }
+}
+
+async function deleteSuggestion(id) {
+  if(!SB.ready) return;
+  try {
+    const r=await fetch(`${SB.url}/rest/v1/suggestions?id=eq.${id}`,
+      {method:'DELETE',headers:{'apikey':SB.akey,'Authorization':`Bearer ${SB.akey}`}});
+    if(!r.ok) throw new Error(`HTTP ${r.status}`);
+    const row=document.getElementById(`sg-row-${id}`);
+    if(row) row.remove();
+    const el=document.getElementById('sg-list');
+    const count=document.getElementById('sg-count');
+    if(el&&!el.children.length) el.innerHTML='<div style="font-size:12px;color:var(--t4)">No pending suggestions.</div>';
+    const remaining=el?el.querySelectorAll('[id^=sg-row-]').length:0;
+    if(count) count.textContent=remaining?`(${remaining} pending)`:'(none)';
+  } catch(e) {
+    alert('Delete failed: '+e.message+'\n\nYou may need to add a DELETE policy to your Supabase suggestions table:\ncreate policy "delete_suggestions" on suggestions for delete using (true);');
   }
 }
 
@@ -1384,9 +1442,8 @@ window.onload=()=>{
 
   if(SHARE_MODE) {
     document.body.classList.add('share-mode');
-    document.getElementById('share-badge').style.display='';
     const sub=document.getElementById('hsubtitle');
-    if(sub) sub.textContent='GLOBAL FLEET · VIEW ONLY · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA';
+    if(sub) sub.textContent='GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA';
     const p=new URLSearchParams(location.search);
     const sbUrl=p.get('sb_url'), sbKey=p.get('sb_key');
     if(sbUrl) localStorage.setItem(LS.SB_URL, sbUrl);
