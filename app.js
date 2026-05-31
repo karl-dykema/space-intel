@@ -625,6 +625,7 @@ function drawLandmarks() {
     viewing:  { col:'#ffcc00' },
     facility: { col:'#00aaff' },
     port:     { col:'#00cc88' },
+    dsn:      { col:'#cc66ff' },
   };
   const landmarkSvg = (type, col) => {
     if (type === 'launch')
@@ -635,20 +636,25 @@ function drawLandmarks() {
       return `<svg width="9" height="9" viewBox="0 0 9 9"><rect x="0.5" y="0.5" width="8" height="8" rx="1" fill="${col}" stroke="none" opacity="0.85"/></svg>`;
     if (type === 'port')
       return `<svg width="10" height="10" viewBox="0 0 10 10"><polygon points="5,1 9,5 5,9 1,5" fill="${col}" stroke="none" opacity="0.85"/></svg>`;
+    if (type === 'dsn')
+      return `<svg width="12" height="12" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5.5" fill="${col}" opacity="0.85"/><circle cx="6" cy="6" r="2.5" fill="#0c1929" opacity="1"/></svg>`;
     return `<svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="${col}" opacity="0.7"/></svg>`;
   };
   LANDMARKS.forEach(lm => {
     const st = TYPE_STYLE[lm.type] || { col:'#888' };
     const svg = landmarkSvg(lm.type, st.col);
-    const sz = lm.type === 'launch' ? 11 : 10;
+    const sz = lm.type === 'launch' ? 11 : lm.type === 'dsn' ? 12 : 10;
     const icon = L.divIcon({ html: svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:'' });
+    const linkHtml = lm.link
+      ? `<br><a href="${lm.link}" target="_blank" style="font-size:10px;color:var(--acc);text-decoration:none">↗ ${esc(lm.link.replace(/^https?:\/\/(www\.)?/,'').split('/')[0])}</a>`
+      : '';
     L.marker([lm.lat, lm.lon], { icon, zIndexOffset:-500 })
       .addTo(landmarkLayer)
       .bindTooltip(
         `<b style="color:${st.col}">${esc(lm.name)}</b><br>
         <span style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:.05em">${lm.type}</span><br>
-        <span style="font-size:11px;color:var(--t3)">${esc(lm.desc)}</span>`,
-        { className:'ltt', direction:'top', maxWidth:280 }
+        <span style="font-size:11px;color:var(--t3)">${esc(lm.desc)}</span>${linkHtml}`,
+        { className:'ltt', direction:'top', maxWidth:300 }
       );
   });
 }

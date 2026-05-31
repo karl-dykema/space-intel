@@ -498,6 +498,18 @@ const LANDMARKS = [
   { id:'woomera',         lat:-31.130, lon:136.816,  name:'Woomera Test Range',              type:'launch',   desc:'Australia\'s primary rocket range. Historic British test site; now multi-user range.' },
   { id:'alcantara',       lat:-2.373,  lon:-44.396,  name:'Alcântara Launch Center',         type:'launch',   desc:'Brazilian near-equatorial spaceport. VLM rocket. Favorable orbital insertion economics.' },
   { id:'starship_io_zone',lat:-19.0,  lon:107.0,    name:'Starship Indian Ocean Landing Zone',type:'viewing',  desc:'Consistent Starship Ship splashdown target (~19°S 107°E), NW of Western Australia. IFT-11 and IFT-12 landed here. Future recovery ship staging area.' },
+
+  // ── NASA Deep Space Network ───────────────────────────────────
+  // Three complexes spaced ~120° apart for continuous deep-space coverage.
+  { id:'dsn_goldstone',  lat:35.4258, lon:-116.8892, name:'DSN — Goldstone (GDSCC)',           type:'dsn',
+    desc:'Goldstone Deep Space Communications Complex, Mojave Desert, CA. Largest DSN complex. 70m antenna (DSS-14 "Mars") + five 34m dishes. Supports Mars, Jupiter, Saturn missions and interstellar probes.',
+    link:'https://www.gdscc.nasa.gov/' },
+  { id:'dsn_madrid',     lat:40.4314, lon:-4.2481,   name:'DSN — Madrid (MDSCC)',              type:'dsn',
+    desc:'Madrid Deep Space Communications Complex, Robledo de Chavela, Spain. Three 34m and one 70m dish. European coverage window for probes visible from 40°N.',
+    link:'https://www.mdscc.nasa.gov/' },
+  { id:'dsn_canberra',   lat:-35.4011,lon:148.9820,  name:'DSN — Canberra (CDSCC)',            type:'dsn',
+    desc:'Canberra Deep Space Communications Complex, Tidbinbilla, Australia. Critical southern-hemisphere coverage — sole DSN contact for missions at low ecliptic latitudes. 70m DSS-43 is the only dish that can uplink to Voyager 1.',
+    link:'https://www.cdscc.nasa.gov/' },
 ];
 
 
