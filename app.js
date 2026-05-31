@@ -828,6 +828,7 @@ function renderFleet(){
     `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>` +
     aircraftRows;
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
+  document.querySelectorAll('.vrow[data-reg]').forEach(el=>{el.onclick=()=>showAircraftDetail(el.dataset.reg);});
 }
 
 function buildVesselRow(v){
@@ -869,7 +870,7 @@ function buildAircraftRow(reg) {
   const status = airborne ? 'AIRBORNE' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : 'ON GROUND';
   const alt = airborne && ac.alt != null && ac.alt !== 'ground' ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
   const spd = airborne && ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
-  return `<div class="vrow" style="border-left-color:${airborne?col:recentLanded?col+'55':'transparent'}${airborne?';background:rgba(0,200,255,.03)':''}">
+  return `<div class="vrow" data-reg="${esc(reg)}" style="border-left-color:${airborne?col:recentLanded?col+'55':'transparent'}${airborne?';background:rgba(0,200,255,.03)':''}">
     <div class="vn" style="color:${airborne?col:recentLanded?'var(--t2)':'var(--t3)'}">${esc(db.abbr)}</div>
     <div class="vop" style="color:${airborne?col+'99':col+'33'}">${esc(db.operator)} · ${esc(db.model)}</div>
     <div class="vbottom">
