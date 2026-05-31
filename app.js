@@ -1353,9 +1353,10 @@ function updateHeaderStats(){
     const airborneAC   =Object.keys(AIRCRAFT_DB).filter(r=>{ const ac=S.aircraft[r]; return ac&&!ac._stale&&ac.alt!=='ground'; }).length;
     const orbitingSC   =Object.keys(S_spacecraft||{}).filter(n=>S_spacecraft[n]?.lat!=null).length;
     rows=[
-      [live.length + airborneAC, 'LIVE',    '#00ff88',`cycleVessels(${safeArr(liveMMSIs)},'live')`],
-      [moving + airborneAC,      'UNDERWAY','#00d4ff',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
-      [ops,                      'OPS',     '#ff9900',`setTab('events')`],
+      [live.length,  'VESSELS', '#00ff88',`cycleVessels(${safeArr(liveMMSIs)},'live')`],
+      [moving,       'UNDERWAY','#00d4ff',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
+      [airborneAC,   'AIRBORNE','#ffcc00',`setTab('events')`],
+      [ops,          'OPS',     '#ff9900',`setTab('events')`],
     ];
     if(S.ws) {
       const parts=[`${KNOWN_MMSIS.length} vessels`];
