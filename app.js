@@ -144,7 +144,9 @@ function smoothPos(prevLat, prevLon, rawLat, rawLon, sog) {
 const sbLastPos = {};
 function maybeSBPos(mmsi, lat, lon, sog, cog, ts) {
   if(!SB.ready) return;
-  if(sbLastPos[mmsi] && ts-sbLastPos[mmsi] < 300000) return;
+  const moving = sog != null && sog > 0.5;
+  const throttle = moving ? 60000 : 180000; // 1 min underway, 3 min stationary
+  if(sbLastPos[mmsi] && ts-sbLastPos[mmsi] < throttle) return;
   sbLastPos[mmsi] = ts;
   SB.insert('positions', { mmsi, lat, lon, sog, cog, ts:new Date(ts).toISOString() });
 }
@@ -471,7 +473,7 @@ function handleAIS(msg) {
       }
       history[mmsi].lastSeen=now;
       const lp=history[mmsi].positions.slice(-1)[0];
-      if(!lp||now-lp.ts>300000||Math.abs(lat-lp.lat)>0.05||Math.abs(lon-lp.lon)>0.05) {
+      if(!lp||now-lp.ts>60000||Math.abs(lat-lp.lat)>0.01||Math.abs(lon-lp.lon)>0.01) {
         history[mmsi].positions.push({lat,lon,ts:now,sog:v.sog,cog:v.cog});
         if(history[mmsi].positions.length>MAX_POS) history[mmsi].positions.shift();
         maybeSBPos(mmsi,lat,lon,v.sog,v.cog,now);
@@ -2843,5 +2845,5 @@ window.onload=()=>{
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
   if(!SHARE_MODE && SB.ready) checkSuggestionsBadge();
-  if(SHARE_MODE) { loadSBData().then(() => { initSBRealtime(); }); setInterval(loadSBData, 300000); }
+  if(SHARE_MODE) { loadSBData().then(() => { initSBRealtime(); }); setInterval(loadSBData, 60000); }
 };
