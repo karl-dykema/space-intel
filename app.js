@@ -686,7 +686,7 @@ function showPingRing(lat, lon, col) {
     iconSize:[22,22], iconAnchor:[11,11], className:''
   });
   const m = L.marker([lat, lon], {icon, zIndexOffset:-300, interactive:false}).addTo(layers);
-  setTimeout(() => { try { layers.removeLayer(m); } catch(e) {} }, 1200);
+  setTimeout(() => { try { layers.removeLayer(m); } catch(e) {} }, 5000);
 }
 
 function updateMarker(v) {
