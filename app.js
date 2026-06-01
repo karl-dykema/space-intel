@@ -459,6 +459,7 @@ function handleAIS(msg) {
         v.track.push([lat,lon]);
         if(v.track.length>1000) v.track.shift();
       }
+      showPingRing(v.lat, v.lon, opColor(info.operator));
     }
   }
 
@@ -674,6 +675,16 @@ function toggleLegend() {
   ops.style.display  = collapsed ? '' : 'none';
   if (chev) chev.textContent = collapsed ? '▾' : '▸';
   try { localStorage.setItem('legend_collapsed', collapsed ? '0' : '1'); } catch(e) {}
+}
+
+function showPingRing(lat, lon, col) {
+  if (!map || !layers) return;
+  const icon = L.divIcon({
+    html: `<div class="ping-ring" style="width:22px;height:22px;border-color:${col}"></div>`,
+    iconSize:[22,22], iconAnchor:[11,11], className:''
+  });
+  const m = L.marker([lat, lon], {icon, zIndexOffset:-300, interactive:false}).addTo(layers);
+  setTimeout(() => { try { layers.removeLayer(m); } catch(e) {} }, 1200);
 }
 
 function updateMarker(v) {
@@ -994,14 +1005,30 @@ function updateSpacecraftMarker(primary, members, layer) {
     spacecraftMarkers[primary].setIcon(icon);
   }
   spacecraftMarkers[primary].bindTooltip(tip, {className:'ltt', direction:'top'});
-  // Ground track (next 90 min) — use primary TLE
+  // Ground track: past 45 min (solid) + next 90 min (dashed)
   if (tleData[primary]) {
-    const track = computeGroundTrack(tleData[primary].satrec);
-    if (track.length > 1) {
-      const style = { color:col, weight:1, opacity:0.25, dashArray:'4 6' };
-      if (orbitTracks[primary]) { orbitTracks[primary].setLatLngs(track); orbitTracks[primary].setStyle(style); }
-      else orbitTracks[primary] = L.polyline(track, style).addTo(layer);
+    const nowMs = Date.now();
+    const past = [], future = [];
+    for (let i = -44; i <= 0; i += 2) {
+      const pos = propagateSat(tleData[primary].satrec, new Date(nowMs + i * 60000));
+      if (pos) past.push([pos.lat, pos.lon]);
     }
+    for (let i = 0; i <= 92; i += 2) {
+      const pos = propagateSat(tleData[primary].satrec, new Date(nowMs + i * 60000));
+      if (pos) future.push([pos.lat, pos.lon]);
+    }
+    // Normalize antimeridian crossings for each segment
+    [past, future].forEach(pts => {
+      for (let i = 1; i < pts.length; i++) {
+        while (pts[i][1] - pts[i-1][1] >  180) pts[i][1] -= 360;
+        while (pts[i-1][1] - pts[i][1] >  180) pts[i][1] += 360;
+      }
+    });
+    if (orbitTracks[primary]) { try { layer.removeLayer(orbitTracks[primary]); } catch(e) {} }
+    const pastLine   = past.length   > 1 ? L.polyline(past,   { color:col, weight:2,   opacity:0.55 })                    : null;
+    const futureLine = future.length > 1 ? L.polyline(future, { color:col, weight:1.5, opacity:0.25, dashArray:'5 8' })   : null;
+    const lines = [pastLine, futureLine].filter(Boolean);
+    if (lines.length) orbitTracks[primary] = L.layerGroup(lines).addTo(layer);
   }
 }
 
