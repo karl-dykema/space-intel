@@ -1169,10 +1169,11 @@ function getMissionArcs(launch, isHot) {
   if (lspName.includes('SpaceX')) {
     if (/Starbase|Boca Chica/i.test(padName)) {
       padCoords = LAUNCH_PADS['starbase'];
-      // Booster: arc east and down toward Gulf of Mexico splashdown zone
+      // Booster: arc east into Gulf then boostback return to offshore splashdown near Starbase
       const boosterWpts = [
         [padCoords.lat, padCoords.lon],
-        [26.5, -96.0], [25.5, -94.0], [24.0, -93.0]
+        [26.8, -95.5], [26.5, -93.5],  // arc east (apex ~T+3min)
+        [26.0, -95.0], [25.9, -97.1]   // boostback return, land near coast
       ];
       // Ship: southeast through Gulf → Caribbean → Atlantic → Indian Ocean
       const shipWpts = [
