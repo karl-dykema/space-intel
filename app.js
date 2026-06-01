@@ -2892,5 +2892,6 @@ window.onload=()=>{
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
   if(!SHARE_MODE && SB.ready) checkSuggestionsBadge();
+  if(!SHARE_MODE && localStorage.getItem(LS.KEY)) setTimeout(()=>connect(localStorage.getItem(LS.KEY)), 4000);
   if(SHARE_MODE) { loadSBData().then(() => { initSBRealtime(); }); setInterval(loadSBData, 60000); }
 };
