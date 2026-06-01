@@ -360,14 +360,17 @@ function isCarryingBooster(mmsi) {
   const role = (VESSEL_DB[mmsi]?.role||'').toLowerCase();
   if(!role.includes('drone') && !role.includes('landing platform')) return null;
   const now = Date.now();
-  return [...missionsCache, ...pastMissionsCache].find(l => {
+  const mission = [...missionsCache, ...pastMissionsCache].find(l => {
     const net = l.net ? new Date(l.net).getTime() : null;
     if(!net) return false;
     const age = now - net;
-    if(age < 600000 || age > 86400000) return false; // 10 min–24 h after NET
+    if(age < 600000 || age > 4*86400000) return false; // 10 min to 4 days
     const op = Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
     return vesselHintsForLaunch(op, l.pad?.name||'', l.pad?.location?.name||'').includes(mmsi);
-  }) || null;
+  });
+  if(!mission) return null;
+  const age = now - new Date(mission.net).getTime();
+  return {...mission, _transit: age > 2*3600000}; // _transit = >2h after launch, returning to port
 }
 
 function findActiveMission(mmsi) {
@@ -1676,7 +1679,7 @@ function buildVesselRow(v){
   const shareMoving=shareHist&&(v.sog!=null&&v.sog>0.5);
   const shareStationary=shareHist&&(v.sog==null||v.sog<=0.5);
   const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':shareMoving?'#4499ff':shareStationary?'#335577':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
-  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?'NO AIS LOCK':shareMoving?`UNDERWAY · ${ageStr(v.ts)}`:shareStationary?`STATIONARY · ${ageStr(v.ts)}`:isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
+  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED — NO SIGNAL':'NO AIS LOCK'):shareMoving?`UNDERWAY · ${ageStr(v.ts)}`:shareStationary?`STATIONARY · ${ageStr(v.ts)}`:isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
   const nameCol=moving?col:stationary?col+'99':isHist?col+'66':shareHist?col:'var(--t3)';
   const roleCol=moving?col+'99':stationary?col+'55':isHist?col+'33':shareHist?col+'99':col+'33';
   const bg=moving?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):stationary?(sel?'var(--bg4)':''):shareHist?(sel?'var(--bg4)':'rgba(0,200,255,.02)'):sel?'var(--bg4)':'';
@@ -1685,7 +1688,7 @@ function buildVesselRow(v){
     style="border-left-color:${borderCol}${bg?';background:'+bg:''}${moving?';box-shadow:inset 2px 0 8px '+col+'22':''}">
     <div class="vn" style="color:${nameCol};${moving?'text-shadow:0 0 12px '+col+'66':''}">${esc(v.abbr||v.name)}</div>
     <div class="vop" style="color:${roleCol}">${esc(v.operator)} · ${esc(v.role)}</div>
-    ${carrying?`<div style="font-size:10px;font-weight:700;color:#ff8c00;letter-spacing:.04em;margin-top:2px">🚀 BOOSTER ABOARD · ${esc(carrying.name||'')}</div>`:''}
+    ${carrying?`<div style="font-size:10px;font-weight:700;color:#ff8c00;letter-spacing:.04em;margin-top:2px">🚀 ${carrying._transit?'BOOSTER ABOARD · RETURNING TO PORT':'BOOSTER RECOVERY · '+esc(carrying.name||'')}</div>`:''}
     <div class="vbottom">
       <div class="vdot" style="background:${dotCol}${moving||shareHist?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
       <span style="color:${dotCol};font-size:10px;font-weight:${isLive?'700':'400'}">${status}</span>
@@ -1881,9 +1884,9 @@ function buildVesselDetail(){
       ${!SHARE_MODE&&v._offline?`<div style="background:rgba(0,0,0,.15);border:1px solid var(--bdr);padding:8px 11px;font-size:12px;color:var(--t4);margin-bottom:6px">IN PORT — no AIS signal. Will appear on map when underway.</div>`:''}
 
       ${carrying?`<div style="background:rgba(255,140,0,.1);border:1px solid #ff8c0066;padding:10px 13px;margin-bottom:6px">
-        <div style="font-size:11px;font-weight:700;color:#ff8c00;letter-spacing:.06em;margin-bottom:3px">🚀 BOOSTER ABOARD</div>
+        <div style="font-size:11px;font-weight:700;color:#ff8c00;letter-spacing:.06em;margin-bottom:3px">🚀 ${carrying._transit?'BOOSTER ABOARD · RETURNING TO PORT':'ACTIVE BOOSTER RECOVERY'}</div>
         <div style="font-size:13px;font-weight:600;color:var(--t2)">${esc(carrying.name||'')}</div>
-        <div style="font-size:11px;color:var(--t4);margin-top:2px">Launched ${ageStr(new Date(carrying.net).getTime())} · returning to port</div>
+        <div style="font-size:11px;color:var(--t4);margin-top:2px">${carrying._transit?`Landed ${ageStr(new Date(carrying.net).getTime())} ago · transit back to port`:`Launched ${ageStr(new Date(carrying.net).getTime())} · booster recovery in progress`}</div>
       </div>`:''}
 
       ${upcomingMissions.length?`
