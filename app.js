@@ -363,6 +363,22 @@ const DRONE_HOME_PORTS = {
   '368368960': {lat:28.41, lon:-80.61},  // Jacklyn — Port Canaveral
 };
 
+// Port webcams — shown in booster transit card when ship is approaching
+const PORT_WEBCAMS = {
+  '368219910': [ // ASOG — Port Canaveral
+    {label:'Port Canaveral Webcam', url:'https://www.portcanaveralwebcam.com/'},
+    {label:'Cruise Port & SpaceX Cam', url:'https://www.cruisingearth.com/port-webcams/united-states/port-canaveral-florida7/'},
+  ],
+  '368351350': [ // OCISLY — Port of Long Beach
+    {label:'Long Beach Harbor Cam (HDOnTap)', url:'https://hdontap.com/stream/247822/long-beach-harbor-live-webcam/'},
+    {label:'Pilot Station Cam (Jacobsen)', url:'https://www.jacobsenpilot.com/port-web-cam.html'},
+  ],
+  '368368960': [ // Jacklyn — Port Canaveral
+    {label:'Port Canaveral Webcam', url:'https://www.portcanaveralwebcam.com/'},
+    {label:'Cruise Port & SpaceX Cam', url:'https://www.cruisingearth.com/port-webcams/united-states/port-canaveral-florida7/'},
+  ],
+};
+
 function isCarryingBooster(mmsi) {
   const role = (VESSEL_DB[mmsi]?.role||'').toLowerCase();
   if(!role.includes('drone') && !role.includes('landing platform')) return null;
@@ -1901,11 +1917,28 @@ function buildVesselDetail(){
       ${!SHARE_MODE&&v._historical?`<div class="hist-box">📡 Showing last known position (${ageStr(v.ts)}). Connect AIS for live data.</div>`:''}
       ${!SHARE_MODE&&v._offline?`<div style="background:rgba(0,0,0,.15);border:1px solid var(--bdr);padding:8px 11px;font-size:12px;color:var(--t4);margin-bottom:6px">IN PORT — no AIS signal. Will appear on map when underway.</div>`:''}
 
-      ${carrying?`<div style="background:rgba(255,140,0,.1);border:1px solid #ff8c0066;padding:10px 13px;margin-bottom:6px">
-        <div style="font-size:11px;font-weight:700;color:#ff8c00;letter-spacing:.06em;margin-bottom:3px">🚀 ${carrying._transit?'BOOSTER ABOARD · RETURNING TO PORT':'ACTIVE BOOSTER RECOVERY'}</div>
-        <div style="font-size:13px;font-weight:600;color:var(--t2)">${esc(carrying.name||'')}</div>
-        <div style="font-size:11px;color:var(--t4);margin-top:2px">${carrying._transit?`Landed ${ageStr(new Date(carrying.net).getTime())} ago · transit back to port`:`Launched ${ageStr(new Date(carrying.net).getTime())} · booster recovery in progress`}</div>
-      </div>`:''}
+      ${carrying?(()=>{
+        const home = DRONE_HOME_PORTS[mmsi];
+        const vp = S.vessels[mmsi];
+        let distKm = null;
+        if(home && vp?.lat) {
+          const dLat=vp.lat-home.lat, dLon=(vp.lon-home.lon)*Math.cos(home.lat*Math.PI/180);
+          distKm = Math.sqrt(dLat*dLat+dLon*dLon)*111;
+        }
+        const arriving = distKm != null && distKm < 200;
+        const cams = PORT_WEBCAMS[mmsi] || [];
+        const camHTML = cams.length ? `
+          <div style="margin-top:8px;padding-top:7px;border-top:1px solid #ff8c0033">
+            <div style="font-size:10px;color:#ff8c00;font-weight:700;letter-spacing:.06em;margin-bottom:5px">${arriving?'⚠ ARRIVING SOON · ':''}PORT WEBCAMS</div>
+            ${cams.map(c=>`<a href="${esc(c.url)}" target="_blank" style="display:block;font-size:12px;color:#44aaff;text-decoration:none;margin-bottom:3px">↗ ${esc(c.label)}</a>`).join('')}
+          </div>` : '';
+        return `<div style="background:rgba(255,140,0,.1);border:1px solid #ff8c0066;padding:10px 13px;margin-bottom:6px">
+          <div style="font-size:11px;font-weight:700;color:#ff8c00;letter-spacing:.06em;margin-bottom:3px">🚀 ${carrying._transit?'BOOSTER ABOARD · RETURNING TO PORT':'ACTIVE BOOSTER RECOVERY'}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--t2)">${esc(carrying.name||'')}</div>
+          <div style="font-size:11px;color:var(--t4);margin-top:2px">${carrying._transit?`Landed ${ageStr(new Date(carrying.net).getTime())} ago · transit back to port`:`Launched ${ageStr(new Date(carrying.net).getTime())} · booster recovery in progress`}${distKm!=null?' · '+Math.round(distKm)+'km from port':''}</div>
+          ${camHTML}
+        </div>`;
+      })():''}
 
       ${upcomingMissions.length?`
         <div class="sec">UPCOMING MISSIONS</div>
