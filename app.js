@@ -372,7 +372,7 @@ const PORT_WEBCAMS = {
     {label:'Cruise Port & SpaceX Cam', url:'https://www.cruisingearth.com/port-webcams/united-states/port-canaveral-florida7/'},
   ],
   '368351350': [ // OCISLY — Port of Long Beach
-    {label:'Long Beach Port Tracker', url:'https://www.cruisingearth.com/port-tracker/united-states/long-beach-california/'},
+    {label:'Long Beach Port Tracker', url:'https://www.cruisingearth.com/port-tracker/united-states/long-beach-california/', lookFor:'Look for MARMAC 304 (OCISLY\'s registered name)'},
   ],
   '368368960': [ // Jacklyn — Port Canaveral
     {label:'Port Canaveral Webcam', url:'https://www.portcanaveralwebcam.com/'},
@@ -1932,7 +1932,7 @@ function buildVesselDetail(){
         const camHTML = cams.length ? `
           <div style="margin-top:8px;padding-top:7px;border-top:1px solid #ff8c0033">
             <div style="font-size:10px;color:#ff8c00;font-weight:700;letter-spacing:.06em;margin-bottom:5px">${arriving?'⚠ ARRIVING SOON · ':''}PORT WEBCAMS</div>
-            ${cams.map(c=>`<a href="${esc(c.url)}" target="_blank" style="display:block;font-size:12px;color:#44aaff;text-decoration:none;margin-bottom:3px">↗ ${esc(c.label)}</a>`).join('')}
+            ${cams.map(c=>`<a href="${esc(c.url)}" target="_blank" style="display:block;font-size:12px;color:#44aaff;text-decoration:none;margin-bottom:2px">↗ ${esc(c.label)}</a>${c.lookFor?`<div style="font-size:11px;color:var(--t4);margin-bottom:4px;font-style:italic">${esc(c.lookFor)}</div>`:''}`).join('')}
           </div>` : '';
         return `<div style="background:rgba(255,140,0,.1);border:1px solid #ff8c0066;padding:10px 13px;margin-bottom:6px">
           <div style="font-size:11px;font-weight:700;color:#ff8c00;letter-spacing:.06em;margin-bottom:3px">🚀 ${carrying._transit?'BOOSTER ABOARD · RETURNING TO PORT':'ACTIVE BOOSTER RECOVERY'}</div>
