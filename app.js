@@ -1556,15 +1556,17 @@ function updateHeaderStats(){
   const safeArr=a=>JSON.stringify(a).replace(/"/g,"'");
   let rows;
   if(SHARE_MODE) {
-    // share mode: count all vessels with any position data
-    const withPos=Object.values(S.vessels).filter(v=>v.lat&&v.ts);
-    const recent=withPos.filter(v=>now-v.ts<86400000); // seen in last 24h
-    const ops=[...new Set(withPos.map(v=>v.operator))].length;
-    const posMMSIs=withPos.map(v=>v.mmsi);
+    const STALE=14*24*3600000;
+    const tracked=Object.values(S.vessels).filter(v=>v.lat&&v.ts&&(now-v.ts<STALE));
+    const underway=tracked.filter(v=>v.sog!=null&&v.sog>0.5);
+    const stationary=tracked.filter(v=>v.sog==null||v.sog<=0.5);
+    const airborneRegs=Object.keys(AIRCRAFT_DB).filter(r=>{const ac=S.aircraft[r];return ac&&!ac._stale&&ac.alt!=='ground';});
+    const underwayMMSIs=underway.map(v=>v.mmsi);
+    const stationaryMMSIs=stationary.map(v=>v.mmsi);
     rows=[
-      [withPos.length,'TRACKED','#00d4ff',`cycleVessels(${safeArr(posMMSIs)},'live')`],
-      [recent.length, 'RECENT', '#00ff88',`cycleVessels(${safeArr(posMMSIs)},'live')`],
-      [ops,           'OPS',    '#ff9900',`setTab('events')`],
+      [underway.length,  'UNDERWAY',  '#00ff88',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
+      [stationary.length,'STATIONARY','#338855',`cycleVessels(${safeArr(stationaryMMSIs)},'stationary')`],
+      [airborneRegs.length,'AIRBORNE','#ffcc00',`cycleAircraft(${safeArr(airborneRegs)},'airborne')`],
     ];
   } else {
     const live=Object.values(S.vessels).filter(v=>v.lat&&!v._historical&&!v._vapi&&v.ts&&(now-v.ts<600000));
@@ -2766,13 +2768,15 @@ window.onload=()=>{
   setInterval(updateTerminator, 60000);
   setInterval(()=>{
     renderFleet(); updateHeaderStats(); updateTrajectoryArcs();
-    // Show/hide OPS tab and auto-switch on launch entry
-    const active = getActiveOpsLaunch();
-    const opsBtn = document.getElementById('rtab-ops');
-    if (opsBtn) opsBtn.style.display = active ? '' : 'none';
-    if (active && active.id !== _opsAutoId) {
-      _opsAutoId = active.id;
-      if (S.tab === 'events') setTab('ops');
+    // Show/hide OPS tab and auto-switch on launch entry (admin only)
+    if (!SHARE_MODE) {
+      const active = getActiveOpsLaunch();
+      const opsBtn = document.getElementById('rtab-ops');
+      if (opsBtn) opsBtn.style.display = active ? '' : 'none';
+      if (active && active.id !== _opsAutoId) {
+        _opsAutoId = active.id;
+        if (S.tab === 'events') setTab('ops');
+      }
     }
   }, 5000);
 
