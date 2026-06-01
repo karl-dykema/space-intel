@@ -1871,12 +1871,13 @@ function buildAircraftDetail() {
     </div>
     <div style="font-size:11px;color:var(--t4);line-height:1.6">${esc(db.notes||'')}</div>
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <a href="https://globe.adsbexchange.com/?icao=${esc(ac?.hex||'')}" target="_blank"
+        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none${!ac?.hex?';opacity:.4;pointer-events:none':''}">ADSBEXCHANGE ↗</a>
+      ${db.operator!=='SpaceX'?`
       <a href="https://www.flightaware.com/live/flight/${encodeURIComponent(reg.replace(/-/g,''))}" target="_blank"
         style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">FLIGHTAWARE ↗</a>
       <a href="https://www.flightradar24.com/data/aircraft/${encodeURIComponent(reg.toLowerCase())}" target="_blank"
-        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">FLIGHTRADAR24 ↗</a>
-      <a href="https://globe.adsbexchange.com/?icao=${esc(ac?.hex||'')}" target="_blank"
-        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none${!ac?.hex?';opacity:.4;pointer-events:none':''}">ADSBEXCHANGE ↗</a>
+        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">FLIGHTRADAR24 ↗</a>`:''}
     </div>
   </div>`;
 }
