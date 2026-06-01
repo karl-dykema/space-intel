@@ -659,7 +659,7 @@ function drawLandmarks() {
         `<b style="color:${st.col}">${esc(lm.name)}</b><br>
         <span style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:.05em">${lm.type}</span><br>
         <span style="font-size:11px;color:var(--t3)">${esc(lm.desc)}</span>${linkHtml}`,
-        { className:'ltt', direction:'top', maxWidth:300 }
+        { className:'ltt', direction:'top', maxWidth:170 }
       );
   });
 }
@@ -1169,10 +1169,10 @@ function getMissionArcs(launch, isHot) {
   if (lspName.includes('SpaceX')) {
     if (/Starbase|Boca Chica/i.test(padName)) {
       padCoords = LAUNCH_PADS['starbase'];
-      // Booster: short arc east and back to Mechazilla
+      // Booster: arc east and down toward Gulf of Mexico splashdown zone
       const boosterWpts = [
         [padCoords.lat, padCoords.lon],
-        [26.5, -96.0], [26.0, -94.5], [25.998, -97.161]
+        [26.5, -96.0], [25.5, -94.0], [24.0, -93.0]
       ];
       // Ship: southeast through Gulf → Caribbean → Atlantic → Indian Ocean
       const shipWpts = [
@@ -1266,6 +1266,14 @@ function showMissionArc(id) {
 function clearMissionArc() {
   selectedMissionForArc = null;
   if (missionArcLayer) missionArcLayer.clearLayers();
+}
+
+function toggleRightPanel() {
+  const right = document.getElementById('right');
+  const btn   = document.getElementById('rpanel-toggle');
+  const col   = right.classList.toggle('collapsed');
+  btn.textContent = col ? '▶' : '◀';
+  btn.title = col ? 'Expand panel' : 'Collapse panel';
 }
 
 // ── Booster projection ─────────────────────────────────────────
