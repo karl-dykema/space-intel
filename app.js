@@ -356,19 +356,17 @@ const S_spacecraft={};  // name → { abbr, operator, role, col, longterm, lat, 
 let tleData={};         // name → { satrec, meta }
 
 // ── Mission linkage ───────────────────────────────────────────
+// Home port coords for drone ships — used to detect "returned to port"
+const DRONE_HOME_PORTS = {
+  '368219910': {lat:28.41, lon:-80.61},  // ASOG — Port Canaveral
+  '368351350': {lat:33.75, lon:-118.22}, // OCISLY — Port of Long Beach
+  '368368960': {lat:28.41, lon:-80.61},  // Jacklyn — Port Canaveral
+};
+
 function isCarryingBooster(mmsi) {
   const role = (VESSEL_DB[mmsi]?.role||'').toLowerCase();
   if(!role.includes('drone') && !role.includes('landing platform')) return null;
   const now = Date.now();
-
-  // If an upcoming launch is already assigned to this vessel it's deploying out, not returning
-  const deploying = missionsCache.some(l => {
-    const net = l.net ? new Date(l.net).getTime() : null;
-    if(!net || net <= now) return false;
-    const op = Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
-    return vesselHintsForLaunch(op, l.pad?.name||'', l.pad?.location?.name||'').includes(mmsi);
-  });
-  if(deploying) return null;
 
   const mission = [...missionsCache, ...pastMissionsCache].find(l => {
     const net = l.net ? new Date(l.net).getTime() : null;
@@ -379,6 +377,16 @@ function isCarryingBooster(mmsi) {
     return vesselHintsForLaunch(op, l.pad?.name||'', l.pad?.location?.name||'').includes(mmsi);
   });
   if(!mission) return null;
+
+  // If vessel is within ~120km of its home port it has returned (or just left) — transit complete
+  const v = S.vessels[mmsi];
+  const home = DRONE_HOME_PORTS[mmsi];
+  if(v?.lat && home) {
+    const dLat = v.lat - home.lat, dLon = (v.lon - home.lon) * Math.cos(home.lat * Math.PI/180);
+    const distKm = Math.sqrt(dLat*dLat + dLon*dLon) * 111;
+    if(distKm < 120) return null;
+  }
+
   const age = now - new Date(mission.net).getTime();
   return {...mission, _transit: age > 2*3600000};
 }
