@@ -1646,59 +1646,75 @@ function renderFleet(){
   const total=KNOWN_MMSIS.length;
   document.getElementById('lhdr').textContent=S.ws?`FLEET · ${lc} LIVE · ${total-lc} OFFLINE`:'FLEET ROSTER';
   const STALE_14D = 14*24*3600000;
-  const rows=KNOWN_MMSIS
-    .map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true})
-    .filter(v => !SHARE_MODE || !v.ts || (Date.now()-v.ts < STALE_14D))
-    .sort((a,b)=>{
-      const now=Date.now();
-      const rank=v=>{
-        const isLive=!!v.lat&&!!v.ts&&!v._historical&&!v._vapi&&(now-v.ts<600000);
-        const hasPos=!!v.lat&&!!v.ts;
-        const carrying=!!isCarryingBooster(v.mmsi);
-        if(carrying&&isLive) return 0;
-        if(isLive) return 1;
-        if(carrying) return 2;
-        if(hasPos) return 3;          // historical, vapi, or stale — sort by ts within
-        return 4;
-      };
-      const ra=rank(a),rb=rank(b);
-      if(ra!==rb) return ra-rb;
-      return (b.ts||0)-(a.ts||0);   // most recent first within same rank
-    });
-  // Background aircraft only appear when they've been spotted this session
-  const visibleAC = Object.keys(AIRCRAFT_DB).filter(reg => {
-    const db = AIRCRAFT_DB[reg];
-    if (!db.background) return true;
-    return !!S.aircraft[reg];
-  }).sort((a, b) => {
-    const now = Date.now();
-    const acRank = reg => {
-      const ac = S.aircraft[reg];
-      if (!ac) return 5;
-      if (!ac._stale && ac.alt !== 'ground') return 0;                          // airborne
-      if (!ac._stale && (ac.gs || 0) > 3) return 1;                             // taxiing
-      if (!ac._stale) return 2;                                                  // on ground live
-      if (ac._staleTs && now - ac._staleTs < 3600000) return 3;                 // recently landed
-      return 4;                                                                  // stale / unknown
-    };
-    const ra = acRank(a), rb = acRank(b);
-    if (ra !== rb) return ra - rb;
-    const tsA = S.aircraft[a]?._staleTs || S.aircraft[a]?.ts || 0;
-    const tsB = S.aircraft[b]?._staleTs || S.aircraft[b]?.ts || 0;
-    return tsB - tsA;
-  });
-  const aircraftRows = showAircraft ? visibleAC.map(reg => buildAircraftRow(reg)).join('') : '';
+  const now=Date.now();
 
-  // Spacecraft: cluster and filter by toggle
-  const scClusters = clusterSpacecraft().filter(c => !c.longterm || showSpacecraft);
-  scClusters.sort((a,b) => (a.longterm?1:0)-(b.longterm?1:0) || a.primary.localeCompare(b.primary));
-  const scRows = scClusters.map(buildSpacecraftRow).filter(Boolean).join('');
+  const vesselRank=v=>{
+    const isLive=!!v.lat&&!!v.ts&&!v._historical&&!v._vapi&&(now-v.ts<600000);
+    const hasPos=!!v.lat&&!!v.ts;
+    const carrying=!!isCarryingBooster(v.mmsi);
+    if(carrying&&isLive) return 0;
+    if(isLive) return 1;
+    if(carrying) return 2;
+    if(hasPos) return 3;
+    return 4; // never seen
+  };
+  const acRank=reg=>{
+    const ac=S.aircraft[reg];
+    if(!ac) return 5;
+    if(!ac._stale&&ac.alt!=='ground') return 0;
+    if(!ac._stale&&(ac.gs||0)>3) return 1;
+    if(!ac._stale) return 2;
+    if(ac._staleTs&&now-ac._staleTs<3600000) return 3;
+    return 4;
+  };
+
+  // All vessels — filter never-seen (no position ever) and share-mode stale
+  const allVessels=KNOWN_MMSIS
+    .map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true})
+    .filter(v=>{
+      if(SHARE_MODE && v.ts && (now-v.ts >= STALE_14D)) return false;
+      return !!(v.lat||v.ts); // hide if never seen at all
+    })
+    .sort((a,b)=>{ const ra=vesselRank(a),rb=vesselRank(b); return ra!==rb?ra-rb:(b.ts||0)-(a.ts||0); });
+
+  // Aircraft — background only if spotted this session
+  const allAC=Object.keys(AIRCRAFT_DB)
+    .filter(reg=>!AIRCRAFT_DB[reg].background||!!S.aircraft[reg])
+    .sort((a,b)=>{ const ra=acRank(a),rb=acRank(b); if(ra!==rb) return ra-rb;
+      return (S.aircraft[b]?._staleTs||S.aircraft[b]?.ts||0)-(S.aircraft[a]?._staleTs||S.aircraft[a]?.ts||0); });
+
+  // Spacecraft clusters
+  const scClusters=clusterSpacecraft().filter(c=>!c.longterm||showSpacecraft);
+  scClusters.sort((a,b)=>(a.longterm?1:0)-(b.longterm?1:0)||a.primary.localeCompare(b.primary));
+
+  // Active items across all categories — float to very top
+  const activeVessels=allVessels.filter(v=>vesselRank(v)<=1);
+  const activeAC=allAC.filter(reg=>acRank(reg)===0);
+  const activeSC=scClusters.filter(c=>S_spacecraft[c.primary]?.lat!=null&&!c.longterm);
+  const hasActive=activeVessels.length||activeAC.length||activeSC.length;
+
+  const inactiveVessels=allVessels.filter(v=>vesselRank(v)>1);
+  const inactiveAC=allAC.filter(reg=>acRank(reg)>0);
+  const inactiveSC=scClusters.filter(c=>!activeSC.includes(c));
+
+  const activeHTML=hasActive
+    ? `<div class="lhdr" style="font-size:10px;color:var(--acc);letter-spacing:.08em">ACTIVE NOW</div>`
+      +(showVessels?activeVessels.map(buildVesselRow).join(''):'')
+      +(showAircraft?activeAC.map(buildAircraftRow).join(''):'')
+      +activeSC.map(buildSpacecraftRow).filter(Boolean).join('')
+    : '';
+
+  const vesselHTML=showVessels?inactiveVessels.map(buildVesselRow).join(''):`<div style="padding:8px 12px;font-size:11px;color:var(--t5)">Vessels hidden</div>`;
+  const acHTML=showAircraft?inactiveAC.map(buildAircraftRow).join(''):`<div style="padding:4px 12px;font-size:11px;color:var(--t5)">Aircraft hidden</div>`;
+  const scHTML=inactiveSC.map(buildSpacecraftRow).filter(Boolean).join('');
 
   document.getElementById('fleet').innerHTML =
-    (showVessels ? rows.map(buildVesselRow).join('') : `<div style="padding:8px 12px;font-size:11px;color:var(--t5)">Vessels hidden</div>`) +
-    `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>` +
-    (showAircraft ? aircraftRows : `<div style="padding:4px 12px;font-size:11px;color:var(--t5)">Aircraft hidden</div>`) +
-    (scRows ? `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">SPACECRAFT</div>${scRows}` : '');
+    activeHTML
+    + `<div class="lhdr" style="${hasActive?'margin-top:10px;':''}font-size:10px;color:var(--t4)">VESSELS</div>`
+    + vesselHTML
+    + `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>`
+    + acHTML
+    + (scHTML?`<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">SPACECRAFT</div>${scHTML}`:'');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
   document.querySelectorAll('.vrow[data-reg]').forEach(el=>{el.onclick=()=>showAircraftDetail(el.dataset.reg);});
   document.querySelectorAll('.vrow[data-sc]').forEach(el=>{el.onclick=()=>showSpacecraftDetail(el.dataset.sc);});
