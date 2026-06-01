@@ -152,12 +152,12 @@ const VESSEL_DB = {
     name:'Christine S', abbr:'Christine S',
     operator:'SpaceX', role:'Support Tug (East Coast)',
     color:'#00d4ff', homePort:'Port Canaveral, FL',
-    flag:'USA', verified:true,
+    flag:'USA', verified:false,
     specs:{ type:'Harbor tug' },
     history:[
-      'Harbor/support tug contracted to SpaceX at Port Canaveral',
+      'Harbor tug active at Port Canaveral near SpaceX assets — operator unconfirmed',
     ],
-    notes:'Port Canaveral SpaceX support tug. [✓ MMSI]',
+    notes:'Port Canaveral tug, likely SpaceX support. [? operator unconfirmed]',
   },
   // ── Blue Origin ──────────────────────────────────────────────
   '368368960': {
