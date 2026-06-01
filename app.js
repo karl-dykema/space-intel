@@ -346,9 +346,9 @@ let missionsCache = [];
 let pastMissionsCache = [];
 const prevZones={};
 let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null, aircraftLayer=null;
-let orbitLayer=null, rocketLayer=null;
+let orbitLayer=null, rocketLayer=null, terminatorLayer=null, missionArcLayer=null;
 let showLandmarks=false, showSpacecraft=false, showVessels=true, showAircraft=true;
-const markers={}, tracks={}, aircraftMarkers={}, aircraftTracks={};
+const markers={}, tracks={}, aircraftMarkers={}, aircraftTracks={}, cogArrows={};
 const spacecraftMarkers={}, orbitTracks={};
 const S_spacecraft={};  // name → { abbr, operator, role, col, longterm, lat, lon, alt, satrec }
 let tleData={};         // name → { satrec, meta }
@@ -504,8 +504,10 @@ function initMap() {
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
     attribution:'© CARTO © OSM',subdomains:'abcd',maxZoom:19,
   }).addTo(map);
+  terminatorLayer=L.layerGroup().addTo(map);
   exclusionLayer=L.layerGroup().addTo(map);
   landmarkLayer=L.layerGroup().addTo(map);
+  missionArcLayer=L.layerGroup().addTo(map);
   orbitLayer=L.layerGroup().addTo(map);
   rocketLayer=L.layerGroup().addTo(map);
   aircraftLayer=L.layerGroup().addTo(map);
@@ -721,6 +723,20 @@ function updateMarker(v) {
     const trackStyle={color:col,weight:hollow?1:2,opacity:hist?0.25:vapi?0.3:stale?0.2:0.5,dashArray:hollow?'3 5':null};
     if(tracks[mmsi]) { tracks[mmsi].setLatLngs(v.track); tracks[mmsi].setStyle(trackStyle); }
     else tracks[mmsi]=L.polyline(v.track,trackStyle).addTo(layers).on('click',()=>selectVessel(mmsi));
+  }
+  // COG heading arrow — project forward 10 min at current SOG
+  if(!hollow && v.sog>0.5 && v.cog!=null && v.lat && v.lon) {
+    const distKm = v.sog * 1.852 * 10/60;
+    const cogRad = v.cog * Math.PI/180;
+    const dLat = distKm * Math.cos(cogRad) / 111;
+    const dLon = distKm * Math.sin(cogRad) / (111 * Math.cos(v.lat * Math.PI/180));
+    const endPt = [v.lat+dLat, v.lon+dLon];
+    const arStyle = {color:col, weight:1.5, opacity:0.55, dashArray:'5 4'};
+    if(cogArrows[mmsi]) { cogArrows[mmsi].setLatLngs([[v.lat,v.lon],endPt]); cogArrows[mmsi].setStyle(arStyle); }
+    else cogArrows[mmsi] = L.polyline([[v.lat,v.lon],endPt], arStyle).addTo(layers);
+  } else if(cogArrows[mmsi]) {
+    try { layers.removeLayer(cogArrows[mmsi]); } catch(e) {}
+    delete cogArrows[mmsi];
   }
 }
 
@@ -1088,6 +1104,95 @@ function toggleSpacecraft() {
   renderFleet();
 }
 
+// ── Day/night terminator ───────────────────────────────────────
+function updateTerminator() {
+  if (!map || !terminatorLayer) return;
+  terminatorLayer.clearLayers();
+  const now = new Date();
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  const decl = -23.45 * Math.cos(2 * Math.PI / 365 * (doy + 10));
+  const declRad = decl * Math.PI / 180;
+  const utcH = now.getUTCHours() + now.getUTCMinutes()/60 + now.getUTCSeconds()/3600;
+  const subSolarLon = (12 - utcH) * 15;
+  const pts = [];
+  for (let lon = -180; lon <= 180; lon += 1) {
+    const lonRad = (lon - subSolarLon) * Math.PI / 180;
+    const lat = Math.atan(-Math.cos(lonRad) / Math.tan(declRad)) * 180 / Math.PI;
+    pts.push([lat, lon]);
+  }
+  const pole = decl > 0 ? -90 : 90;
+  L.polygon([...pts, [pole, 180], [pole, -180]], {
+    color:'transparent', fillColor:'#000820', fillOpacity:0.42, interactive:false
+  }).addTo(terminatorLayer);
+  L.polyline(pts, { color:'#ffdd88', weight:1, opacity:0.35, dashArray:'3 5', interactive:false }).addTo(terminatorLayer);
+}
+
+// ── Mission arc ────────────────────────────────────────────────
+function greatCircleArc(lat1,lon1,lat2,lon2,steps=60) {
+  const r=Math.PI/180;
+  const φ1=lat1*r, λ1=lon1*r, φ2=lat2*r, λ2=lon2*r;
+  const d=2*Math.asin(Math.sqrt(Math.sin((φ2-φ1)/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin((λ2-λ1)/2)**2));
+  if(d<0.0001) return [[lat1,lon1],[lat2,lon2]];
+  const pts=[];
+  for(let i=0;i<=steps;i++){
+    const f=i/steps;
+    const A=Math.sin((1-f)*d)/Math.sin(d), B=Math.sin(f*d)/Math.sin(d);
+    const x=A*Math.cos(φ1)*Math.cos(λ1)+B*Math.cos(φ2)*Math.cos(λ2);
+    const y=A*Math.cos(φ1)*Math.sin(λ1)+B*Math.cos(φ2)*Math.sin(λ2);
+    const z=A*Math.sin(φ1)+B*Math.sin(φ2);
+    pts.push([Math.atan2(z,Math.sqrt(x*x+y*y))/r, Math.atan2(y,x)/r]);
+  }
+  return pts;
+}
+
+function updateMissionArc() {
+  if (!map || !missionArcLayer) return;
+  missionArcLayer.clearLayers();
+  const now = Date.now();
+  const active = [...missionsCache, ...pastMissionsCache].find(l => {
+    const net = l.net ? new Date(l.net).getTime() : null;
+    if (!net) return false;
+    const el = now - net;
+    return el > -3*3600000 && el < 30*60000;
+  });
+  if (!active) return;
+  const net = new Date(active.net).getTime();
+  const lspName = active.launch_service_provider?.name || '';
+  const padName = (active.pad?.name || '') + ' ' + (active.pad?.location?.name || '');
+  let padCoords = null, target = null;
+  if (lspName.includes('SpaceX')) {
+    if (/Starbase|Boca Chica/i.test(padName)) {
+      padCoords = LAUNCH_PADS['starbase'];
+    } else if (/Vandenberg|SLC-4/i.test(padName)) {
+      padCoords = LAUNCH_PADS['slc4e'];
+      const ds = S.vessels['368351350']; target = ds?.lat ? {lat:ds.lat,lon:ds.lon} : {lat:32.5,lon:-122.0};
+    } else {
+      padCoords = /LC-39A/i.test(padName) ? LAUNCH_PADS['lc39a'] : LAUNCH_PADS['slc40'];
+      const ds = S.vessels['368219910']; target = ds?.lat ? {lat:ds.lat,lon:ds.lon} : {lat:30.5,lon:-76.5};
+    }
+  } else if (lspName.includes('Blue Origin')) {
+    padCoords = LAUNCH_PADS['lc36'];
+    const ds = S.vessels['368368960']; target = ds?.lat ? {lat:ds.lat,lon:ds.lon} : {lat:30.0,lon:-77.5};
+  } else if (lspName.includes('Rocket Lab')) {
+    padCoords = LAUNCH_PADS['mahia'];
+    target = {lat:-39.5,lon:179.5};
+  }
+  if (!padCoords || !target) return;
+  const isHot = now - net > -5*60000; // within 5 min of launch
+  const arc = greatCircleArc(padCoords.lat, padCoords.lon, target.lat, target.lon);
+  L.polyline(arc, {
+    color: isHot ? '#ff2244' : '#ff8800',
+    weight: isHot ? 2.5 : 1.5,
+    opacity: isHot ? 0.75 : 0.45,
+    dashArray: isHot ? '8 4' : '5 8',
+    interactive: false
+  }).addTo(missionArcLayer);
+  L.circleMarker([padCoords.lat, padCoords.lon], {
+    radius:5, color:'#ff8800', fillColor:'#ff8800', fillOpacity:0.9, weight:2, interactive:false
+  }).addTo(missionArcLayer)
+    .bindTooltip(`<b>${esc(active.name)}</b><br>${esc(active.pad?.name||'')}`, {className:'ltt', direction:'top'});
+}
+
 // ── Booster projection ─────────────────────────────────────────
 function updateBoosterProjections() {
   if (!rocketLayer) return;
@@ -1413,8 +1518,10 @@ function renderFleet(){
   const lc=Object.values(S.vessels).filter(v=>v.lat&&!v._historical&&v.ts&&(now2-v.ts<600000)).length;
   const total=KNOWN_MMSIS.length;
   document.getElementById('lhdr').textContent=S.ws?`FLEET · ${lc} LIVE · ${total-lc} OFFLINE`:'FLEET ROSTER';
+  const STALE_14D = 14*24*3600000;
   const rows=KNOWN_MMSIS
     .map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true})
+    .filter(v => !SHARE_MODE || !v.ts || (Date.now()-v.ts < STALE_14D))
     .sort((a,b)=>{
       const now=Date.now();
       const rank=v=>{
@@ -2560,8 +2667,10 @@ window.onload=()=>{
   renderFleet();
   renderRight();
   updateHeaderStats();
+  updateTerminator();
+  setInterval(updateTerminator, 60000);
   setInterval(()=>{
-    renderFleet(); updateHeaderStats();
+    renderFleet(); updateHeaderStats(); updateMissionArc();
     // Show/hide OPS tab and auto-switch on launch entry
     const active = getActiveOpsLaunch();
     const opsBtn = document.getElementById('rtab-ops');
@@ -2573,7 +2682,7 @@ window.onload=()=>{
   }, 5000);
 
   loadSBData().then(()=>loadVapiPositions());
-  fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); });
+  fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateMissionArc(); });
   pollAircraft();
   setInterval(pollAircraft, AIRCRAFT_POLL_MS);
   fetchTLEs();
