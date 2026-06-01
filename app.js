@@ -384,7 +384,7 @@ function isCarryingBooster(mmsi) {
   if(v?.lat && home) {
     const dLat = v.lat - home.lat, dLon = (v.lon - home.lon) * Math.cos(home.lat * Math.PI/180);
     const distKm = Math.sqrt(dLat*dLat + dLon*dLon) * 111;
-    if(distKm < 120) return null;
+    if(distKm < 3) return null;
   }
 
   const age = now - new Date(mission.net).getTime();
