@@ -357,6 +357,29 @@ const _missionById={};
 const S_spacecraft={};  // name → { abbr, operator, role, col, longterm, lat, lon, alt, satrec }
 let tleData={};         // name → { satrec, meta }
 
+// ── Port proximity ────────────────────────────────────────────
+// Known port zones — any vessel last seen within ~8km is considered in port
+const KNOWN_PORT_ZONES = [
+  {lat:28.41,  lon:-80.61},  // Port Canaveral, FL
+  {lat:33.75,  lon:-118.22}, // Port of Long Beach / LA, CA
+  {lat:25.95,  lon:-97.40},  // Port of Brownsville, TX
+  {lat:29.75,  lon:-95.27},  // Port of Houston, TX
+  {lat:29.95,  lon:-90.07},  // Port of New Orleans, LA
+  {lat:37.79,  lon:-122.39}, // Port of San Francisco, CA
+  {lat:47.60,  lon:-122.34}, // Port of Seattle, WA
+  {lat:30.40,  lon:-87.05},  // Port of Pensacola, FL
+  {lat:25.77,  lon:-80.19},  // Port of Miami, FL
+  {lat:-39.26, lon:177.86},  // Port of Gisborne / Māhia, NZ
+];
+
+function isNearPort(lat, lon, radiusKm=8) {
+  if(lat==null||lon==null) return false;
+  return KNOWN_PORT_ZONES.some(p=>{
+    const dLat=lat-p.lat, dLon=(lon-p.lon)*Math.cos(p.lat*Math.PI/180);
+    return Math.sqrt(dLat*dLat+dLon*dLon)*111 < radiusKm;
+  });
+}
+
 // ── Mission linkage ───────────────────────────────────────────
 // Home port coords for drone ships — used to detect "returned to port"
 const DRONE_HOME_PORTS = {
@@ -1598,9 +1621,8 @@ function updateHeaderStats(){
   let rows;
   if(SHARE_MODE) {
     const STALE=14*24*3600000;
-    const FRESH=4*3600000; // only trust SOG within 4h
     const tracked=Object.values(S.vessels).filter(v=>v.lat&&v.ts&&(now-v.ts<STALE));
-    const underway=tracked.filter(v=>v.sog!=null&&v.sog>0.5&&(now-v.ts<FRESH));
+    const underway=tracked.filter(v=>v.sog!=null&&v.sog>0.5&&!isNearPort(v.lat,v.lon));
     const stationary=tracked.filter(v=>!underway.includes(v));
     const airborneRegs=Object.keys(AIRCRAFT_DB).filter(r=>{const ac=S.aircraft[r];return ac&&!ac._stale&&ac.alt!=='ground';});
     const underwayMMSIs=underway.map(v=>v.mmsi);
@@ -1731,9 +1753,8 @@ function buildVesselRow(v){
   const carrying=isCarryingBooster(v.mmsi);
   const stationary=isLive&&(v.sog==null||v.sog<=0.1);
   const moving=isLive&&!stationary;
-  const shareRecent=shareHist&&v.ts&&(now-v.ts<4*3600000); // only trust SOG if seen within 4h
-  const shareMoving=shareRecent&&(v.sog!=null&&v.sog>0.5);
-  const shareStationary=shareHist&&(!shareRecent||(v.sog==null||v.sog<=0.5));
+  const shareMoving=shareHist&&(v.sog!=null&&v.sog>0.5)&&!isNearPort(v.lat,v.lon);
+  const shareStationary=shareHist&&!shareMoving;
   const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':shareMoving?'#4499ff':shareStationary?'#335577':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
   const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED — NO SIGNAL':'NO AIS LOCK'):shareMoving?`UNDERWAY · ${ageStr(v.ts)}`:shareStationary?`STATIONARY · ${ageStr(v.ts)}`:isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
   const nameCol=moving?col:stationary?col+'99':isHist?col+'66':shareHist?col:'var(--t3)';
@@ -1762,9 +1783,10 @@ function buildAircraftRow(reg) {
   const hasLive = !!ac && !ac._stale;
   const airborne = hasLive && ac.alt !== 'ground';
   const taxiing  = hasLive && ac.alt === 'ground' && (ac.gs || 0) > 3;
-  const recentLanded = ac?._stale && ac?.lat && ac?._staleTs && (Date.now() - ac._staleTs < 3600000);
-  const dotCol = airborne ? '#00ff88' : taxiing ? '#88dd44' : recentLanded ? '#ffcc00' : '#2a4a5a';
-  const status = airborne ? 'AIRBORNE' : taxiing ? 'TAXIING' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : 'ON GROUND';
+  const recentLanded = ac?._stale && ac?.lat && ac?._staleTs && ac?.alt === 'ground' && (Date.now() - ac._staleTs < 3600000);
+  const staleAirborne = ac?._stale && ac?.alt !== 'ground' && ac?.lat;
+  const dotCol = airborne ? '#00ff88' : taxiing ? '#88dd44' : recentLanded ? '#ffcc00' : staleAirborne ? '#ffcc0044' : '#2a4a5a';
+  const status = airborne ? 'AIRBORNE' : taxiing ? 'TAXIING' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : staleAirborne ? `NO SIGNAL · ${ageStr(ac._staleTs)}` : 'ON GROUND';
   const alt = airborne && ac.alt != null ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
   const spd = (airborne || taxiing) && ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
   const active = airborne || taxiing;
@@ -1826,18 +1848,21 @@ function buildAircraftDetail() {
   const hasLive = !!ac && !ac._stale;
   const airborne = hasLive && ac?.alt !== 'ground';
   const taxiing  = hasLive && ac?.alt === 'ground' && (ac?.gs || 0) > 3;
-  const recentLanded = ac?._stale && ac?.lat && ac?._staleTs && (Date.now() - ac._staleTs < 3600000);
+  const recentLanded = ac?._stale && ac?.lat && ac?._staleTs && ac?.alt === 'ground' && (Date.now() - ac._staleTs < 3600000);
   const alt = ac?.alt != null && ac.alt !== 'ground' ? Math.round(ac.alt).toLocaleString()+'ft' : '—';
   const spd = ac?.gs != null ? Math.round(ac.gs)+' kn' : '—';
   const hdg = ac?.track != null ? Math.round(ac.track)+'°' : '—';
   const pos = ac?.lat ? `${ac.lat.toFixed(4)}, ${ac.lon.toFixed(4)}` : 'No position';
-  const statusLabel = airborne ? 'AIRBORNE' : taxiing ? 'TAXIING' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : 'ON GROUND';
-  const statusCol   = airborne ? '#00ff88' : taxiing ? '#88dd44' : recentLanded ? '#ffcc00' : 'var(--t4)';
+  const lastFixTs = ac?._staleTs || ac?.ts;
+  const staleAirborneD = ac?._stale && ac?.alt !== 'ground' && ac?.lat;
+  const statusLabel = airborne ? 'AIRBORNE' : taxiing ? 'TAXIING' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : staleAirborneD ? 'NO SIGNAL' : 'ON GROUND';
+  const statusCol   = airborne ? '#00ff88' : taxiing ? '#88dd44' : recentLanded ? '#ffcc00' : staleAirborneD ? '#ffcc00' : 'var(--t4)';
   return `<div style="padding:14px 16px">
     <div style="font-size:18px;font-weight:700;color:${col};letter-spacing:.04em;margin-bottom:2px">${esc(db.name)}</div>
     <div style="font-size:12px;color:var(--t4);margin-bottom:12px">${esc(db.operator)} · ${esc(db.model)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
       ${stat('STATUS', statusLabel, statusCol)}
+      ${stat('LAST FIX', lastFixTs ? ageStr(lastFixTs) : '—', 'var(--t2)')}
       ${stat('POSITION', pos, 'var(--t2)')}
       ${stat('ALTITUDE', alt, 'var(--t2)')}
       ${stat('SPEED', spd, 'var(--t2)')}
