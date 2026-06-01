@@ -465,6 +465,25 @@ const LANDMARKS = [
   { id:'jalama_beach',    lat:34.512,  lon:-120.503, name:'Jalama Beach',                    type:'viewing',  desc:'Santa Barbara County park. Nearest legal public viewing of Vandenberg launches, ~12 mi.' },
   { id:'lompoc_viewing',  lat:34.624,  lon:-120.447, name:'W. Ocean Ave, Lompoc',            type:'viewing',  desc:'Common roadside viewing corridor near base perimeter for SLC launches.' },
 
+  // ── Stoke Space ───────────────────────────────────────────────
+  { id:'stoke_auburn',    lat:47.290,  lon:-122.218, name:'Stoke Space — Auburn, WA',         type:'facility', desc:'Stoke Space Technologies HQ and test facility. Developing Nova, a fully reusable two-stage rocket. Hot-fire tests of upper stage thruster here.' },
+
+  // ── Relativity Space ─────────────────────────────────────────
+  { id:'relativity_lb',   lat:33.768,  lon:-118.188, name:'Relativity Space — Long Beach, CA',type:'facility', desc:'Relativity Space headquarters. Terran R development (fully reusable, F9-class). Stargate 3D-printing production.' },
+  { id:'relativity_slc16',lat:28.502,  lon:-80.561,  name:'SLC-16 (Relativity / Terran R)',   type:'launch',   desc:'Cape Canaveral SFS pad leased by Relativity for Terran R orbital launches. Former Pershing II missile test site.' },
+
+  // ── Firefly Aerospace ─────────────────────────────────────────
+  { id:'firefly_hq',      lat:30.479,  lon:-97.829,  name:'Firefly Aerospace — Cedar Park, TX',type:'facility',desc:'Firefly Aerospace HQ and production. Alpha small launcher, Miranda engine, Elytra in-space vehicle development.' },
+  { id:'firefly_slc20',   lat:28.526,  lon:-80.555,  name:'SLC-20 (Firefly Alpha)',            type:'launch',   desc:'Cape Canaveral SFS Firefly Alpha east coast pad. Former Pershing II site. First operational launch 2023.' },
+
+  // ── ABL Space ─────────────────────────────────────────────────
+  { id:'abl_hq',          lat:34.631,  lon:-120.609, name:'ABL Space — Vandenberg (SLC-576)',  type:'launch',   desc:'ABL Space Systems RS1 test launches at Vandenberg. Compact orbital launcher targeting rapid-cadence small sat deployment.' },
+
+  // ── UK / North Atlantic spaceports ───────────────────────────
+  { id:'saxavord',        lat:60.820,  lon:-0.833,   name:'SaxaVord Spaceport — Shetland',    type:'launch',   desc:'UK\'s first operational vertical launch site on Unst, Shetland Islands. High-inclination polar orbit access. Orbex Prime targeting first UK orbital launch.' },
+  { id:'sutherland',      lat:58.516,  lon:-4.028,   name:'Spaceport Sutherland — Scotland',  type:'launch',   desc:'Scottish mainland launch site. Orbex and Highland & Islands Enterprise. Horizontal and vertical launch development.' },
+  { id:'spaceport_cornwall',lat:50.440,lon:-5.004,   name:'Spaceport Cornwall — Newquay',     type:'launch',   desc:'Horizontal launch site. Virgin Orbit attempted first UK orbital launch Jan 2023 — failed at upper stage ignition. Future operators TBD.' },
+
   // ── Blue Origin facilities ────────────────────────────────────
   { id:'bo_kent',         lat:47.398,  lon:-122.233, name:'Blue Origin HQ — Kent, WA',       type:'facility', desc:'Blue Origin headquarters and manufacturing. New Glenn, New Shepard, BE-4 engine production.' },
   { id:'bo_van_horn',     lat:31.413,  lon:-104.757, name:'Blue Origin — Van Horn, TX',       type:'launch',   desc:'New Shepard suborbital launch site. West Texas desert. Crew capsule parachute landings nearby.' },
@@ -506,7 +525,10 @@ const LANDMARKS = [
   { id:'tanegashima',     lat:30.401,  lon:130.968,  name:'Tanegashima Space Center',        type:'launch',   desc:'JAXA primary launch site. H-IIA/H3 rockets for Japanese government and commercial payloads.' },
   { id:'sriharikota',     lat:13.733,  lon:80.234,   name:'Satish Dhawan — Sriharikota',     type:'launch',   desc:'ISRO launch site. PSLV, GSLV, LVM3. Chandrayaan, Mangalyaan, OneWeb missions.' },
   { id:'naro',            lat:34.432,  lon:127.535,  name:'Naro Space Center (KARI)',        type:'launch',   desc:'South Korea\'s first spaceport. Nuri (KSLV-II) orbital launch vehicle.' },
+  { id:'andoya',          lat:69.294,  lon:16.020,   name:'Andøya Space Center',             type:'launch',   desc:'Norwegian launch site above Arctic Circle. Sounding rockets since 1962; targeting small orbital launches. Isar Aerospace SLC-1 under construction.' },
   { id:'esrange',         lat:67.886,  lon:21.063,   name:'Esrange Space Center',            type:'launch',   desc:'Swedish sounding rocket and balloon facility above Arctic Circle. Small orbital ambitions.' },
+  { id:'psca_kodiak',     lat:57.436,  lon:-152.338, name:'Pacific Spaceport Complex — Alaska', type:'launch', desc:'Kodiak Island, AK. FAA-licensed orbital spaceport. Astra launches, government payloads. Polar and sun-sync orbit access.' },
+  { id:'poker_flat',      lat:65.126,  lon:-147.473, name:'Poker Flat Research Range',        type:'launch',   desc:'University of Alaska Fairbanks / NASA sounding rocket range. Highest-latitude launch range in the US. Aurora/ionospheric research.' },
   { id:'woomera',         lat:-31.130, lon:136.816,  name:'Woomera Test Range',              type:'launch',   desc:'Australia\'s primary rocket range. Historic British test site; now multi-user range.' },
   { id:'alcantara',       lat:-2.373,  lon:-44.396,  name:'Alcântara Launch Center',         type:'launch',   desc:'Brazilian near-equatorial spaceport. VLM rocket. Favorable orbital insertion economics.' },
   { id:'starship_io_zone',lat:-19.0,  lon:107.0,    name:'Starship Indian Ocean Landing Zone',type:'viewing',  desc:'Consistent Starship Ship splashdown target (~19°S 107°E), NW of Western Australia. IFT-11 and IFT-12 landed here. Future recovery ship staging area.' },
