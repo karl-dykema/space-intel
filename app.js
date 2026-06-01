@@ -1314,6 +1314,8 @@ function toggleRightPanel() {
   const col   = right.classList.toggle('collapsed');
   btn.textContent = col ? '▶' : '◀';
   btn.title = col ? 'Expand panel' : 'Collapse panel';
+  // Wait for CSS transition to finish then tell Leaflet to repaint
+  setTimeout(() => { if(map) map.invalidateSize(); }, 160);
 }
 
 // ── Booster projection ─────────────────────────────────────────
