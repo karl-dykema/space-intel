@@ -395,9 +395,10 @@ function isCarryingBooster(mmsi) {
   });
   if(!mission) return null;
 
-  // If vessel is within ~120km of its home port it has returned (or just left) — transit complete
+  // Need a known position to make the port-proximity call — without it, don't flag
   const v = S.vessels[mmsi];
   const home = DRONE_HOME_PORTS[mmsi];
+  if(home && !v?.lat) return null; // no position yet, wait for data before showing flag
   if(v?.lat && home) {
     const dLat = v.lat - home.lat, dLon = (v.lon - home.lon) * Math.cos(home.lat * Math.PI/180);
     const distKm = Math.sqrt(dLat*dLat + dLon*dLon) * 111;
