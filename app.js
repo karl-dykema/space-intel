@@ -360,6 +360,16 @@ function isCarryingBooster(mmsi) {
   const role = (VESSEL_DB[mmsi]?.role||'').toLowerCase();
   if(!role.includes('drone') && !role.includes('landing platform')) return null;
   const now = Date.now();
+
+  // If an upcoming launch is already assigned to this vessel it's deploying out, not returning
+  const deploying = missionsCache.some(l => {
+    const net = l.net ? new Date(l.net).getTime() : null;
+    if(!net || net <= now) return false;
+    const op = Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
+    return vesselHintsForLaunch(op, l.pad?.name||'', l.pad?.location?.name||'').includes(mmsi);
+  });
+  if(deploying) return null;
+
   const mission = [...missionsCache, ...pastMissionsCache].find(l => {
     const net = l.net ? new Date(l.net).getTime() : null;
     if(!net) return false;
@@ -370,7 +380,7 @@ function isCarryingBooster(mmsi) {
   });
   if(!mission) return null;
   const age = now - new Date(mission.net).getTime();
-  return {...mission, _transit: age > 2*3600000}; // _transit = >2h after launch, returning to port
+  return {...mission, _transit: age > 2*3600000};
 }
 
 function findActiveMission(mmsi) {
