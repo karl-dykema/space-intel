@@ -659,7 +659,7 @@ function drawLandmarks() {
         `<b style="color:${st.col}">${esc(lm.name)}</b><br>
         <span style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:.05em">${lm.type}</span><br>
         <span style="font-size:11px;color:var(--t3)">${esc(lm.desc)}</span>${linkHtml}`,
-        { className:'ltt', direction:'top', maxWidth:170 }
+        { className:'ltt ltt-wrap', direction:'top', maxWidth:200 }
       );
   });
 }
