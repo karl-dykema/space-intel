@@ -1598,9 +1598,10 @@ function updateHeaderStats(){
   let rows;
   if(SHARE_MODE) {
     const STALE=14*24*3600000;
+    const FRESH=4*3600000; // only trust SOG within 4h
     const tracked=Object.values(S.vessels).filter(v=>v.lat&&v.ts&&(now-v.ts<STALE));
-    const underway=tracked.filter(v=>v.sog!=null&&v.sog>0.5);
-    const stationary=tracked.filter(v=>v.sog==null||v.sog<=0.5);
+    const underway=tracked.filter(v=>v.sog!=null&&v.sog>0.5&&(now-v.ts<FRESH));
+    const stationary=tracked.filter(v=>!underway.includes(v));
     const airborneRegs=Object.keys(AIRCRAFT_DB).filter(r=>{const ac=S.aircraft[r];return ac&&!ac._stale&&ac.alt!=='ground';});
     const underwayMMSIs=underway.map(v=>v.mmsi);
     const stationaryMMSIs=stationary.map(v=>v.mmsi);
@@ -1730,8 +1731,9 @@ function buildVesselRow(v){
   const carrying=isCarryingBooster(v.mmsi);
   const stationary=isLive&&(v.sog==null||v.sog<=0.1);
   const moving=isLive&&!stationary;
-  const shareMoving=shareHist&&(v.sog!=null&&v.sog>0.5);
-  const shareStationary=shareHist&&(v.sog==null||v.sog<=0.5);
+  const shareRecent=shareHist&&v.ts&&(now-v.ts<4*3600000); // only trust SOG if seen within 4h
+  const shareMoving=shareRecent&&(v.sog!=null&&v.sog>0.5);
+  const shareStationary=shareHist&&(!shareRecent||(v.sog==null||v.sog<=0.5));
   const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':shareMoving?'#4499ff':shareStationary?'#335577':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
   const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED — NO SIGNAL':'NO AIS LOCK'):shareMoving?`UNDERWAY · ${ageStr(v.ts)}`:shareStationary?`STATIONARY · ${ageStr(v.ts)}`:isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
   const nameCol=moving?col:stationary?col+'99':isHist?col+'66':shareHist?col:'var(--t3)';
