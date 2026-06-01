@@ -370,8 +370,7 @@ const PORT_WEBCAMS = {
     {label:'Cruise Port & SpaceX Cam', url:'https://www.cruisingearth.com/port-webcams/united-states/port-canaveral-florida7/'},
   ],
   '368351350': [ // OCISLY — Port of Long Beach
-    {label:'Long Beach Harbor Cam (HDOnTap)', url:'https://hdontap.com/stream/247822/long-beach-harbor-live-webcam/'},
-    {label:'Pilot Station Cam (Jacobsen)', url:'https://www.jacobsenpilot.com/port-web-cam.html'},
+    {label:'Port of LA EarthCam', url:'https://www.earthcam.com/usa/california/losangeles/port/?cam=portofla2'},
   ],
   '368368960': [ // Jacklyn — Port Canaveral
     {label:'Port Canaveral Webcam', url:'https://www.portcanaveralwebcam.com/'},
