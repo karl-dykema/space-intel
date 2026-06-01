@@ -136,15 +136,38 @@ const VESSEL_DB = {
     ],
     notes:'East Coast ASOG support tug. IMO 9254018. [✓ MMSI]',
   },
+  '366885000': {
+    name:'Signet Warhorse II', abbr:'Warhorse II',
+    operator:'SpaceX', role:'Support Tug (East Coast)',
+    color:'#00d4ff', homePort:'Port Canaveral, FL',
+    imo:'9388132', flag:'USA', built:2008, verified:true,
+    specs:{ length:'46m', beam:'14m', grossTonnage:'1,085 GT', deadweight:'1,025 DWT', type:'Anchor handling tug', operator:'Signet Maritime Corporation (contracted)' },
+    history:[
+      'Operated by Signet Maritime Corporation, contracted to SpaceX',
+      'Anchor handling / escort tug for ASOG Atlantic deployments',
+    ],
+    notes:'East Coast ASOG anchor handling tug. IMO 9388132. [✓ MMSI]',
+  },
+  '368448940': {
+    name:'Christine S', abbr:'Christine S',
+    operator:'SpaceX', role:'Support Tug',
+    color:'#00d4ff', homePort:'Port Canaveral, FL',
+    flag:'USA', verified:false,
+    specs:{ type:'Harbor tug' },
+    history:[
+      'Support tug operating near SpaceX Canaveral assets',
+    ],
+    notes:'SpaceX support tug. [? MMSI — verify operator]',
+  },
   // ── Blue Origin ──────────────────────────────────────────────
   '368368960': {
-    name:'Jacklyn', abbr:'Jacklyn',
-    operator:'Blue Origin', role:'New Glenn Landing Platform (LPV-1)',
+    name:'LPV-1 (Jacklyn)', abbr:'Jacklyn',
+    operator:'Blue Origin', role:'New Glenn Landing Platform',
     color:'#4477ff', homePort:'Port Canaveral, FL',
     imo:'9998676', flag:'USA', built:2024, verified:true,
-    specs:{ length:'116m', beam:'46m', grossTonnage:'13,818 GT', type:'Landing Platform Vessel', propulsion:'Dynamic positioning thrusters' },
+    specs:{ length:'115m', beam:'45m', grossTonnage:'13,818 GT', type:'Landing Platform Vessel', propulsion:'Dynamic positioning thrusters' },
     history:[
-      'Designated LPV-1; Blue Origin\'s first autonomous booster landing platform',
+      'AIS name: LPV-1 (Launch Platform Vessel 1); informally known as Jacklyn',
       'Named after Jacklyn Gise Bezos, Jeff Bezos\' mother',
       'First successful New Glenn booster landing: January 16 2025 (NG-1)',
       'First booster catch (with catch arms): November 13 2025 (NG-3)',
