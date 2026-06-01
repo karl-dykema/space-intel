@@ -586,7 +586,7 @@ function drawExclusionZones() {
     [28.815, -80.478], [28.722, -80.683], [28.422, -80.579],
     [28.183, -80.483], [28.167, -80.354], [28.815, -80.354],
   ], style).addTo(exclusionLayer)
-    .bindTooltip(tipUSCG('Cape Canaveral Maritime Safety Zone','33 CFR 165.775'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipUSCG('Cape Canaveral Maritime Safety Zone','33 CFR 165.775'),{className:'ltt',direction:'auto'});
 
   // Vandenberg — 33 CFR 334.1130 (3 nm offshore danger zones)
   L.polygon([
@@ -596,57 +596,57 @@ function drawExclusionZones() {
     [34.405, -120.500], [34.393, -120.452], [34.406, -120.411],
     [34.456, -120.411],
   ], style).addTo(exclusionLayer)
-    .bindTooltip(tipUSCG('Vandenberg Maritime Danger Zone','33 CFR 334.1130'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipUSCG('Vandenberg Maritime Danger Zone','33 CFR 334.1130'),{className:'ltt',direction:'auto'});
 
   // Starbase / Boca Chica — USCG enforces ad-hoc safety zones per launch
   L.circle([26.0, -97.15], {radius:28000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tipUSCG('Starbase / Boca Chica Safety Zone','Ad-hoc USCG marine safety notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipUSCG('Starbase / Boca Chica Safety Zone','Ad-hoc USCG marine safety notices'),{className:'ltt',direction:'auto'});
 
   // Wallops Island (NASA/Northrop Grumman) — FAA/USCG launch safety zones
   L.circle([37.94, -75.47], {radius:30000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tipUSCG('Wallops Island Maritime Safety Zone','USCG/FAA launch safety zones'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipUSCG('Wallops Island Maritime Safety Zone','USCG/FAA launch safety zones'),{className:'ltt',direction:'auto'});
 
   // Māhia Peninsula, NZ — Rocket Lab maritime exclusion
   L.circle([-39.26, 177.87], {radius:20000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tipIntl('Māhia Launch Exclusion Zone','Maritime NZ exclusion notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipIntl('Māhia Launch Exclusion Zone','Maritime NZ exclusion notices'),{className:'ltt',direction:'auto'});
 
   // Kourou / Centre Spatial Guyanais — ESA/Arianespace Atlantic exclusion
   L.circle([5.24, -52.77], {radius:60000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tipIntl('Kourou (CSG) Maritime Exclusion Zone','French DGAC / CNES notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipIntl('Kourou (CSG) Maritime Exclusion Zone','French DGAC / CNES notices'),{className:'ltt',direction:'auto'});
 
   // Alcântara, Brazil — AEB/Itamar
   L.circle([-2.37, -44.40], {radius:30000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tipIntl('Alcântara Launch Center Maritime Zone','DECEA/AEB airspace & maritime notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipIntl('Alcântara Launch Center Maritime Zone','DECEA/AEB airspace & maritime notices'),{className:'ltt',direction:'auto'});
 
   // Wenchang Space Launch Center — CNSA South China Sea exclusion
   L.circle([19.61, 110.95], {radius:45000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tipIntl('Wenchang Maritime Exclusion Zone','CNSA / China MSA notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipIntl('Wenchang Maritime Exclusion Zone','CNSA / China MSA notices'),{className:'ltt',direction:'auto'});
 
   // Tanegashima Space Center — JAXA Pacific exclusion
   L.circle([30.38, 130.97], {radius:35000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tipIntl('Tanegashima Maritime Exclusion Zone','JAXA / Japan JCG notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipIntl('Tanegashima Maritime Exclusion Zone','JAXA / Japan JCG notices'),{className:'ltt',direction:'auto'});
 
   // Satish Dhawan Space Centre (SHAR) — ISRO Bay of Bengal exclusion
   L.circle([13.73, 80.23], {radius:35000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tipIntl('SHAR (Sriharikota) Maritime Exclusion Zone','ISRO / India Coast Guard notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipIntl('SHAR (Sriharikota) Maritime Exclusion Zone','ISRO / India Coast Guard notices'),{className:'ltt',direction:'auto'});
 
   // Naro Space Center, South Korea — KARI exclusion
   L.circle([34.43, 127.54], {radius:20000, ...style})
     .addTo(exclusionLayer)
-    .bindTooltip(tipIntl('Naro Space Center Maritime Zone','KARI / Korea Coast Guard notices'),{className:'ltt',direction:'top'});
+    .bindTooltip(tipIntl('Naro Space Center Maritime Zone','KARI / Korea Coast Guard notices'),{className:'ltt',direction:'auto'});
 
   // Starship Indian Ocean Landing Zone — consistent splashdown target IFT-11 / IFT-12
   L.circle([-19.0, 107.0], {radius:150000, color:'#00d4ff', fillColor:'#00d4ff', fillOpacity:0.03, weight:1.0, dashArray:'4 6'})
     .addTo(exclusionLayer)
-    .bindTooltip('<b style="color:#00d4ff">Starship Indian Ocean Landing Zone</b><br><span style="font-size:11px;color:var(--t5)">~19°S 107°E · IFT-11 &amp; IFT-12 splashdown target<br>Future recovery ship staging area</span>',{className:'ltt',direction:'top'});
+    .bindTooltip('<b style="color:#00d4ff">Starship Indian Ocean Landing Zone</b><br><span style="font-size:11px;color:var(--t5)">~19°S 107°E · IFT-11 &amp; IFT-12 splashdown target<br>Future recovery ship staging area</span>',{className:'ltt',direction:'auto'});
 }
 
 function drawZones() {
@@ -656,7 +656,7 @@ function drawZones() {
    {id:'gulf_ops',lat:27.0,lon:-92.0,r:90}].forEach(z=>{
     const def=ZONES.find(zz=>zz.id===z.id);
     L.circle([z.lat,z.lon],{radius:z.r*1000,color:'#0c3352',fillColor:'#041525',fillOpacity:0.2,weight:1,dashArray:'4 4'})
-      .addTo(zoneLayer).bindTooltip(def?.name||z.id,{className:'ltt',direction:'top'});
+      .addTo(zoneLayer).bindTooltip(def?.name||z.id,{className:'ltt',direction:'auto'});
   });
 }
 
@@ -698,7 +698,7 @@ function drawLandmarks() {
         `<b style="color:${st.col}">${esc(lm.name)}</b><br>
         <span style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:.05em">${lm.type}</span><br>
         <span style="font-size:11px;color:var(--t3)">${esc(lm.desc)}</span>${linkHtml}`,
-        { className:'ltt ltt-wrap', direction:'top', maxWidth:200 }
+        { className:'ltt ltt-wrap', direction:'auto', maxWidth:200 }
       );
   });
 }
@@ -758,7 +758,7 @@ function updateMarker(v) {
     `<b style="color:${col}">${esc(v.abbr||v.name)}</b><br>
     <span style="color:var(--t5)">${esc(v.operator)}</span><br>${esc(v.role)}<br>
     ${v.sog!=null&&!hollow?v.sog.toFixed(1)+' kn':''}${age}${v.dest&&!hollow?' → '+esc(v.dest):''}`,
-    {className:'ltt',direction:'top'}
+    {className:'ltt',direction:'auto'}
   );
   if(v.track&&v.track.length>1) {
     const trackStyle={color:col,weight:hollow?1:2,opacity:hist?0.25:vapi?0.3:stale?0.2:0.5,dashArray:hollow?'3 5':null};
@@ -872,7 +872,7 @@ function updateAircraftMarker(reg) {
     aircraftMarkers[reg].setLatLng([ac.lat, ac.lon]);
     aircraftMarkers[reg].setIcon(icon);
   }
-  aircraftMarkers[reg].bindTooltip(tooltip, {className:'ltt', direction:'top'});
+  aircraftMarkers[reg].bindTooltip(tooltip, {className:'ltt', direction:'auto'});
 
   // Draw flight path track
   if (ac._track && ac._track.length > 1) {
@@ -1072,7 +1072,7 @@ function updateSpacecraftMarker(primary, members, layer) {
     spacecraftMarkers[primary].setLatLng([sc.lat, sc.lon]);
     spacecraftMarkers[primary].setIcon(icon);
   }
-  spacecraftMarkers[primary].bindTooltip(tip, {className:'ltt', direction:'top'});
+  spacecraftMarkers[primary].bindTooltip(tip, {className:'ltt', direction:'auto'});
   // Ground track: past 45 min (solid) + next 90 min (dashed)
   if (tleData[primary]) {
     const nowMs = Date.now();
@@ -1272,7 +1272,7 @@ function drawTrajectoryArcs(launch, isHot) {
   L.circleMarker([padCoords.lat, padCoords.lon], {
     radius:5, color:'#ff8800', fillColor:'#ff8800', fillOpacity:0.9, weight:2, interactive:false
   }).addTo(missionArcLayer)
-    .bindTooltip(`<b>${esc(launch.name)}</b><br>${esc(launch.pad?.name||'')}`, {className:'ltt', direction:'top'});
+    .bindTooltip(`<b>${esc(launch.name)}</b><br>${esc(launch.pad?.name||'')}`, {className:'ltt', direction:'auto'});
 }
 
 function updateTrajectoryArcs() {
@@ -1385,7 +1385,7 @@ function updateBoosterProjections() {
     spacecraftMarkers[key].bindTooltip(
       `<b style="color:${col}">BOOSTER · ${esc(active.name||'')}</b><br>
       <span style="color:var(--t4)">Estimated · ${tStr} · ~${Math.round(frac*100)}% to landing</span>`,
-      {className:'ltt', direction:'top'});
+      {className:'ltt', direction:'auto'});
   } else if (elapsed > prof.boosterSecs) {
     if (spacecraftMarkers[key]) { try { rocketLayer.removeLayer(spacecraftMarkers[key]); } catch(e) {} delete spacecraftMarkers[key]; }
   }
@@ -1407,7 +1407,7 @@ function updateBoosterProjections() {
     spacecraftMarkers[shipKey].bindTooltip(
       `<b style="color:${col}">STARSHIP SHIP · ${esc(active.name||'')}</b><br>
       <span style="color:var(--t4)">Estimated · ${tStr}</span>`,
-      {className:'ltt', direction:'top'});
+      {className:'ltt', direction:'auto'});
   }
 }
 
