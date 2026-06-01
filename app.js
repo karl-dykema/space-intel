@@ -928,17 +928,28 @@ function propagateSat(satrec, date) {
   } catch(e) { return null; }
 }
 
+function splitAtAntimeridian(pts) {
+  if (!pts.length) return [];
+  const segs = [];
+  let cur = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    if (Math.abs(pts[i][1] - pts[i-1][1]) > 180) {
+      if (cur.length > 1) segs.push(cur);
+      cur = [pts[i]];
+    } else {
+      cur.push(pts[i]);
+    }
+  }
+  if (cur.length > 1) segs.push(cur);
+  return segs;
+}
+
 function computeGroundTrack(satrec) {
   const now = Date.now();
   const pts = [];
   for (let i = 0; i <= 92; i += 2) {
     const pos = propagateSat(satrec, new Date(now + i * 60000));
     if (pos) pts.push([pos.lat, pos.lon]);
-  }
-  // Normalize longitudes to avoid antimeridian lines across the map
-  for (let i = 1; i < pts.length; i++) {
-    while (pts[i][1] - pts[i-1][1] >  180) pts[i][1] -= 360;
-    while (pts[i-1][1] - pts[i][1] >  180) pts[i][1] += 360;
   }
   return pts;
 }
@@ -1033,17 +1044,11 @@ function updateSpacecraftMarker(primary, members, layer) {
       const pos = propagateSat(tleData[primary].satrec, new Date(nowMs + i * 60000));
       if (pos) future.push([pos.lat, pos.lon]);
     }
-    // Normalize antimeridian crossings for each segment
-    [past, future].forEach(pts => {
-      for (let i = 1; i < pts.length; i++) {
-        while (pts[i][1] - pts[i-1][1] >  180) pts[i][1] -= 360;
-        while (pts[i-1][1] - pts[i][1] >  180) pts[i][1] += 360;
-      }
-    });
     if (orbitTracks[primary]) { try { layer.removeLayer(orbitTracks[primary]); } catch(e) {} }
-    const pastLine   = past.length   > 1 ? L.polyline(past,   { color:col, weight:2,   opacity:0.55 })                    : null;
-    const futureLine = future.length > 1 ? L.polyline(future, { color:col, weight:1.5, opacity:0.25, dashArray:'5 8' })   : null;
-    const lines = [pastLine, futureLine].filter(Boolean);
+    const lines = [
+      ...splitAtAntimeridian(past).map(seg   => L.polyline(seg, { color:col, weight:2,   opacity:0.55 })),
+      ...splitAtAntimeridian(future).map(seg => L.polyline(seg, { color:col, weight:1.5, opacity:0.25, dashArray:'5 8' })),
+    ];
     if (lines.length) orbitTracks[primary] = L.layerGroup(lines).addTo(layer);
   }
 }
