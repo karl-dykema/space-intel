@@ -350,6 +350,8 @@ let orbitLayer=null, rocketLayer=null, terminatorLayer=null, missionArcLayer=nul
 let showLandmarks=false, showSpacecraft=false, showVessels=true, showAircraft=true;
 const markers={}, tracks={}, aircraftMarkers={}, aircraftTracks={}, cogArrows={};
 const spacecraftMarkers={}, orbitTracks={};
+let selectedMissionForArc=null;
+const _missionById={};
 const S_spacecraft={};  // name → { abbr, operator, role, col, longterm, lat, lon, alt, satrec }
 let tleData={};         // name → { satrec, meta }
 
@@ -1150,9 +1152,95 @@ function greatCircleArc(lat1,lon1,lat2,lon2,steps=60) {
   return pts;
 }
 
-function updateMissionArc() {
+function addArcLines(layer, pts, style) {
+  splitAtAntimeridian(pts).forEach(seg => {
+    if (seg.length > 1) L.polyline(seg, {...style, interactive:false}).addTo(layer);
+  });
+}
+
+function getMissionArcs(launch, isHot) {
+  const lspName = launch.launch_service_provider?.name || '';
+  const padName = (launch.pad?.name || '') + ' ' + (launch.pad?.location?.name || '');
+  const op = isHot ? 0.75 : 0.45;
+  const w  = isHot ? 2.0  : 1.5;
+  const da = isHot ? '8 4' : '5 8';
+  let padCoords = null, arcs = [];
+
+  if (lspName.includes('SpaceX')) {
+    if (/Starbase|Boca Chica/i.test(padName)) {
+      padCoords = LAUNCH_PADS['starbase'];
+      // Booster: short arc east and back to Mechazilla
+      const boosterWpts = [
+        [padCoords.lat, padCoords.lon],
+        [26.5, -96.0], [26.0, -94.5], [25.998, -97.161]
+      ];
+      // Ship: southeast through Gulf → Caribbean → Atlantic → Indian Ocean
+      const shipWpts = [
+        [padCoords.lat, padCoords.lon],
+        [22.5,-90.0],[18.0,-82.0],[14.0,-70.0],
+        [10.0,-50.0],[6.0,-25.0],[2.0,5.0],
+        [-4.0,30.0],[-8.0,55.0],[-10.0,80.0]
+      ];
+      arcs = [
+        { pts:boosterWpts, style:{color:'#ff8800',weight:w,opacity:op,dashArray:da} },
+        { pts:shipWpts,    style:{color:'#44aaff',weight:w,opacity:op,dashArray:da} },
+      ];
+    } else if (/Vandenberg|SLC-4/i.test(padName)) {
+      padCoords = LAUNCH_PADS['slc4e'];
+      const dsV = S.vessels['368351350'];
+      const ocisly = dsV?.lat ? {lat:dsV.lat,lon:dsV.lon} : {lat:32.0,lon:-123.5};
+      const sep = [32.5, -125.0];
+      arcs = [
+        { pts:greatCircleArc(padCoords.lat,padCoords.lon,sep[0],sep[1]),    style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
+        { pts:greatCircleArc(sep[0],sep[1],ocisly.lat,ocisly.lon),          style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
+        { pts:greatCircleArc(sep[0],sep[1],20.0,-148.0),                    style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
+      ];
+    } else {
+      padCoords = /LC-39A/i.test(padName) ? LAUNCH_PADS['lc39a'] : LAUNCH_PADS['slc40'];
+      const dsE = S.vessels['368219910'];
+      const asog = dsE?.lat ? {lat:dsE.lat,lon:dsE.lon} : {lat:30.0,lon:-72.5};
+      const sep = [28.5, -72.0];
+      arcs = [
+        { pts:greatCircleArc(padCoords.lat,padCoords.lon,sep[0],sep[1]),    style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
+        { pts:greatCircleArc(sep[0],sep[1],asog.lat,asog.lon),              style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
+        { pts:greatCircleArc(sep[0],sep[1],24.0,-42.0),                     style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
+      ];
+    }
+  } else if (lspName.includes('Blue Origin')) {
+    padCoords = LAUNCH_PADS['lc36'];
+    const dsNG = S.vessels['368368960'];
+    const jacklyn = dsNG?.lat ? {lat:dsNG.lat,lon:dsNG.lon} : {lat:30.0,lon:-74.0};
+    arcs = [
+      { pts:greatCircleArc(padCoords.lat,padCoords.lon,jacklyn.lat,jacklyn.lon), style:{color:'#44ccff',weight:w,opacity:op,dashArray:da} },
+    ];
+  } else if (lspName.includes('Rocket Lab')) {
+    padCoords = LAUNCH_PADS['mahia'];
+    arcs = [
+      { pts:greatCircleArc(padCoords.lat,padCoords.lon,-39.5,179.5), style:{color:'#ff8800',weight:w,opacity:op,dashArray:da} },
+    ];
+  }
+  return { padCoords, arcs };
+}
+
+function drawTrajectoryArcs(launch, isHot) {
   if (!map || !missionArcLayer) return;
   missionArcLayer.clearLayers();
+  if (!launch) return;
+  const { padCoords, arcs } = getMissionArcs(launch, isHot);
+  if (!padCoords || !arcs.length) return;
+  arcs.forEach(a => addArcLines(missionArcLayer, a.pts, a.style));
+  L.circleMarker([padCoords.lat, padCoords.lon], {
+    radius:5, color:'#ff8800', fillColor:'#ff8800', fillOpacity:0.9, weight:2, interactive:false
+  }).addTo(missionArcLayer)
+    .bindTooltip(`<b>${esc(launch.name)}</b><br>${esc(launch.pad?.name||'')}`, {className:'ltt', direction:'top'});
+}
+
+function updateTrajectoryArcs() {
+  if (!map || !missionArcLayer) return;
+  if (selectedMissionForArc) {
+    drawTrajectoryArcs(selectedMissionForArc, false);
+    return;
+  }
   const now = Date.now();
   const active = [...missionsCache, ...pastMissionsCache].find(l => {
     const net = l.net ? new Date(l.net).getTime() : null;
@@ -1160,42 +1248,24 @@ function updateMissionArc() {
     const el = now - net;
     return el > -3*3600000 && el < 30*60000;
   });
-  if (!active) return;
-  const net = new Date(active.net).getTime();
-  const lspName = active.launch_service_provider?.name || '';
-  const padName = (active.pad?.name || '') + ' ' + (active.pad?.location?.name || '');
-  let padCoords = null, target = null;
-  if (lspName.includes('SpaceX')) {
-    if (/Starbase|Boca Chica/i.test(padName)) {
-      padCoords = LAUNCH_PADS['starbase'];
-    } else if (/Vandenberg|SLC-4/i.test(padName)) {
-      padCoords = LAUNCH_PADS['slc4e'];
-      const ds = S.vessels['368351350']; target = ds?.lat ? {lat:ds.lat,lon:ds.lon} : {lat:32.5,lon:-122.0};
-    } else {
-      padCoords = /LC-39A/i.test(padName) ? LAUNCH_PADS['lc39a'] : LAUNCH_PADS['slc40'];
-      const ds = S.vessels['368219910']; target = ds?.lat ? {lat:ds.lat,lon:ds.lon} : {lat:30.5,lon:-76.5};
-    }
-  } else if (lspName.includes('Blue Origin')) {
-    padCoords = LAUNCH_PADS['lc36'];
-    const ds = S.vessels['368368960']; target = ds?.lat ? {lat:ds.lat,lon:ds.lon} : {lat:30.0,lon:-77.5};
-  } else if (lspName.includes('Rocket Lab')) {
-    padCoords = LAUNCH_PADS['mahia'];
-    target = {lat:-39.5,lon:179.5};
-  }
-  if (!padCoords || !target) return;
-  const isHot = now - net > -5*60000; // within 5 min of launch
-  const arc = greatCircleArc(padCoords.lat, padCoords.lon, target.lat, target.lon);
-  L.polyline(arc, {
-    color: isHot ? '#ff2244' : '#ff8800',
-    weight: isHot ? 2.5 : 1.5,
-    opacity: isHot ? 0.75 : 0.45,
-    dashArray: isHot ? '8 4' : '5 8',
-    interactive: false
-  }).addTo(missionArcLayer);
-  L.circleMarker([padCoords.lat, padCoords.lon], {
-    radius:5, color:'#ff8800', fillColor:'#ff8800', fillOpacity:0.9, weight:2, interactive:false
-  }).addTo(missionArcLayer)
-    .bindTooltip(`<b>${esc(active.name)}</b><br>${esc(active.pad?.name||'')}`, {className:'ltt', direction:'top'});
+  if (!active) { missionArcLayer.clearLayers(); return; }
+  const isHot = now - new Date(active.net).getTime() > -5*60000;
+  drawTrajectoryArcs(active, isHot);
+}
+
+function showMissionArc(id) {
+  const launch = _missionById[id];
+  if (!launch) return;
+  selectedMissionForArc = launch;
+  drawTrajectoryArcs(launch, false);
+  document.getElementById('missions-panel').style.display = 'none';
+  const { padCoords } = getMissionArcs(launch, false);
+  if (padCoords) map.setView([padCoords.lat, padCoords.lon], 4);
+}
+
+function clearMissionArc() {
+  selectedMissionForArc = null;
+  if (missionArcLayer) missionArcLayer.clearLayers();
 }
 
 // ── Booster projection ─────────────────────────────────────────
@@ -2254,6 +2324,7 @@ async function showMissions() {
 }
 
 function buildMissionCard(l, isPast=false) {
+  if (l.id) _missionById[l.id] = l;
   const lsp       = l.launch_service_provider?.name||'';
   const op        = Object.entries(OPERATOR_MATCH).find(([k])=>lsp.includes(k))?.[1]||lsp;
   const col       = opColor(op);
@@ -2416,11 +2487,21 @@ function buildMissionCard(l, isPast=false) {
       </div>`;}).join('')}
     </div>` : '';
 
+  const hasTraj = lsp.includes('SpaceX')||lsp.includes('Blue Origin')||lsp.includes('Rocket Lab');
+  const arcBtnHTML = hasTraj && l.id ? `
+    <div style="margin:8px 0 4px">
+      <button onclick="showMissionArc('${l.id.replace(/'/g,"\\'")}');return false"
+        style="font-size:11px;font-weight:700;padding:5px 13px;background:#0a1e30;border:1px solid #1a4060;color:#44aaff;cursor:pointer;letter-spacing:.04em;border-radius:2px">
+        TRAJECTORY ↗
+      </button>
+    </div>` : '';
+
   return `<div class="mcard" style="border-left-color:${col}">
     ${headerHTML}
     ${countdownHTML}
     ${programsHTML}
     ${linksHTML}
+    ${arcBtnHTML}
     ${descHTML}
     ${crewHTML}
     ${catchHTML}
@@ -2675,7 +2756,7 @@ window.onload=()=>{
   updateTerminator();
   setInterval(updateTerminator, 60000);
   setInterval(()=>{
-    renderFleet(); updateHeaderStats(); updateMissionArc();
+    renderFleet(); updateHeaderStats(); updateTrajectoryArcs();
     // Show/hide OPS tab and auto-switch on launch entry
     const active = getActiveOpsLaunch();
     const opsBtn = document.getElementById('rtab-ops');
@@ -2687,7 +2768,7 @@ window.onload=()=>{
   }, 5000);
 
   loadSBData().then(()=>loadVapiPositions());
-  fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateMissionArc(); });
+  fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
   pollAircraft();
   setInterval(pollAircraft, AIRCRAFT_POLL_MS);
   fetchTLEs();
