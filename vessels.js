@@ -120,7 +120,7 @@ const VESSEL_DB = {
       'Operated by GO Maritime (Edison Chouest Offshore subsidiary) for SpaceX',
       'Droneship support vessel used by SpaceX for over 10 years in Atlantic and Pacific',
       'Supported OCISLY on West Coast and ASOG/JRTI on East Coast at various times',
-      'Retired 2023 — replaced by Bob and Doug on East Coast, GO Beyond on West Coast',
+      'Retired 2023 — replaced by Bob and Doug on East Coast, GO Beyond (MMSI 368237190) on West Coast',
     ],
     notes:'RETIRED 2023. IMO 8987876. [✓ MMSI confirmed]',
   },
@@ -158,6 +158,30 @@ const VESSEL_DB = {
       'Harbor tug active at Port Canaveral near SpaceX assets — operator unconfirmed',
     ],
     notes:'Port Canaveral tug, likely SpaceX support. [? operator unconfirmed]',
+  },
+  '366888850': {
+    name:'Lindsay C', abbr:'Lindsay C',
+    operator:'SpaceX', role:'Support Tug (West Coast)',
+    color:'#00d4ff', homePort:'Port of Long Beach, CA',
+    imo:'7507382', flag:'USA', verified:false,
+    specs:{ type:'Harbor tug' },
+    history:[
+      'Harbor tug operating near OCISLY and West Coast SpaceX assets',
+    ],
+    notes:'West Coast SpaceX support tug — seen with OCISLY. IMO 7507382. [? operator unconfirmed]',
+  },
+  '368237190': {
+    name:'GO Beyond', abbr:'GO Beyond',
+    operator:'SpaceX', role:'Droneship Support (West Coast)',
+    color:'#00d4ff', homePort:'Port of Long Beach, CA',
+    imo:'9622655', flag:'USA', verified:true,
+    specs:{ type:'Multi-purpose offshore vessel' },
+    history:[
+      'Operated by GO Maritime (Edison Chouest Offshore subsidiary) for SpaceX',
+      'Replaced GO Quest as primary West Coast OCISLY support vessel in 2023',
+      'Supports OCISLY deployments from Vandenberg SFB (SLC-4E)',
+    ],
+    notes:'West Coast OCISLY support vessel. Replaced GO Quest 2023. IMO 9622655. [✓ MMSI]',
   },
   // ── Blue Origin ──────────────────────────────────────────────
   '368368960': {
@@ -651,6 +675,18 @@ const AIRCRAFT_DB = {
     operator:'NASA', role:'Airborne science platform',
     model:'Douglas DC-8-72', type:'research', background:true,
     notes:'Based at Armstrong AFRC. Four-engine jet used as airborne science platform; carries instruments for atmospheric and Earth-observation campaigns. Occasionally supports launch range coverage.',
+  },
+  'N559NA': {
+    name:'NASA X-59 QueSST', abbr:'X-59',
+    operator:'NASA', role:'Quiet supersonic research',
+    model:'Lockheed Martin X-59', type:'research',
+    notes:'Based at Armstrong AFRC, Edwards AFB, CA. Quesst mission — demonstrating supersonic flight without a disruptive sonic boom. 99.7ft long, 29.5ft wingspan, GE F414 engine, Mach 1.5 max. First flight Oct 28 2025. Preparing for first supersonic flight June 2026. Registration N559NA — verify if not tracking.',
+  },
+  'N941NA': {
+    name:'NASA Super Guppy', abbr:'Super Guppy',
+    operator:'NASA', role:'Oversized cargo transport',
+    model:'Aero Spacelines B-377SGT Super Guppy Turbine', type:'research', background:true,
+    notes:'Transports large spacecraft components — Orion capsules, rocket segments, satellite hardware — between NASA centers. 156ft wingspan, 48ft tail height. Based at Ellington Field (JSC), Houston, TX / El Paso, TX.',
   },
   // ── Stratolaunch ─────────────────────────────────────────────
   'N351SL': {

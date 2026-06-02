@@ -418,17 +418,34 @@ function isCarryingBooster(mmsi) {
   });
   if(!mission) return null;
 
-  // Need a known position to make the port-proximity call — without it, don't flag
   const v = S.vessels[mmsi];
   const home = DRONE_HOME_PORTS[mmsi];
+  const age = now - new Date(mission.net).getTime();
+
   if(home && !v?.lat) return null; // no position yet, wait for data before showing flag
   if(v?.lat && home) {
     const dLat = v.lat - home.lat, dLon = (v.lon - home.lon) * Math.cos(home.lat * Math.PI/180);
     const distKm = Math.sqrt(dLat*dLat + dLon*dLon) * 111;
+    // Within 3km → definitely at dock
     if(distKm < 3) return null;
+    // Within 10km and slow/moored → docked or just departed
+    if(distKm < 10 && (v.sog <= 0.5 || v.navStatus === 5 || v.navStatus === 1)) return null;
   }
 
-  const age = now - new Date(mission.net).getTime();
+  // In-session track: any position within 3km of home port since mission launch → booster was unloaded
+  if(home && history[mmsi]?.positions) {
+    const mNet = new Date(mission.net).getTime();
+    const hadPortVisit = history[mmsi].positions.some(p => {
+      if(p.ts <= mNet) return false;
+      const dLat = p.lat - home.lat, dLon = (p.lon - home.lon) * Math.cos(home.lat * Math.PI/180);
+      return Math.sqrt(dLat*dLat + dLon*dLon) * 111 < 3;
+    });
+    if(hadPortVisit) return null;
+  }
+
+  // After 36h+ if vessel is now stationary, it has returned and docked
+  if(age > 36*3600000 && v?.sog != null && v.sog <= 0.1) return null;
+
   return {...mission, _transit: age > 2*3600000};
 }
 
