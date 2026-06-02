@@ -366,7 +366,7 @@ let pastMissionsCache = [];
 const prevZones={};
 let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null, aircraftLayer=null;
 let orbitLayer=null, rocketLayer=null, terminatorLayer=null, missionArcLayer=null;
-let showLandmarks=false, showSpacecraft=false, showVessels=true, showAircraft=true;
+let showLandmarks=true, showSpacecraft=true, showVessels=true, showAircraft=true;
 const markers={}, tracks={}, aircraftMarkers={}, aircraftTracks={}, cogArrows={};
 const spacecraftMarkers={}, orbitTracks={};
 let selectedMissionForArc=null;
