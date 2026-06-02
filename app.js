@@ -1112,7 +1112,7 @@ function clusterSpacecraft() {
     for (const [other, osc] of positioned) {
       if (used.has(other)) continue;
       if (STATION_SET.has(other)) continue; // never absorb one station core under another
-      if (scDistKm(st.lat, st.lon, osc.lat, osc.lon) < 500) {
+      if (scDistKm(st.lat, st.lon, osc.lat, osc.lon) < 2000) {
         members.push(other);
         used.add(other);
       }
@@ -1131,11 +1131,10 @@ function clusterSpacecraft() {
 }
 
 function removeSatMarker(name) {
-  [orbitLayer, rocketLayer].forEach(layer => {
-    if (!layer) return;
-    if (spacecraftMarkers[name]) { try { layer.removeLayer(spacecraftMarkers[name]); } catch(e) {} delete spacecraftMarkers[name]; }
-    if (orbitTracks[name])       { try { layer.removeLayer(orbitTracks[name]);       } catch(e) {} delete orbitTracks[name]; }
-  });
+  const marker = spacecraftMarkers[name];
+  const track  = orbitTracks[name];
+  if (marker) { [orbitLayer, rocketLayer].forEach(l => { if (l) try { l.removeLayer(marker); } catch(e) {} }); delete spacecraftMarkers[name]; }
+  if (track)  { [orbitLayer, rocketLayer].forEach(l => { if (l) try { l.removeLayer(track);  } catch(e) {} }); delete orbitTracks[name]; }
 }
 
 function updateSpacecraftMarker(primary, members, layer) {
@@ -1847,34 +1846,14 @@ function renderFleet(){
   const scClusters=clusterSpacecraft().filter(c=>!c.longterm||showSpacecraft);
   scClusters.sort((a,b)=>(a.longterm?1:0)-(b.longterm?1:0)||a.primary.localeCompare(b.primary));
 
-  // Active items across all categories — float to very top
-  const activeVessels=allVessels.filter(v=>vesselRank(v)<=1);
-  const activeAC=allAC.filter(reg=>acRank(reg)===0);
-  const activeSC=scClusters.filter(c=>S_spacecraft[c.primary]?.lat!=null&&!c.longterm);
-  const hasActive=activeVessels.length||activeAC.length||activeSC.length;
+  const scHTML=scClusters.map(buildSpacecraftRow).filter(Boolean).join('');
 
-  const inactiveVessels=allVessels;
-  const inactiveAC=allAC;
-  const inactiveSC=scClusters.filter(c=>!activeSC.includes(c));
-
-  const activeHTML=hasActive
-    ? `<div class="lhdr" style="font-size:10px;color:var(--acc);letter-spacing:.08em">ACTIVE NOW</div>`
-      +activeVessels.map(buildVesselRow).join('')
-      +activeAC.map(buildAircraftRow).join('')
-      +activeSC.map(buildSpacecraftRow).filter(Boolean).join('')
-    : '';
-
-  // Map toggles control layer visibility only — roster always shows full list
-  const vesselHTML=inactiveVessels.map(buildVesselRow).join('');
-  const acHTML=inactiveAC.map(buildAircraftRow).join('');
-  const scHTML=inactiveSC.map(buildSpacecraftRow).filter(Boolean).join('');
-
+  // Categories show full sorted roster — active items float to top via rank sort
   document.getElementById('fleet').innerHTML =
-    activeHTML
-    + `<div class="lhdr" style="${hasActive?'margin-top:10px;':''}font-size:10px;color:var(--t4)">VESSELS</div>`
-    + vesselHTML
+    `<div class="lhdr" style="font-size:10px;color:var(--t4)">VESSELS</div>`
+    + allVessels.map(buildVesselRow).join('')
     + `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>`
-    + acHTML
+    + allAC.map(buildAircraftRow).join('')
     + (scHTML?`<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">SPACECRAFT</div>${scHTML}`:'');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
   document.querySelectorAll('.vrow[data-reg]').forEach(el=>{el.onclick=()=>showAircraftDetail(el.dataset.reg);});
