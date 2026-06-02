@@ -76,6 +76,7 @@ const VESSEL_DB = {
       'Retired 2025 — sister ship Shannon now sole Dragon recovery vessel',
     ],
     notes:'RETIRED 2025. Ex-GO Searcher. Named for NASA astronaut Megan McArthur. [✓ MMSI]',
+    background:true,
   },
   '367550000': {
     name:'Shannon', abbr:'Shannon',
@@ -136,6 +137,7 @@ const VESSEL_DB = {
       'Retired 2023 — replaced by Bob and Doug on East Coast, GO Beyond (MMSI 368237190) on West Coast',
     ],
     notes:'RETIRED 2023. IMO 8987876. [✓ MMSI confirmed]',
+    background:true,
   },
   '369599000': {
     name:'Signet Warhorse I', abbr:'Warhorse I',
@@ -148,6 +150,7 @@ const VESSEL_DB = {
       'Provides towing and escort services for ASOG on Atlantic deployments',
     ],
     notes:'East Coast ASOG support tug. IMO 9254018. [✓ MMSI]',
+    background:true,
   },
   '366885000': {
     name:'Signet Warhorse II', abbr:'Warhorse II',
@@ -160,6 +163,7 @@ const VESSEL_DB = {
       'Anchor handling / escort tug for ASOG Atlantic deployments',
     ],
     notes:'East Coast ASOG anchor handling tug. IMO 9388132. [✓ MMSI]',
+    background:true,
   },
   '368448940': {
     name:'Christine S', abbr:'Christine S',
@@ -171,6 +175,7 @@ const VESSEL_DB = {
       'Harbor tug active at Port Canaveral near SpaceX assets — operator unconfirmed',
     ],
     notes:'Port Canaveral tug, likely SpaceX support. [? operator unconfirmed]',
+    background:true,
   },
   '366888850': {
     name:'Lindsay C', abbr:'Lindsay C',
@@ -182,6 +187,7 @@ const VESSEL_DB = {
       'Harbor tug operating near OCISLY and West Coast SpaceX assets',
     ],
     notes:'West Coast SpaceX support tug — seen with OCISLY. IMO 7507382. [? operator unconfirmed]',
+    background:true,
   },
   '368237190': {
     name:'GO Beyond', abbr:'GO Beyond',
@@ -195,6 +201,7 @@ const VESSEL_DB = {
       'Supports OCISLY deployments from Vandenberg SFB (SLC-4E)',
     ],
     notes:'West Coast OCISLY support vessel. Replaced GO Quest 2023. IMO 9622655. [✓ MMSI]',
+    background:true,
   },
   // ── Blue Origin ──────────────────────────────────────────────
   '368368960': {
@@ -225,6 +232,7 @@ const VESSEL_DB = {
       'Named after Blue Origin engineer Harvey Stone',
     ],
     notes:'Support tug for Jacklyn. [✓ MMSI confirmed]',
+    background:true,
   },
   // ── Rocket Lab ───────────────────────────────────────────────
   '512385000': {
@@ -270,6 +278,7 @@ const VESSEL_DB = {
       'Primary tugboat used by SpaceX to tow ASOG to and from Atlantic landing zones',
     ],
     notes:'Primary SpaceX East Coast drone ship tug. IMO 7390765. [✓ confirmed]',
+    background:true,
   },
   // ── ULA ──────────────────────────────────────────────────────
   '338731000': {

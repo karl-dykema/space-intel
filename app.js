@@ -1727,6 +1727,7 @@ function renderFleet(){
     .map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true})
     .filter(v=>{
       if(SHARE_MODE && v.ts && (now-v.ts >= STALE_14D)) return false;
+      if(VESSEL_DB[v.mmsi]?.background && !v.lat) return false; // background vessels: hide until spotted
       return !!(v.lat||v.ts); // hide if never seen at all
     })
     .sort((a,b)=>{ const ra=vesselRank(a),rb=vesselRank(b); return ra!==rb?ra-rb:(b.ts||0)-(a.ts||0); });
