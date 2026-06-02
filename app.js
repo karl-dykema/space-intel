@@ -997,23 +997,21 @@ async function fetchTLEsFromIvanAPI() {
 async function fetchTLEs() {
   try {
     if (typeof satellite === 'undefined') { addLog('satellite.js not loaded', 'err'); return; }
-    // Try same-origin TLE file first (no CORS, updated by GitHub Actions)
+    let found = 0;
+    // Load local file (stations: ISS, CSS modules, Soyuz, Progress, CSS crewed)
     try {
       const res = await fetch('data/stations.tle', { cache: 'no-cache' });
       if (res.ok) {
         const text = await res.text();
-        const found = parseTLEText(text);
-        if (found > 0) {
-          addLog(`Orbit: loaded ${found} spacecraft TLEs`, 'sys');
-          updateOrbits();
-          return;
-        }
+        found = parseTLEText(text);
+        if (found > 0) addLog(`Orbit: loaded ${found} station TLEs`, 'sys');
       }
     } catch(e) {}
-    // Fallback: Ivan TLE API (CORS-open, JSON)
-    addLog('TLE: trying backup API…', 'sys');
-    const found = await fetchTLEsFromIvanAPI();
-    if (found > 0) { addLog(`Orbit: loaded ${found} spacecraft (backup API)`, 'sys'); updateOrbits(); }
+    // Always supplement with Ivan API for active missions (Dragon, Cygnus, Orion)
+    // — these are NOT in the Celestrak STATIONS group
+    const extra = await fetchTLEsFromIvanAPI();
+    if (extra > 0) addLog(`Orbit: +${extra} active mission TLEs (Ivan API)`, 'sys');
+    if (found + extra > 0) { updateOrbits(); }
     else addLog('TLE: all sources failed', 'err');
   } catch(e) { addLog(`TLE error: ${e.message}`, 'err'); }
 }
@@ -1844,22 +1842,23 @@ function renderFleet(){
 
 function buildVesselRow(v){
   const sel=S.selected===v.mmsi, col=opColor(v.operator);
-  const isLive=!!v.lat&&!!v.ts&&(Date.now()-v.ts<600000)&&(!v._historical||SHARE_MODE);
-  const isHist=v._historical;
-  const shareHist=SHARE_MODE&&isHist&&!!v.lat;
-  const stale=!!v.lat&&!isLive&&!isHist;
+  const now2=Date.now(), age2=v.ts?now2-v.ts:Infinity;
+  const isLive=!!v.lat&&!!v.ts&&age2<600000&&(!v._historical||SHARE_MODE);
+  const isRecent=!!v.lat&&!!v.ts&&age2<7200000&&(!v._historical||SHARE_MODE); // <2h, not fully stale
+  const isHist=v._historical&&!SHARE_MODE;
+  const stale=!!v.lat&&!isRecent&&!isHist;
   const isOffline=v._offline||(!v.lat&&!isHist);
   const carrying=isCarryingBooster(v.mmsi);
   const stationary=isLive&&(v.sog==null||v.sog<=0.1);
   const moving=isLive&&!stationary;
-  const shareMoving=shareHist&&(v.sog!=null&&v.sog>0.5)&&!isNearPort(v.lat,v.lon);
-  const shareStationary=shareHist&&!shareMoving;
-  const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':shareMoving?'#4499ff':shareStationary?'#335577':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
-  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED — NO SIGNAL':'NO AIS LOCK'):shareMoving?`UNDERWAY · ${ageStr(v.ts)}`:shareStationary?`STATIONARY · ${ageStr(v.ts)}`:isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
-  const nameCol=moving?col:stationary?col+'99':isHist?col+'66':shareHist?col:'var(--t3)';
-  const roleCol=moving?col+'99':stationary?col+'55':isHist?col+'33':shareHist?col+'99':col+'33';
-  const bg=moving?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):stationary?(sel?'var(--bg4)':''):shareHist?(sel?'var(--bg4)':'rgba(0,200,255,.02)'):sel?'var(--bg4)':'';
-  const borderCol=moving?col:stationary?col+'55':shareHist?col+'66':isHist?col+'33':'transparent';
+  const recentMoving=!moving&&isRecent&&(v.sog!=null&&v.sog>0.5)&&!isNearPort(v.lat,v.lon);
+  const recentStationary=!moving&&!stationary&&isRecent&&!recentMoving;
+  const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':recentMoving?'#44cc77':recentStationary?'#226644':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
+  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED — NO SIGNAL':'NO AIS LOCK'):recentMoving?`UNDERWAY · LAST PING ${ageStr(v.ts)}`:recentStationary?`STATIONARY · ${ageStr(v.ts)}`:isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
+  const nameCol=moving?col:stationary?col+'99':recentMoving?col:recentStationary?col+'88':isHist?col+'66':'var(--t3)';
+  const roleCol=moving?col+'99':stationary?col+'55':recentMoving?col+'88':isHist?col+'33':'var(--t4)';
+  const bg=moving?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):stationary?(sel?'var(--bg4)':''):recentMoving?(sel?'var(--bg4)':'rgba(0,200,100,.015)'):sel?'var(--bg4)':'';
+  const borderCol=moving?col:stationary?col+'55':recentMoving?col+'88':isHist?col+'33':'transparent';
   return `<div class="vrow${sel?' sel':''}" data-mmsi="${esc(v.mmsi)}"
     style="border-left-color:${borderCol}${bg?';background:'+bg:''}${moving?';box-shadow:inset 2px 0 8px '+col+'22':''}">
     <div class="vn" style="color:${nameCol};${moving?'text-shadow:0 0 12px '+col+'66':''}">${esc(v.abbr||v.name)}</div>
