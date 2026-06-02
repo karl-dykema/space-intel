@@ -2181,19 +2181,18 @@ function formatTPlus(ms) {
 }
 
 // ── Version check — show refresh banner when new deploy detected ──
-let _versionLastMod = null;
-(async function initVersionCheck() {
-  try {
-    const r = await fetch(location.pathname || '/', { method:'HEAD', cache:'no-store' });
-    _versionLastMod = r.headers.get('last-modified');
-  } catch(e) {}
+let _loadedVersion = null;
+(function initVersionString() {
+  const el = document.querySelector('#hdr .ht span');
+  if (el) _loadedVersion = el.textContent.trim();
 })();
 async function checkForNewVersion() {
-  if (!_versionLastMod) return;
+  if (!_loadedVersion) return;
   try {
-    const r = await fetch(location.pathname || '/', { method:'HEAD', cache:'no-store' });
-    const cur = r.headers.get('last-modified');
-    if (cur && cur !== _versionLastMod) {
+    const r = await fetch(location.pathname || '/', { cache:'no-store' });
+    const text = await r.text();
+    const m = text.match(/v\d+\.\d+\.\d+/);
+    if (m && m[0] !== _loadedVersion) {
       const b = document.getElementById('stale-banner');
       if (b) b.style.display = '';
     }
