@@ -695,6 +695,11 @@ function drawExclusionZones() {
   L.circle([-19.0, 107.0], {radius:150000, color:'#00d4ff', fillColor:'#00d4ff', fillOpacity:0.03, weight:1.0, dashArray:'4 6'})
     .addTo(exclusionLayer)
     .bindTooltip('<b style="color:#00d4ff">Starship Indian Ocean Landing Zone</b><br><span style="font-size:11px;color:var(--t5)">~19°S 107°E · IFT-11 &amp; IFT-12 splashdown target<br>Future recovery ship staging area</span>',{className:'ltt',direction:'auto'});
+
+  // Starfall Pacific reentry zone — FAA EA May 2026, ~700nm off US West Coast
+  L.circle([29.0, -131.0], {radius:350000, color:'#00d4ff', fillColor:'#00d4ff', fillOpacity:0.03, weight:1.0, dashArray:'4 6'})
+    .addTo(exclusionLayer)
+    .bindTooltip('<b style="color:#00d4ff">Starfall Reentry Zone</b><br><span style="font-size:11px;color:var(--t5)">~700nm off US West Coast · outside 200nm EEZ<br>SpaceX uncrewed reentry capsule (3.1m, 2,100kg)<br>In-orbit manufacturing &amp; rapid cargo delivery · FAA EA May 2026</span>',{className:'ltt',direction:'auto'});
 }
 
 function drawZones() {
