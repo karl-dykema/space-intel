@@ -968,15 +968,16 @@ function parseTLEText(text) {
 }
 
 async function fetchTLEsFromIvanAPI() {
+  // Full fallback: fetch everything when local file is unavailable
   const queries = [
-    `${IVAN_BASE}/25544`, `${IVAN_BASE}/48274`,  // ISS, Tiangong (stable IDs)
+    `${IVAN_BASE}/25544`, `${IVAN_BASE}/48274`,
     `${IVAN_BASE}?search=SOYUZ-MS&page-size=5`,
     `${IVAN_BASE}?search=PROGRESS-MS&page-size=5`,
     `${IVAN_BASE}?search=SHENZHOU&page-size=5`,
     `${IVAN_BASE}?search=TIANZHOU&page-size=5`,
-    `${IVAN_BASE}?search=CREW+DRAGON&page-size=5`,
-    `${IVAN_BASE}?search=DRAGON+CRS&page-size=5`,
-    `${IVAN_BASE}?search=CYGNUS+NG&page-size=5`,
+    `${IVAN_BASE}?search=CREW+DRAGON&page-size=1`,
+    `${IVAN_BASE}?search=DRAGON+CRS&page-size=1`,
+    `${IVAN_BASE}?search=CYGNUS+NG&page-size=1`,
   ];
   const results = await Promise.allSettled(queries.map(u => fetch(u).then(r => r.ok ? r.json() : null)));
   let found = 0;
@@ -994,24 +995,54 @@ async function fetchTLEsFromIvanAPI() {
   return found;
 }
 
+async function fetchActiveMissionTLEs() {
+  // Supplement local file with currently active Dragon/Cygnus/Orion (not in STATIONS group)
+  // page-size=1 = most recent only, avoiding stale old missions flooding the map
+  const queries = [
+    `${IVAN_BASE}?search=CREW+DRAGON&page-size=1`,
+    `${IVAN_BASE}?search=DRAGON+CRS&page-size=1`,
+    `${IVAN_BASE}?search=CYGNUS+NG&page-size=1`,
+    `${IVAN_BASE}?search=ORION&page-size=1`,
+  ];
+  const results = await Promise.allSettled(queries.map(u => fetch(u).then(r => r.ok ? r.json() : null)));
+  let found = 0;
+  for (const res of results) {
+    if (res.status !== 'fulfilled' || !res.value) continue;
+    const items = Array.isArray(res.value.member) ? res.value.member : [res.value];
+    const item = items[0];
+    if (!item?.name || !item?.line1 || !item?.line2) continue;
+    if (/DEB|OBJECT|R\/B/i.test(item.name)) continue;
+    const pat = SPACECRAFT_PATTERNS.find(p => p.match(item.name));
+    if (!pat || tleData[item.name]) continue;
+    try { tleData[item.name] = { satrec: satellite.twoline2satrec(item.line1, item.line2), meta: pat, name: item.name }; found++; } catch(e) {}
+  }
+  return found;
+}
+
 async function fetchTLEs() {
   try {
     if (typeof satellite === 'undefined') { addLog('satellite.js not loaded', 'err'); return; }
     let found = 0;
-    // Load local file (stations: ISS, CSS modules, Soyuz, Progress, CSS crewed)
+    // Load local file (ISS, CSS modules, Soyuz, Progress, CSS crewed)
     try {
       const res = await fetch('data/stations.tle', { cache: 'no-cache' });
       if (res.ok) {
         const text = await res.text();
         found = parseTLEText(text);
-        if (found > 0) addLog(`Orbit: loaded ${found} station TLEs`, 'sys');
+        if (found > 0) {
+          addLog(`Orbit: loaded ${found} station TLEs`, 'sys');
+          // Supplement with active Dragon/Cygnus (not in STATIONS group)
+          const extra = await fetchActiveMissionTLEs();
+          if (extra > 0) addLog(`Orbit: +${extra} active mission TLEs`, 'sys');
+          updateOrbits();
+          return;
+        }
       }
     } catch(e) {}
-    // Always supplement with Ivan API for active missions (Dragon, Cygnus, Orion)
-    // — these are NOT in the Celestrak STATIONS group
-    const extra = await fetchTLEsFromIvanAPI();
-    if (extra > 0) addLog(`Orbit: +${extra} active mission TLEs (Ivan API)`, 'sys');
-    if (found + extra > 0) { updateOrbits(); }
+    // Fallback: full Ivan API fetch
+    addLog('TLE: trying backup API…', 'sys');
+    const fallback = await fetchTLEsFromIvanAPI();
+    if (fallback > 0) { addLog(`Orbit: loaded ${fallback} spacecraft (backup API)`, 'sys'); updateOrbits(); }
     else addLog('TLE: all sources failed', 'err');
   } catch(e) { addLog(`TLE error: ${e.message}`, 'err'); }
 }
