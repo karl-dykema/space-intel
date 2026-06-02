@@ -1857,13 +1857,14 @@ function renderFleet(){
 
   const activeHTML=hasActive
     ? `<div class="lhdr" style="font-size:10px;color:var(--acc);letter-spacing:.08em">ACTIVE NOW</div>`
-      +(showVessels?activeVessels.map(buildVesselRow).join(''):'')
-      +(showAircraft?activeAC.map(buildAircraftRow).join(''):'')
+      +activeVessels.map(buildVesselRow).join('')
+      +activeAC.map(buildAircraftRow).join('')
       +activeSC.map(buildSpacecraftRow).filter(Boolean).join('')
     : '';
 
-  const vesselHTML=showVessels?inactiveVessels.map(buildVesselRow).join(''):`<div style="padding:8px 12px;font-size:11px;color:var(--t5)">Vessels hidden</div>`;
-  const acHTML=showAircraft?inactiveAC.map(buildAircraftRow).join(''):`<div style="padding:4px 12px;font-size:11px;color:var(--t5)">Aircraft hidden</div>`;
+  // Map toggles control layer visibility only — roster always shows full list
+  const vesselHTML=inactiveVessels.map(buildVesselRow).join('');
+  const acHTML=inactiveAC.map(buildAircraftRow).join('');
   const scHTML=inactiveSC.map(buildSpacecraftRow).filter(Boolean).join('');
 
   document.getElementById('fleet').innerHTML =
