@@ -1,87 +1,144 @@
-# Space Vessel Intel
+# Space Fleet Tracker
 
-Real-time AIS tracking of vessels supporting commercial and government space launch operations. Tracks drone ships, recovery boats, transport vessels, and range support ships for SpaceX, Blue Origin, Rocket Lab, ULA, ESA, and US Space Force.
+Real-time map of every vessel, aircraft, and spacecraft supporting commercial space launch operations — SpaceX, Blue Origin, Rocket Lab, ULA, NASA, and more.
 
-Live at: **https://karl-dykema.github.io/space-intel/**
+**[→ Open the live tracker](https://karl-dykema.github.io/space-intel/?share)**
+
+---
+
+## What it tracks
+
+**Vessels (AIS)** — drone ships, fairing catchers, Dragon recovery ships, support tugs, and range instrumentation ships. Positions update in real-time via AIS transponders.
+
+**Aircraft (ADS-B)** — SpaceX executive jets, NASA research aircraft (WB-57F, ER-2, X-59), Rocket Lab's capture helicopter, Draken International adversary trainers, and more.
+
+**Spacecraft (TLE)** — ISS, Tiangong, active Dragon and Cygnus capsules, Soyuz, Shenzhou, and other crewed/cargo vehicles in orbit, updated every 15 seconds from Celestrak TLE data.
+
+**Launches** — upcoming missions from the Launch Library API with countdowns, trajectory arcs computed from actual orbital inclination, and vessel-mission linkage showing which ship is assigned to each booster recovery.
+
+---
+
+## Fleet
+
+### SpaceX — Vessels
+| Vessel | Role |
+|--------|------|
+| A Shortfall of Gravitas (ASOG) | Autonomous drone ship — East Coast (LC-39A, SLC-40) |
+| Of Course I Still Love You (OCISLY) | Autonomous drone ship — West Coast (Vandenberg SLC-4E) |
+| Just Read the Instructions (JRTI) | Drone ship / Starship program support (Boca Chica) |
+| Shannon | Dragon capsule recovery |
+| Bob | Fairing recovery / ASOG support |
+| Doug | Fairing recovery / ASOG support |
+| Finn Falgout | Primary East Coast drone ship tug |
+| GO Beyond | West Coast OCISLY support vessel |
+| Signet Warhorse I & II | Atlantic escort tugs |
+
+### Blue Origin — Vessels
+| Vessel | Role |
+|--------|------|
+| LPV-1 Jacklyn | New Glenn first-stage landing platform |
+| Harvey Stone | Jacklyn support tug |
+
+### Rocket Lab — Vessels
+| Vessel | Role |
+|--------|------|
+| Seaworker | Electron booster recovery — Māhia, NZ |
+| Sea Surveyor | Range support — Māhia, NZ |
+
+### ULA / ESA / Other — Vessels
+| Vessel | Role |
+|--------|------|
+| RocketShip | Delta IV / Vulcan component transport (ULA) |
+| Delta Mariner | Heavy rocket component transport (ULA) |
+| Canopée | Ariane 6 rocket transport (ArianeGroup) |
+| MN Colibri / MN Toucan | Arianespace component transports |
+| Once in a Lifetime | Sea-based mobile launch platform (The Spaceport Company) |
+
+### US Space Force — Range Instrumentation
+| Vessel | Role |
+|--------|------|
+| USNS Howard O. Lorenzen (T-AGM-25) | Cobra King radar — missile/range telemetry |
+| USNS Invincible (T-AGM-24) | Range instrumentation ship |
+| SBX-1 | Sea-based X-band radar (Pearl Harbor) |
+
+### SpaceX — Aircraft
+| Registration | Aircraft | Role |
+|---|---|---|
+| N628TS | Gulfstream G650ER | Executive transport |
+| N8628 | Gulfstream G800 | Executive transport |
+| N154TS | Boeing 737-800 | Personnel transport |
+| N272BG / N502SX | Gulfstream G550 (×2) | Executive transport |
+| N152QS | Gulfstream G450 | Executive transport |
+
+### NASA — Aircraft
+| Registration | Aircraft | Role |
+|---|---|---|
+| N926NA / N927NA / N928NA | WB-57F Canberra (×3) | High-altitude launch observation (60,000 ft+) |
+| N806NA / N809NA | ER-2S (×2) | High-altitude Earth observation (70,000 ft+) |
+| N559NA | X-59 QueSST | Quiet supersonic research — first supersonic flight 2026 |
+| N941NA | Super Guppy | Oversized spacecraft component transport |
+| N426NA | P-3B Orion | Airborne science |
+| N917NA / N918NA / N960NA / N963NA / N966NA / N967NA | T-38 Talon fleet | Astronaut jet proficiency training |
+| N908NA | T-38A | Research support — NASA Ames (Moffett Field) |
+
+### Draken International / Jared Isaacman
+| Registration | Aircraft | Role |
+|---|---|---|
+| N29UB / N229XX / N129XX | MiG-29UB (×3) | Adversary air training |
+| N591EM / N592EM / N593EM | Northrop F-5E/F (×3) | Adversary air training |
+| N572AJ / N512XA / N115AJ | Alpha Jet (×3) | Adversary air training |
+| N136EM / N135EM / N138EM / N137EM | L-39 variants (×4) | Adversary air training |
+| N82EM | Global Express | Executive transport |
+
+### Rocket Lab — Aircraft
+| Registration | Aircraft | Role |
+|---|---|---|
+| ZK-HEV | Sikorsky S-92A | Mid-air Electron booster catch off Māhia, NZ |
 
 ---
 
 ## Features
 
-- **Live AIS tracking** via [aisstream.io](https://aisstream.io) WebSocket — subscribes to all known MMSIs globally
-- **Persistent history** via Supabase PostgreSQL — positions and events survive page reloads
-- **Mission linkage** — upcoming launches from The Space Devs API linked to their assigned vessels
-- **Launch banner** — prominent countdown strip when a mission is within 24 hours
-- **Share mode** (`?share&sb_url=...&sb_key=...`) — public read-only view, no AIS key required
-- **Geofences** — automatic zone enter/exit events (Cape Canaveral, Vandenberg, Starbase, Mahia, recovery zones)
-- **Vessel detail** — MMSI, IMO, specs, history, upcoming missions, external lookups
+- **Live AIS** via [aisstream.io](https://aisstream.io) WebSocket — global coverage, all tracked MMSIs
+- **Live ADS-B** via [airplanes.live](https://airplanes.live) — polled every 60 seconds (admin only; share page syncs via database)
+- **Orbital tracking** — TLE propagation via satellite.js, positions updated every 15 seconds
+- **Mission linkage** — [Launch Library 2](https://thespacedevs.com) data links vessels to assigned missions; trajectory arcs use real orbital inclination
+- **Booster projections** — estimated drone ship arrival computed from mission timing and live vessel position
+- **Events feed** — automatic zone enter/exit, vessel underway/moored, destination changes
+- **Share mode** — clean public URL (`?share`) with no API keys in the URL
+- **Supabase sync** — position history survives page reloads; share page stays within ~15 seconds of admin
 
 ---
 
-## Setup
+## Using the tracker
 
-1. Get a free API key at [aisstream.io/authenticate](https://aisstream.io/authenticate)
-2. Open the app and click **⚙ SETTINGS**
-3. Paste the key and click **SAVE & APPLY**
+The **[live link](https://karl-dykema.github.io/space-intel/?share)** requires no setup or login.
+
+Toggle buttons at the top control **Landmarks & Facilities**, **Vessels**, **Aircraft**, and **Spacecraft** layers. Click any element on the map or fleet list for details, specs, and mission history.
+
+---
+
+## Running your own instance
+
+1. Fork this repo and enable GitHub Pages (`main` branch, root folder)
+2. Get a free AIS key at [aisstream.io/authenticate](https://aisstream.io/authenticate)
+3. Open the app, click **⚙ SETTINGS**, paste your key
 
 **Optional — Supabase persistence:**
 1. Create a free project at [supabase.com](https://supabase.com)
-2. Open SQL Editor and run `supabase_schema.sql`
-3. Paste your project URL and anon key in ⚙ SETTINGS
-
-**Share link:**  
-Click **COPY SHARE LINK** in Settings to generate a URL that embeds your Supabase read credentials. Recipients see the full map and vessel data — admin controls are hidden.
+2. Run `supabase_schema.sql` in the SQL editor
+3. Set `CFG_SB_URL` and `CFG_SB_AKEY` at the top of `app.js`
 
 ---
 
-## Fleet Coverage
+## Data sources
 
-### SpaceX
-| Vessel | MMSI | Role |
-|--------|------|------|
-| A Shortfall of Gravitas (ASOG) | 368219910 | ASDS — East Coast / Gulf (LC-39A, SLC-40) |
-| Just Read the Instructions (JRTI) | 368219920 | Drone ship / Starship support (Boca Chica) |
-| Of Course I Still Love You (OCISLY) | 368351350 | ASDS — West Coast (Vandenberg SLC-4E) |
-| GO Searcher | 366584000 | Recovery / crew support |
-| GO Navigator | 367550000 | Recovery / crew support |
-| Bob | 367578000 | Fast recovery boat |
-| Doug | 367120400 | Fast recovery boat |
-| Jacklyn | 368368960 | Starship recovery (Blue Origin charter) |
-
-### Blue Origin
-| Vessel | MMSI | Role |
-|--------|------|------|
-| Jacklyn | 368368960 | New Glenn booster recovery ship |
-
-### Rocket Lab
-| Vessel | MMSI | Role |
-|--------|------|------|
-| Seaworker | 512440000 | Recovery ship — Mahia, NZ |
-| Sea Surveyor | 512385000 | Recovery / range support |
-
-### ULA
-| Vessel | MMSI | Role |
-|--------|------|------|
-| Harvey Stone | 369045000 | Range support / transport |
-
-### ESA / Arianespace
-| Vessel | MMSI | Role |
-|--------|------|------|
-| Canopée | 228438700 | Ariane 6 rocket component transport |
-| MN Colibri | 228057000 | Arianespace component transport |
-| MN Toucan | 227278000 | Arianespace component transport |
-
-### The Spaceport Company
-| Vessel | MMSI | Role |
-|--------|------|------|
-| Once in a Lifetime | 369857000 | Sea-based mobile launch platform (unverified) |
-
-### US Space Force Range (Military Sealift Command)
-| Vessel | MMSI | Role |
-|--------|------|------|
-| USNS Howard O. Lorenzen (T-AGM-25) | 369998000 | Missile/range instrumentation — Cobra King radar |
-| USNS Invincible (T-AGM-24) | 338941000 | Missile/range instrumentation |
-| SBX-1 | 369468000 | Sea-based X-band radar platform (Pearl Harbor) |
+| Data | Source |
+|------|--------|
+| Vessel positions | [aisstream.io](https://aisstream.io) (live WebSocket) |
+| Aircraft positions | [airplanes.live](https://airplanes.live) |
+| Spacecraft TLEs | [Celestrak](https://celestrak.com) via GitHub Actions (every 2h) |
+| Launch schedule | [Launch Library 2](https://thespacedevs.com) |
 
 ---
 
@@ -89,111 +146,22 @@ Click **COPY SHARE LINK** in Settings to generate a URL that embeds your Supabas
 
 | File | Description |
 |------|-------------|
-| `index.html` | App shell, meta tags, layout |
-| `styles.css` | All styling |
-| `vessels.js` | Vessel database, zones, operator config, constants |
-| `app.js` | AIS WebSocket, Supabase client, map, UI logic |
-| `supabase_schema.sql` | Database schema for position history + events |
+| `index.html` | App shell and layout |
+| `vessels.js` | Vessel/aircraft database, zones, landmarks, operator config |
+| `app.js` | AIS/ADS-B/TLE logic, Supabase client, map, UI |
+| `supabase_schema.sql` | Database schema for position history and events |
+| `scripts/fetch-tles.js` | GitHub Actions TLE updater |
 
 ---
 
-## Future / Research
+## Contributing
 
-### Starship Indian Ocean Recovery Ship
-IFT-11 and IFT-12 (2025–2026) both splashed down at approximately **19°S, 107°E** northwest of Western Australia. SpaceX has placed Starlink-equipped buoys at this location for live coverage. As the program matures toward full reusability, SpaceX will likely station a dedicated recovery ship (possibly a new JRTI-class vessel or converted platform) in this zone to retrieve the Ship. Watch for new vessel registrations with a homeport near Fremantle, WA or Singapore. The landing zone is already drawn on the map as a dashed blue circle.
+MMSIs, aircraft registrations, and vessel details live in `vessels.js`. PRs and issues welcome — especially for:
 
-### Aircraft tracking (ADS-B)
-Live ADS-B polling via [airplanes.live](https://airplanes.live/api-guide/) (free, no key, 1 req/s, CORS-open). Currently tracked:
+- Support tugs and secondary vessels that are hard to verify
+- New operator fleets (Firefly, Relativity, etc.)
+- International launch support ships
+- Corrections to vessel specs or history
 
-| Registration | Aircraft | Operator | Role |
-|---|---|---|---|
-| ZK-HEV | Sikorsky S-92A | Rocket Lab | Mid-air Electron recovery off Māhia |
-| N628TS | Gulfstream G650ER | SpaceX | Executive transport |
-| N8628 | Gulfstream G800 | SpaceX | Executive transport (acquired 2025) |
-| N272BG | Gulfstream G550 | SpaceX | Executive transport |
-| N502SX | Gulfstream G550 | SpaceX | Executive transport |
-| N154TS | Boeing 737-800 | SpaceX | Personnel transport (custom livery) |
-| N152QS | Gulfstream G450 | SpaceX | Executive transport |
-
-Note: Blue Origin New Shepard capsules land via parachute + airbags — no helicopter catch. New Glenn booster uses propulsive landing.
-
-### NOTAMs / Maritime Safety Notices
-Launch exclusion zones are already drawn on the map (static, from 33 CFR). Dynamic notices are harder:
-
-**Aviation NOTAMs (FAA):** TFRs (Temporary Flight Restrictions) are issued per launch and available via:
-- [NASA DIP NOTAM service](https://dip.amesaero.nasa.gov) — free, parses FAA SWIM feed
-- [SkyLink API](https://skylinkapi.com) — free tier 1,000 req/month, structured output
-
-**Maritime (USCG):** No public REST API. Notices issued as:
-- Broadcast Notice to Mariners on VHF 16/22A and 2182 kHz
-- Local Notice to Mariners (weekly PDF) from each USCG District
-- Safety zones published in Federal Register per launch season
-
-Best approach: poll FAA TFR feed for airspace restrictions near known launch coordinates as a proxy for imminent launch activity. Coordinates to watch: Canaveral (28.5°N 80.6°W), Vandenberg (34.7°N 120.6°W), Starbase (26.0°N 97.2°W), Mahia (-39.3°N 177.9°E).
-
-**Regulatory zone references:**
-- Cape Canaveral maritime: 33 CFR 165.775 (12 nm boundary, polygon drawn in app)
-- Vandenberg maritime: 33 CFR 334.1130 (3 nm coastline zone, polygon drawn in app)
-- Starbase/Boca Chica: ad-hoc USCG notices, no permanent CFR zone
-
-Integration would require: a second data source alongside AIS, a way to display aircraft icons on the same Leaflet map (different icon shape, altitude label), and registration-to-callsign resolution. The OpenSky API returns lat/lon/altitude/velocity and is REST-based — could poll every 15–30s for the known registrations.
-
-### Rocket Stage Tracking (TODO)
-
-Each launch involves multiple tracked elements across different data sources:
-
-| Stage | Tracking method | Status |
-|-------|----------------|--------|
-| Falcon 9 booster | AIS (on drone ship post-landing) | ✅ live |
-| Dragon capsule | Orbit tracker (Celestrak TLE) | planned |
-| Starship Ship | Orbit tracker / Indian Ocean zone | planned |
-| Starship Booster | AIS (JRTI) or Mechazilla (static landmark) | partial |
-| Electron stage | AIS (Seaworker) / helicopter ADS-B | ✅ live |
-| New Glenn booster | AIS (Jacklyn) | ✅ live |
-| Recovery helicopter | ADS-B (ZK-HEV) | ✅ live |
-
-Ideal view: a per-mission "launch card" that links all fleet elements (vessels, aircraft, spacecraft) that are part of that mission, with live status for each.
-
-### Mission-Centric Ops Panel (TODO)
-
-The `OPS` stat in the header currently counts unique operators with live vessels. A better view would be a mission card that aggregates all related assets:
-- Launch vehicle stages on the map (booster on drone ship, capsule in orbit)
-- Recovery vessels in position
-- Support aircraft in the air
-- Countdown / T+ timer
-- Link to live webcast when active
-
-This would replace or augment the current Events tab during active operations.
-
-### Mobile / Responsive Layout
-
-Current layout is three-column desktop-only. Options if we ever tackle this:
-
-**Option A — CSS media queries** (~1hr, low effort)
-- At ≤768px: hide left fleet panel, map full-width, right panel collapses to bottom drawer
-- Header wraps/collapses
-- Still feels like a squished desktop app but functional
-
-**Option B — Bottom tab navigation** (3–4hrs, recommended)
-- Map always full-screen
-- Bottom nav bar: `MAP | FLEET | EVENTS`
-- Each tab is full-screen; vessel detail slides up as an overlay
-- Clean native-app feel, similar to MarineTraffic mobile
-
-**Option C — Bottom sheet / pull-up drawer** (most polished, most work)
-- Map always full-screen
-- Swipe up from bottom reveals fleet roster or events panel
-- This is the pattern used by MarineTraffic, VesselFinder, etc.
-
-**Common work regardless of approach:**
-- Header needs to collapse (hamburger or icon-only strip)
-- Leaflet tap targets need to be larger for touch
-- Missions panel and modals need full-screen treatment on mobile
-- Share/suggest modals need to be scrollable at small heights
-
----
-
-## MMSI Verification
-
-All MMSIs marked `[✓ MMSI]` in vessel notes are confirmed via MarineTraffic or vesseltracker.com.  
-Vessels marked `verified: false` need confirmation — check [marinetraffic.com](https://www.marinetraffic.com) or [vesselfinder.com](https://www.vesselfinder.com).
+**Verify MMSIs:** [marinetraffic.com](https://www.marinetraffic.com) · [vesselfinder.com](https://www.vesselfinder.com)  
+**Verify registrations:** [FAA Registry](https://registry.faa.gov/aircraftinquiry) · [planespotters.net](https://www.planespotters.net)
