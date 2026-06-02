@@ -1094,29 +1094,38 @@ function scDistKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// Group spacecraft within 200 km of each other (docked / co-orbiting complex)
+// Group spacecraft — stations get priority as cluster primaries.
+// Docked craft show nested under station while within 500km (handles TLE drift).
+// Once a spacecraft departs and drifts >500km from all stations, it gets
+// its own standalone marker with ground track so departures can be monitored live.
 function clusterSpacecraft() {
   const positioned = Object.entries(S_spacecraft).filter(([,sc]) => sc.lat != null);
+  const STATIONS = ['ISS (ZARYA)', 'CSS (TIANHE)'];
   const used = new Set();
   const clusters = [];
-  // Station names get priority as cluster primary
-  const STATIONS = ['ISS (ZARYA)', 'CSS (TIANHE)'];
-  for (const [name, sc] of positioned) {
-    if (used.has(name)) continue;
-    const members = [name];
-    used.add(name);
+
+  // First pass: build station clusters
+  for (const stName of STATIONS) {
+    const st = S_spacecraft[stName];
+    if (!st?.lat) continue;
+    used.add(stName);
+    const members = [stName];
     for (const [other, osc] of positioned) {
       if (used.has(other)) continue;
-      if (scDistKm(sc.lat, sc.lon, osc.lat, osc.lon) < 200) {
+      if (scDistKm(st.lat, st.lon, osc.lat, osc.lon) < 500) {
         members.push(other);
         used.add(other);
       }
     }
-    // Prefer station as primary; cluster is longterm if primary is
-    const station = members.find(n => STATIONS.includes(n));
-    const primary = station || members[0];
-    const psc = S_spacecraft[primary];
-    clusters.push({ primary, members, longterm: psc.longterm });
+    clusters.push({ primary: stName, members, longterm: true });
+  }
+
+  // Second pass: remaining (departed/independent) spacecraft as standalone
+  for (const [name] of positioned) {
+    if (used.has(name)) continue;
+    used.add(name);
+    const psc = S_spacecraft[name];
+    clusters.push({ primary: name, members: [name], longterm: !!psc.longterm });
   }
   return clusters;
 }
