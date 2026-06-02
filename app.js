@@ -1,5 +1,9 @@
 'use strict';
 
+// ── Public config (safe to commit — Supabase anon key is client-side by design) ──
+const CFG_SB_URL  = 'https://wicxziyzayyymsubqpbi.supabase.co';
+const CFG_SB_AKEY = 'sb_publishable_60y2euVA3BA6QpRVw_6mjw_F6J1ummh';
+
 const SHARE_MODE = new URLSearchParams(location.search).has('share');
 
 let history = {};
@@ -93,9 +97,9 @@ const SB = {
   ready: false,
 
   init() {
-    this.url  = (localStorage.getItem(LS.SB_URL) ||'').replace(/\/+$/,'');
-    this.akey = localStorage.getItem(LS.SB_AKEY)||'';
-    this.ready = !!(this.url && this.akey);
+    this.url  = (localStorage.getItem(LS.SB_URL)  || CFG_SB_URL  || '').replace(/\/+$/,'');
+    this.akey =  localStorage.getItem(LS.SB_AKEY) || CFG_SB_AKEY || '';
+    this.ready = !!(this.url && this.akey && !this.url.includes('YOUR_PROJECT'));
     updateSBStatus();
     return this.ready;
   },
@@ -2842,11 +2846,7 @@ async function deleteSuggestion(id) {
 
 // ── Share link ────────────────────────────────────────────────
 function copyShareLink() {
-  const sbUrl = localStorage.getItem(LS.SB_URL)||'';
-  const sbKey = localStorage.getItem(LS.SB_AKEY)||'';
-  let url = `${location.origin}${location.pathname}?share`;
-  if(sbUrl) url += `&sb_url=${encodeURIComponent(sbUrl)}`;
-  if(sbKey) url += `&sb_key=${encodeURIComponent(sbKey)}`;
+  const url = `${location.origin}${location.pathname}?share`;
   navigator.clipboard.writeText(url).then(()=>{
     const msg=document.getElementById('share-link-msg');
     if(msg){msg.textContent='Copied ✓';setTimeout(()=>msg.textContent='',3000);}
@@ -2941,10 +2941,6 @@ window.onload=()=>{
     document.body.classList.add('share-mode');
     const sub=document.getElementById('hsubtitle');
     if(sub) sub.textContent='GLOBAL FLEET · AIS + ADS-B · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA';
-    const p=new URLSearchParams(location.search);
-    const sbUrl=p.get('sb_url'), sbKey=p.get('sb_key');
-    if(sbUrl) localStorage.setItem(LS.SB_URL, sbUrl);
-    if(sbKey) localStorage.setItem(LS.SB_AKEY, sbKey);
   }
 
   SB.init();
