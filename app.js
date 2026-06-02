@@ -145,17 +145,17 @@ const sbLastPos = {};
 function maybeSBPos(mmsi, lat, lon, sog, cog, ts) {
   if(!SB.ready) return;
   const moving = sog != null && sog > 0.5;
-  const throttle = moving ? 60000 : 180000; // 1 min underway, 3 min stationary
+  const throttle = moving ? 15000 : 90000; // 15s underway, 90s stationary
   if(sbLastPos[mmsi] && ts-sbLastPos[mmsi] < throttle) return;
   sbLastPos[mmsi] = ts;
   SB.insert('positions', { mmsi, lat, lon, sog, cog, ts:new Date(ts).toISOString() });
 }
 
-// Throttle: one aircraft position write per minute
+// Throttle: one aircraft position write per 30s (admin only — share reads from Supabase)
 const sbLastAcPos = {};
 function maybeSBAcPos(reg, lat, lon, alt, gs, track, ts) {
   if(!SB.ready || SHARE_MODE) return;
-  if(sbLastAcPos[reg] && ts - sbLastAcPos[reg] < 60000) return;
+  if(sbLastAcPos[reg] && ts - sbLastAcPos[reg] < 30000) return;
   sbLastAcPos[reg] = ts;
   SB.insert('aircraft_positions', { reg, lat, lon, alt: alt ?? null, gs: gs ?? null, track: track ?? null, ts: new Date(ts).toISOString() });
 }
@@ -2972,8 +2972,11 @@ window.onload=()=>{
 
   loadSBData().then(()=>loadVapiPositions());
   fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
-  pollAircraft();
-  setInterval(pollAircraft, AIRCRAFT_POLL_MS);
+  // Aircraft polling: admin only — share reads aircraft positions from Supabase
+  if (!SHARE_MODE) {
+    pollAircraft();
+    setInterval(pollAircraft, AIRCRAFT_POLL_MS);
+  }
   fetchTLEs();
   setInterval(()=>{ fetchTLEs(); }, 3600000);   // re-fetch TLEs every hour
   setInterval(()=>{ updateOrbits(); renderFleet(); }, 15000); // update positions every 15s
@@ -2981,5 +2984,5 @@ window.onload=()=>{
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
   if(!SHARE_MODE && SB.ready) checkSuggestionsBadge();
   if(!SHARE_MODE && localStorage.getItem(LS.KEY)) setTimeout(()=>connect(localStorage.getItem(LS.KEY)), 4000);
-  if(SHARE_MODE) { loadSBData().then(() => { initSBRealtime(); }); setInterval(loadSBData, 60000); }
+  if(SHARE_MODE) { loadSBData().then(() => { initSBRealtime(); }); setInterval(loadSBData, 30000); }
 };
