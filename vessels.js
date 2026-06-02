@@ -640,6 +640,30 @@ const AIRCRAFT_DB = {
     notes:'Heavy business jet for fast point-to-point transit.',
   },
   // ── NASA ─────────────────────────────────────────────────────
+  'N810NA': {
+    name:'NASA CV-990 Coronado (STORED)', abbr:'CV-990',
+    operator:'NASA', role:'Research platform (RETIRED)',
+    model:'Convair CV-990-30A-5 Coronado', type:'research', background:true,
+    notes:'C/n 30-10-29. Used as high-speed research and Shuttle chase aircraft in the 1970s–80s. Spotted in storage at Mojave Mar 2024.',
+  },
+  'N747NA': {
+    name:'NASA SOFIA (RETIRED)', abbr:'SOFIA',
+    operator:'NASA', role:'Stratospheric infrared observatory (RETIRED 2022)',
+    model:'Boeing 747SP-21', type:'research', background:true,
+    notes:'C/n 21441 / ln 306. Stratospheric Observatory for Infrared Astronomy — 2.5m infrared telescope in fuselage. Deployed to Christchurch for Southern Hemisphere campaigns. Retired Sep 2022 after 10 years of science operations. Spotted Davis-Monthan boneyard Dec 2022.',
+  },
+  'N808NA': {
+    name:'NASA Gulfstream III', abbr:'NASA GIII',
+    operator:'NASA', role:'Research & executive transport',
+    model:'Gulfstream III (G-III)', type:'jet', background:true,
+    notes:'C/n 424. Multi-mission support and crew transport. Spotted Boise Oct 2021, Tucson Nov 2024. [✓ confirmed]',
+  },
+  'N95NA': {
+    name:'NASA Gulfstream V', abbr:'NASA GV',
+    operator:'NASA', role:'Crew & executive transport',
+    model:'Gulfstream V (G-V)', type:'jet', background:true,
+    notes:'Long-range crew transport — used for astronaut travel and executive missions. Spotted at Glasgow Prestwick Apr 2025 (transatlantic). [✓ confirmed]',
+  },
   'N926NA': {
     name:'NASA WB-57F (926)', abbr:'WB-57 926',
     operator:'NASA', role:'High-altitude launch observation',
@@ -665,16 +689,16 @@ const AIRCRAFT_DB = {
     notes:'Based at Armstrong AFRC, Edwards AFB, CA. Civilian U-2 variant. Flies at 70,000ft for atmospheric research and Earth observation. Occasionally repositions near launch corridors.',
   },
   'N809NA': {
-    name:'NASA ER-2 (809)', abbr:'ER-2 809',
+    name:'NASA ER-2S (809)', abbr:'ER-2 809',
     operator:'NASA', role:'High-altitude research',
-    model:'Lockheed ER-2', type:'research',
-    notes:'Sister ship to N806NA. Based at Armstrong AFRC, Edwards AFB.',
+    model:'Lockheed ER-2S', type:'research',
+    notes:'Ex-USAF serial 80-1097. Two-seat S-variant with enlarged sensor bay. Based at Armstrong AFRC, Edwards AFB. Spotted Palmdale/Plant 42 Nov 2021. [✓ confirmed]',
   },
   'N817NA': {
     name:'NASA DC-8 Flying Lab', abbr:'DC-8 817',
     operator:'NASA', role:'Airborne science platform',
-    model:'Douglas DC-8-72', type:'research', background:true,
-    notes:'Based at Armstrong AFRC. Four-engine jet used as airborne science platform; carries instruments for atmospheric and Earth-observation campaigns. Occasionally supports launch range coverage.',
+    model:'McDonnell Douglas DC-8-72H', type:'research', background:true,
+    notes:'C/n 46082 / ln 458. Based at Armstrong AFRC. Hush-kit four-engine jet used as airborne science platform for atmospheric and Earth-observation campaigns. Deploys worldwide — spotted Seoul Gimpo Feb 2024. [✓ confirmed]',
   },
   'N559NA': {
     name:'NASA X-59 QueSST', abbr:'X-59',
@@ -682,11 +706,54 @@ const AIRCRAFT_DB = {
     model:'Lockheed Martin X-59', type:'research',
     notes:'Based at Armstrong AFRC, Edwards AFB, CA. Quesst mission — demonstrating supersonic flight without a disruptive sonic boom. 99.7ft long, 29.5ft wingspan, GE F414 engine, Mach 1.5 max. First flight Oct 28 2025. Preparing for first supersonic flight June 2026. Registration N559NA — verify if not tracking.',
   },
+  'N917NA': {
+    name:'NASA T-38A Talon', abbr:'T-38 917',
+    operator:'NASA', role:'Astronaut jet proficiency training',
+    model:'Northrop T-38A(N) Talon', type:'research', background:true,
+    notes:'C/n 5953. Based at Ellington Field (JSC), Houston, TX. Spotted Boise Nov 2023, Lakeland Apr 2026. [✓ confirmed]',
+  },
+  'N918NA': {
+    name:'NASA T-38N Talon', abbr:'T-38 918',
+    operator:'NASA', role:'Astronaut jet proficiency training',
+    model:'Northrop T-38N Talon', type:'research', background:true,
+    notes:'C/n 5954. Based at El Paso Forward Operating Location (FOL). Confirmed active Feb 2024 (El Paso). [✓ confirmed]',
+  },
+  'N960NA': {
+    name:'NASA T-38A Talon', abbr:'T-38 960',
+    operator:'NASA', role:'Astronaut jet proficiency training',
+    model:'Northrop T-38A Talon', type:'research', background:true,
+    notes:'C/n T6242. Based at Ellington Field (JSC), Houston, TX. Confirmed active Mar 2024 (Seattle Boeing Field). [✓ confirmed]',
+  },
+  'N966NA': {
+    name:'NASA T-38A Talon', abbr:'T-38 966',
+    operator:'NASA', role:'Astronaut jet proficiency training',
+    model:'Northrop T-38A Talon', type:'research', background:true,
+    notes:'C/n 5776. Based at El Paso FOL. Confirmed active Feb 2024 (El Paso). [✓ confirmed]',
+  },
+  'N967NA': {
+    name:'NASA T-38A Talon', abbr:'T-38 967',
+    operator:'NASA', role:'Astronaut jet proficiency training',
+    model:'Northrop T-38A Talon', type:'research', background:true,
+    notes:'C/n 5772. Based at Ellington Field (JSC), Houston, TX. Confirmed active Sep 2025 (Topeka Forbes Field). [✓ confirmed]',
+  },
   'N941NA': {
     name:'NASA Super Guppy', abbr:'Super Guppy',
     operator:'NASA', role:'Oversized cargo transport',
-    model:'Aero Spacelines B-377SGT Super Guppy Turbine', type:'research', background:true,
-    notes:'Transports large spacecraft components — Orion capsules, rocket segments, satellite hardware — between NASA centers. 156ft wingspan, 48ft tail height. Based at Ellington Field (JSC), Houston, TX / El Paso, TX.',
+    model:'Aero Spacelines 377SGT Super Guppy Turbine', type:'research', background:true,
+    notes:'Transports large spacecraft components — Orion capsules, rocket segments, satellite hardware — between NASA centers. 156ft wingspan, 48ft tail height. Confirmed active Apr 2026 (Lakeland/Sun \'n Fun). [✓ confirmed]',
+  },
+  'N426NA': {
+    name:'NASA P-3B Orion', abbr:'P-3 426',
+    operator:'NASA', role:'Airborne science / Earth observation',
+    model:'Lockheed P-3B Orion', type:'research', background:true,
+    notes:'C/n 5175. Four-engine turboprop science platform. Based at Wallops Flight Facility or Armstrong AFRC. Confirmed active Jun 2024 (Ontario, CA). [✓ confirmed]',
+  },
+  // ── NASA (military serials — BuNo/USAF, not trackable via ADS-B reg lookup) ──
+  '161521': {
+    name:'NASA F/A-18A Hornet', abbr:'F/A-18 161521',
+    operator:'NASA', role:'Research support',
+    model:'McDonnell Douglas F/A-18A Hornet', type:'research', background:true,
+    notes:'BuNo 161521 (C/n 38/A029). Based at NASA Ames, Moffett Federal Airfield. Confirmed active Nov 2024. Military bureau number — may not appear on civilian ADS-B.',
   },
   // ── Stratolaunch ─────────────────────────────────────────────
   'N351SL': {
