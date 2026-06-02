@@ -1726,7 +1726,7 @@ function updateHeaderStats(){
       [airborneRegs.length,'AIRBORNE','#ffcc00',`cycleAircraft(${safeArr(airborneRegs)},'airborne')`],
     ];
   } else {
-    const live=Object.values(S.vessels).filter(v=>v.lat&&!v._historical&&!v._vapi&&v.ts&&(now-v.ts<600000));
+    const live=Object.values(S.vessels).filter(v=>v.lat&&!v._vapi&&v.ts&&(now-v.ts<600000));
     const moving=live.filter(v=>v.sog>0.5).length;
     const liveMMSIs    =live.map(v=>v.mmsi);
     const underwayMMSIs=live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
@@ -1765,7 +1765,8 @@ function renderFleet(){
   const now=Date.now();
 
   const vesselRank=v=>{
-    const isLive=!!v.lat&&!!v.ts&&!v._historical&&!v._vapi&&(now-v.ts<600000);
+    // In share mode treat fresh Supabase positions as live (ignore _historical flag)
+    const isLive=!!v.lat&&!!v.ts&&(now-v.ts<600000)&&(!v._historical||SHARE_MODE)&&!v._vapi;
     const hasPos=!!v.lat&&!!v.ts;
     const carrying=!!isCarryingBooster(v.mmsi);
     if(carrying&&isLive) return 0;
@@ -1839,7 +1840,7 @@ function renderFleet(){
 
 function buildVesselRow(v){
   const sel=S.selected===v.mmsi, col=opColor(v.operator);
-  const isLive=!!v.lat&&!!v.ts&&!v._historical&&(Date.now()-v.ts<600000);
+  const isLive=!!v.lat&&!!v.ts&&(Date.now()-v.ts<600000)&&(!v._historical||SHARE_MODE);
   const isHist=v._historical;
   const shareHist=SHARE_MODE&&isHist&&!!v.lat;
   const stale=!!v.lat&&!isLive&&!isHist;
