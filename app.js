@@ -1268,12 +1268,12 @@ function getMissionArcs(launch, isHot) {
         [26.8, -95.5], [26.5, -93.5],  // arc east (apex ~T+3min)
         [26.0, -95.0], [25.9, -97.1]   // boostback return, land near coast
       ];
-      // Ship: southeast through Gulf → Caribbean → Atlantic → Indian Ocean
+      // Ship: east/ESE through Gulf → Caribbean → Atlantic → Indian Ocean
       const shipWpts = [
         [padCoords.lat, padCoords.lon],
-        [22.5,-90.0],[18.0,-82.0],[14.0,-70.0],
-        [10.0,-50.0],[6.0,-25.0],[2.0,5.0],
-        [-4.0,30.0],[-8.0,55.0],[-10.0,80.0]
+        [25.5,-90.0],[24.0,-80.0],[21.0,-70.0],
+        [17.0,-58.0],[12.0,-42.0],[7.0,-22.0],
+        [2.0,0.0],[-4.0,22.0],[-10.0,50.0],[-15.0,80.0]
       ];
       arcs = [
         { pts:boosterWpts, style:{color:'#ff8800',weight:w,opacity:op,dashArray:da} },
@@ -1282,22 +1282,24 @@ function getMissionArcs(launch, isHot) {
     } else if (/Vandenberg|SLC-4/i.test(padName)) {
       padCoords = LAUNCH_PADS['slc4e'];
       const dsV = S.vessels['368351350'];
-      const ocisly = dsV?.lat ? {lat:dsV.lat,lon:dsV.lon} : {lat:32.0,lon:-123.5};
-      const sep = [32.5, -125.0];
+      const ocisly = dsV?.lat ? {lat:dsV.lat,lon:dsV.lon} : {lat:31.5,lon:-124.5};
+      // SSO/polar: azimuth ~195° (SSW). Sep ~300km downrange at ~32°N, 121.5°W
+      const sep = [32.0, -121.5];
       arcs = [
         { pts:greatCircleArc(padCoords.lat,padCoords.lon,sep[0],sep[1]),    style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
         { pts:greatCircleArc(sep[0],sep[1],ocisly.lat,ocisly.lon),          style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
-        { pts:greatCircleArc(sep[0],sep[1],20.0,-148.0),                    style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
+        { pts:greatCircleArc(sep[0],sep[1],15.0,-122.5),                    style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
       ];
     } else {
       padCoords = /LC-39A/i.test(padName) ? LAUNCH_PADS['lc39a'] : LAUNCH_PADS['slc40'];
       const dsE = S.vessels['368219910'];
-      const asog = dsE?.lat ? {lat:dsE.lat,lon:dsE.lon} : {lat:30.0,lon:-72.5};
-      const sep = [28.5, -72.0];
+      const asog = dsE?.lat ? {lat:dsE.lat,lon:dsE.lon} : {lat:31.5,lon:-74.5};
+      // Starlink ~53°: azimuth NE. Sep ~350km downrange at ~30.5°N, 76.5°W
+      const sep = [30.5, -76.5];
       arcs = [
         { pts:greatCircleArc(padCoords.lat,padCoords.lon,sep[0],sep[1]),    style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
         { pts:greatCircleArc(sep[0],sep[1],asog.lat,asog.lon),              style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
-        { pts:greatCircleArc(sep[0],sep[1],24.0,-42.0),                     style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
+        { pts:greatCircleArc(sep[0],sep[1],36.0,-58.0),                     style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
       ];
     }
   } else if (lspName.includes('Blue Origin')) {
