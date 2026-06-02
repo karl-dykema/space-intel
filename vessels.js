@@ -489,6 +489,7 @@ const ZONES = [
   { id:'pac_recovery', name:'Pacific Recovery Zone',   minLat:30.0,  maxLat:35.0,  minLon:-122.0,maxLon:-116.0, roles:['drone','asds','recovery'] },
   { id:'gulf_ops',     name:'Gulf Ops Zone',           minLat:25.0,  maxLat:29.0,  minLon:-97.5, maxLon:-88.0,  roles:['drone','asds','starship'] },
   { id:'io_landing',   name:'Starship Indian Ocean Landing Zone', minLat:-25.0, maxLat:-13.0, minLon:100.0, maxLon:115.0, roles:['drone','asds','recovery','starship'] },
+  { id:'starfall_pac', name:'Starfall Reentry Zone (Pacific)',   minLat:22.0,  maxLat:37.0,  minLon:-138.0,maxLon:-120.0, roles:['recovery'] },
 ];
 function detectZones(lat, lon) {
   return ZONES.filter(z=>lat>=z.minLat&&lat<=z.maxLat&&lon>=z.minLon&&lon<=z.maxLon).map(z=>z.id);
@@ -610,6 +611,7 @@ const LANDMARKS = [
   { id:'woomera',         lat:-31.130, lon:136.816,  name:'Woomera Test Range',              type:'launch',   desc:'Australia\'s primary rocket range. Historic British test site; now multi-user range.' },
   { id:'alcantara',       lat:-2.373,  lon:-44.396,  name:'Alcântara Launch Center',         type:'launch',   desc:'Brazilian near-equatorial spaceport. VLM rocket. Favorable orbital insertion economics.' },
   { id:'starship_io_zone',lat:-19.0,  lon:107.0,    name:'Starship Indian Ocean Landing Zone',type:'viewing',  desc:'Consistent Starship Ship splashdown target (~19°S 107°E), NW of Western Australia. IFT-11 and IFT-12 landed here. Future recovery ship staging area.' },
+  { id:'starfall_zone',   lat:29.0,   lon:-131.0,   name:'Starfall Reentry Zone (Pacific)',  type:'viewing',  desc:'FAA-designated Pacific Ocean reentry area for SpaceX Starfall capsules (~700nm off US West Coast, outside 200nm EEZ). Small uncrewed reentry vehicles (~3.1m diameter, 2,100kg) for in-orbit manufacturing and rapid cargo delivery. Recovered by SpaceX vessels after splashdown. FAA EA approved May 2026.' },
 
   // ── NASA Deep Space Network ───────────────────────────────────
   // Three complexes spaced ~120° apart for continuous deep-space coverage.
