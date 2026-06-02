@@ -652,6 +652,12 @@ const AIRCRAFT_DB = {
     model:'Boeing 747SP-21', type:'research', background:true,
     notes:'C/n 21441 / ln 306. Stratospheric Observatory for Infrared Astronomy — 2.5m infrared telescope in fuselage. Deployed to Christchurch for Southern Hemisphere campaigns. Retired Sep 2022 after 10 years of science operations. Spotted Davis-Monthan boneyard Dec 2022.',
   },
+  'N520NA': {
+    name:'NASA Gulfstream C-20A', abbr:'NASA C-20A',
+    operator:'NASA', role:'Executive / crew transport',
+    model:'Gulfstream C-20A (G-1159A)', type:'jet', background:true,
+    notes:'Ex-USAF serial 86-0206. Military C-20A (Gulfstream III) transferred to NASA. Based at NASA Ames, Moffett Federal Airfield. Confirmed active Apr 2023 (Moffett). [✓ confirmed]',
+  },
   'N808NA': {
     name:'NASA Gulfstream III', abbr:'NASA GIII',
     operator:'NASA', role:'Research & executive transport',
@@ -698,7 +704,7 @@ const AIRCRAFT_DB = {
     name:'NASA DC-8 Flying Lab', abbr:'DC-8 817',
     operator:'NASA', role:'Airborne science platform',
     model:'McDonnell Douglas DC-8-72H', type:'research', background:true,
-    notes:'C/n 46082 / ln 458. Based at Armstrong AFRC. Hush-kit four-engine jet used as airborne science platform for atmospheric and Earth-observation campaigns. Deploys worldwide — spotted Seoul Gimpo Feb 2024. [✓ confirmed]',
+    notes:'C/n 46082 / ln 458. Based at Armstrong AFRC / NASA Ames (Moffett). Hush-kit four-engine jet used as airborne science platform for atmospheric and Earth-observation campaigns. Spotted Seoul Feb 2024, Moffett May 2024. [✓ confirmed]',
   },
   'N559NA': {
     name:'NASA X-59 QueSST', abbr:'X-59',
@@ -711,6 +717,12 @@ const AIRCRAFT_DB = {
     operator:'NASA', role:'Astronaut jet proficiency training',
     model:'Northrop T-38A(N) Talon', type:'research', background:true,
     notes:'C/n 5953. Based at Ellington Field (JSC), Houston, TX. Spotted Boise Nov 2023, Lakeland Apr 2026. [✓ confirmed]',
+  },
+  'N908NA': {
+    name:'NASA T-38A Talon', abbr:'T-38 908',
+    operator:'NASA', role:'Research support / proficiency training',
+    model:'Northrop T-38A Talon', type:'research', background:true,
+    notes:'USAF serial 65-10328. Based at NASA Ames, Moffett Federal Airfield. Confirmed active Oct 2023 (Moffett). [✓ confirmed]',
   },
   'N918NA': {
     name:'NASA T-38N Talon', abbr:'T-38 918',

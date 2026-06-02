@@ -235,7 +235,14 @@ async function loadSBData() {
     acRows.forEach(r => { (byReg[r.reg] = byReg[r.reg] || []).push(r); });
     for (const [reg, rows] of Object.entries(byReg)) {
       if (!AIRCRAFT_DB[reg]) continue;
-      const pts = rows.map(r => [r.lat, r.lon]);
+      // Only use last contiguous flight segment — split at gaps >4h to avoid inter-flight connector lines
+      const GAP_AC = 4 * 3600000;
+      let segStart = 0;
+      for (let i = 1; i < rows.length; i++) {
+        if (new Date(rows[i].ts).getTime() - new Date(rows[i-1].ts).getTime() > GAP_AC) segStart = i;
+      }
+      const segRows = rows.slice(segStart);
+      const pts = segRows.map(r => [r.lat, r.lon]);
       const last = rows[rows.length - 1];
       const lastTs = new Date(last.ts).getTime();
       const existing = S.aircraft[reg];
@@ -247,7 +254,8 @@ async function loadSBData() {
           _track: pts,
         };
       } else {
-        existing._track = [...pts.filter(p => !existing._track?.some(e => e[0]===p[0]&&e[1]===p[1])), ...(existing._track||[])];
+        // Approximate coord match to avoid float-precision false negatives
+        existing._track = [...pts.filter(p => !existing._track?.some(e => Math.abs(e[0]-p[0])<0.0001&&Math.abs(e[1]-p[1])<0.0001)), ...(existing._track||[])];
       }
       updateAircraftMarker(reg);
     }
@@ -852,7 +860,8 @@ async function pollAircraft() {
         continue;
       }
       const prevAc = S.aircraft[reg];
-      const _track = prevAc?._track || [];
+      // Start fresh track if last known position is >4h old (different flight)
+      const _track = (prevAc?.ts && Date.now() - prevAc.ts > 4*3600000) ? [] : (prevAc?._track || []);
       const lastPt = _track[_track.length - 1];
       const moved = !lastPt || Math.abs(lastPt[0] - ac.lat) > 0.001 || Math.abs(lastPt[1] - ac.lon) > 0.001;
       if (moved) {
@@ -899,11 +908,11 @@ function updateAircraftMarker(reg) {
     ${shape}
   </svg>`;
   const icon = L.divIcon({html:svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:''});
-  const staleNote = ac._stale && ac._staleTs ? ` · last seen ${ageStr(ac._staleTs)}` : '';
-  const alt = !ac._stale && ac.alt != null ? ` · ${Math.round(ac.alt).toLocaleString()}ft` : '';
-  const spd = !ac._stale && ac.gs != null ? ` · ${Math.round(ac.gs)}kn` : '';
-  const tooltip = `<b style="color:${col}">${esc(db.abbr)}</b><br>
-    <span style="color:var(--t5)">${esc(db.operator)}</span><br>${esc(db.role)}<br>${esc(db.model)}${alt}${spd}${staleNote}`;
+  const staleNote = ac._stale && ac._staleTs ? `<br><span style="color:#ffcc00;font-size:10px">last seen ${ageStr(ac._staleTs)}</span>` : '';
+  const alt = !ac._stale && ac.alt != null ? `<br><span style="color:var(--t3);font-size:10px">${Math.round(ac.alt).toLocaleString()} ft</span>` : '';
+  const spd = !ac._stale && ac.gs != null ? ` · <b style="color:#00ff88">${Math.round(ac.gs)} kn</b>` : '';
+  const tooltip = `<b style="color:${col}">${esc(db.abbr)}</b>${spd}<br>
+    <span style="color:var(--t5)">${esc(db.operator)}</span><br>${esc(db.role)}${alt}${staleNote}`;
   if(!aircraftMarkers[reg]) {
     aircraftMarkers[reg] = L.marker([ac.lat, ac.lon], {icon, zIndexOffset:500})
       .addTo(aircraftLayer)
