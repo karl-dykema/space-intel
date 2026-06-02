@@ -246,14 +246,24 @@ async function loadSBData() {
       const last = rows[rows.length - 1];
       const lastTs = new Date(last.ts).getTime();
       const existing = S.aircraft[reg];
+      const freshness = Date.now() - lastTs;
+      const isStale = freshness > 5 * 60000; // fresh if < 5 min old
       if (!existing) {
         S.aircraft[reg] = {
           reg, lat: last.lat, lon: last.lon,
           alt: last.alt, gs: last.gs, track: last.track ?? 0,
-          ts: lastTs, _stale: true, _staleTs: lastTs,
+          ts: lastTs, _stale: isStale, _staleTs: isStale ? lastTs : undefined,
           _track: pts,
         };
       } else {
+        // Update freshness on repeat loads — position may now be within 5 min
+        if (!isStale && existing._stale) {
+          existing._stale = false;
+          existing._staleTs = undefined;
+          existing.lat = last.lat; existing.lon = last.lon;
+          existing.alt = last.alt; existing.gs = last.gs;
+          existing.track = last.track ?? 0; existing.ts = lastTs;
+        }
         // Approximate coord match to avoid float-precision false negatives
         existing._track = [...pts.filter(p => !existing._track?.some(e => Math.abs(e[0]-p[0])<0.0001&&Math.abs(e[1]-p[1])<0.0001)), ...(existing._track||[])];
       }
