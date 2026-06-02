@@ -774,6 +774,12 @@ const AIRCRAFT_DB = {
     model:'Northrop T-38A Talon', type:'research', background:true,
     notes:'C/n 5776. Based at El Paso FOL. Confirmed active Feb 2024 (El Paso). [✓ confirmed]',
   },
+  'N963NA': {
+    name:'NASA T-38A Talon', abbr:'T-38 963',
+    operator:'NASA', role:'Astronaut jet proficiency training',
+    model:'Northrop T-38A Talon', type:'research', background:true,
+    notes:'USAF serial 59-1603. NASA Johnson Space Center. Based at Ellington Field (JSC), Houston, TX.',
+  },
   'N967NA': {
     name:'NASA T-38A Talon', abbr:'T-38 967',
     operator:'NASA', role:'Astronaut jet proficiency training',
@@ -798,6 +804,36 @@ const AIRCRAFT_DB = {
     operator:'NASA', role:'Research support',
     model:'McDonnell Douglas F/A-18A Hornet', type:'research', background:true,
     notes:'BuNo 161521 (C/n 38/A029). Based at NASA Ames, Moffett Federal Airfield. Confirmed active Nov 2024. Military bureau number — may not appear on civilian ADS-B.',
+  },
+  'N7NA': {
+    name:'NASA King Air 200', abbr:'King Air 7',
+    operator:'NASA', role:'Research / personnel transport',
+    model:'Beechcraft Super King Air 200', type:'research', background:true,
+    notes:'C/n BB-997. 1982. NASA Armstrong AFRC, Edwards AFB. Twin-engine turboprop used for research support and personnel transport.',
+  },
+  'N601NA': {
+    name:'NASA S-3B Viking', abbr:'S-3B 601',
+    operator:'NASA', role:'Airborne research',
+    model:'Lockheed S-3B Viking', type:'research', background:true,
+    notes:'NASA Glenn Research Center. Ex-US Navy carrier-based ASW aircraft converted for research.',
+  },
+  'N602NA': {
+    name:'NASA T-34C Mentor', abbr:'T-34C 602',
+    operator:'NASA', role:'Research / proficiency',
+    model:'Beechcraft T-34C Turbo Mentor', type:'research', background:true,
+    notes:'NASA Glenn Research Center.',
+  },
+  'N603NA': {
+    name:'NASA T-34C Mentor', abbr:'T-34C 603',
+    operator:'NASA', role:'Research / proficiency',
+    model:'Beechcraft T-34C Turbo Mentor', type:'research', background:true,
+    notes:'NASA Glenn Research Center.',
+  },
+  'N606NA': {
+    name:'NASA Pilatus PC-12', abbr:'PC-12 606',
+    operator:'NASA', role:'Research / personnel transport',
+    model:'Pilatus PC-12', type:'research', background:true,
+    notes:'NASA Glenn Research Center. 2008. Single-engine turboprop.',
   },
   // ── Stratolaunch ─────────────────────────────────────────────
   'N351SL': {
@@ -909,6 +945,13 @@ const AIRCRAFT_DB = {
     operator:'Draken International', role:'Adversary air training',
     model:'Northrop F-5F Tiger II', type:'research', background:true,
     notes:'JDI Holdings LLC. 1979.',
+  },
+  // ── Tactical Air Support (TacAir) ────────────────────────────
+  'N643TA': {
+    name:'TacAir F-5F Tiger II', abbr:'N643TA',
+    operator:'Tactical Air Support', role:'Adversary air training',
+    model:'Northrop F-5F Tiger II', type:'research', background:true,
+    notes:'Based at Reno, NV. Tactical Air Support (TacAir) — contract adversary air training for US military.',
   },
   // ── Virgin Galactic ──────────────────────────────────────────
   'N348MS': {
