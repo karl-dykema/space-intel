@@ -1851,8 +1851,8 @@ function renderFleet(){
   const activeSC=scClusters.filter(c=>S_spacecraft[c.primary]?.lat!=null&&!c.longterm);
   const hasActive=activeVessels.length||activeAC.length||activeSC.length;
 
-  const inactiveVessels=allVessels.filter(v=>vesselRank(v)>1);
-  const inactiveAC=allAC.filter(reg=>acRank(reg)>0);
+  const inactiveVessels=allVessels;
+  const inactiveAC=allAC;
   const inactiveSC=scClusters.filter(c=>!activeSC.includes(c));
 
   const activeHTML=hasActive
