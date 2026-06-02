@@ -813,6 +813,103 @@ const AIRCRAFT_DB = {
     model:'Lockheed L-1011 TriStar', type:'carrier', background:true,
     notes:'Modified L-1011 widebody. Carries Pegasus XL rocket attached beneath fuselage; drops at ~40,000ft altitude over ocean for orbital launches. Based at Vandenberg SFB. Operator: Northrop Grumman Launch & Targeting Systems.',
   },
+  // ── Jared Isaacman / Draken International (JDI Holdings LLC) ─
+  'N82EM': {
+    name:'Isaacman Global Express', abbr:'N82EM',
+    operator:'Jared Isaacman', role:'Executive transport',
+    model:'Bombardier Global Express', type:'jet', background:true,
+    notes:'JDI Holdings LLC. Ultra-long-range business jet (2007). Isaacman: NASA Administrator nominee, Polaris Dawn commander, Draken co-founder.',
+  },
+  'N80EM': {
+    name:'Isaacman Citation X', abbr:'N80EM',
+    operator:'Jared Isaacman', role:'Executive transport',
+    model:'Cessna Citation X', type:'jet', background:true,
+    notes:'Isaacman\'s Cessna Citation X super-midsize business jet.',
+  },
+  'N51EM': {
+    name:'Draken CitationJet', abbr:'N51EM',
+    operator:'Draken International', role:'Light transport',
+    model:'Cessna CitationJet', type:'jet', background:true,
+    notes:'JDI Holdings LLC. 2012.',
+  },
+  'N29UB': {
+    name:'Draken MiG-29UB', abbr:'MiG-29UB',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Mikoyan-Gurevich MiG-29UB', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1989. Isaacman performed at EAA Oshkosh 2023 in this aircraft.',
+  },
+  'N229XX': {
+    name:'Draken MiG-29UB', abbr:'N229XX',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Mikoyan-Gurevich MiG-29UB', type:'research', background:true,
+    notes:'JDI Holdings LLC.',
+  },
+  'N129XX': {
+    name:'Draken MiG-29UB', abbr:'N129XX',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Mikoyan-Gurevich MiG-29UB', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1986.',
+  },
+  'N136EM': {
+    name:'Draken L-39 Albatros', abbr:'N136EM',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Aero Vodochody L-39', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1984.',
+  },
+  'N135EM': {
+    name:'Draken L-39ZA', abbr:'N135EM',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Aero Vodochody L-39ZA', type:'research', background:true,
+    notes:'JDI Holdings LLC. Armed variant. 1982.',
+  },
+  'N138EM': {
+    name:'Draken L-39C', abbr:'N138EM',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Aero Vodochody L-39C', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1978.',
+  },
+  'N137EM': {
+    name:'Draken L-39C', abbr:'N137EM',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Aero Vodochody L-39C', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1980.',
+  },
+  'N572AJ': {
+    name:'Draken Alpha Jet', abbr:'N572AJ',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Dornier/Dassault Alpha Jet', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1979.',
+  },
+  'N512XA': {
+    name:'Draken Alpha Jet', abbr:'N512XA',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Dornier/Dassault Alpha Jet', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1981.',
+  },
+  'N115AJ': {
+    name:'Draken Alpha Jet', abbr:'N115AJ',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Dornier/Dassault Alpha Jet', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1981.',
+  },
+  'N591EM': {
+    name:'Draken F-5E Tiger II', abbr:'N591EM',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Northrop F-5E Tiger II', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1977.',
+  },
+  'N592EM': {
+    name:'Draken F-5F Tiger II', abbr:'N592EM',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Northrop F-5F Tiger II', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1978.',
+  },
+  'N593EM': {
+    name:'Draken F-5F Tiger II', abbr:'N593EM',
+    operator:'Draken International', role:'Adversary air training',
+    model:'Northrop F-5F Tiger II', type:'research', background:true,
+    notes:'JDI Holdings LLC. 1979.',
+  },
   // ── Virgin Galactic ──────────────────────────────────────────
   'N348MS': {
     name:'VMS Eve', abbr:'VMS Eve',
@@ -822,7 +919,7 @@ const AIRCRAFT_DB = {
   },
 };
 
-const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff', 'NASA':'#ff6600', 'CNSA':'#ff4444', 'Stratolaunch':'#cc44ff', 'Northrop Grumman':'#dd8800', 'Virgin Galactic':'#2277ff' };
+const OP_COLORS = { 'SpaceX':'#00d4ff', 'Blue Origin':'#4477ff', 'Rocket Lab':'#ff3355', 'ULA':'#ff9900', 'ESA':'#9933ff', 'The Spaceport Company':'#00cc88', 'US Space Force Range':'#aabb00', 'NASA Recovery':'#3399ff', 'NASA':'#ff6600', 'CNSA':'#ff4444', 'Stratolaunch':'#cc44ff', 'Northrop Grumman':'#dd8800', 'Virgin Galactic':'#2277ff', 'Draken International':'#ff6600', 'Jared Isaacman':'#ff8833' };
 function opColor(op) { return OP_COLORS[op]||'#aaaaaa'; }
 
 // ── Event config ──────────────────────────────────────────────
