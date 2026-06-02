@@ -1107,9 +1107,13 @@ const LAUNCH_PADS = {
   'slc40':    { lat:28.562, lon:-80.577 },
   'slc4e':    { lat:34.632, lon:-120.611 },
   'starbase': { lat:25.997, lon:-97.159 },
-  'mahia':    { lat:-39.262,lon:177.864 },
-  'lc36':     { lat:28.467, lon:-80.537 }, // New Glenn LC-36
-  'kourou':   { lat:5.239,  lon:-52.768 },
+  'mahia':      { lat:-39.262,lon:177.864 },
+  'lc36':       { lat:28.467, lon:-80.537 }, // New Glenn LC-36
+  'kourou':     { lat:5.239,  lon:-52.768 },
+  'rl_wallops': { lat:37.833, lon:-75.488 }, // Rocket Lab LC-2, Wallops
+  'sriharikota':{ lat:13.734, lon:80.235  }, // ISRO SHAR
+  'baikonur':   { lat:45.920, lon:63.342  }, // Baikonur Cosmodrome
+  'vostochny':  { lat:51.884, lon:128.333 }, // Vostochny Cosmodrome
 };
 
 // ── Booster projection profiles ───────────────────────────────

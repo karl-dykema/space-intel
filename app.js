@@ -1251,9 +1251,52 @@ function addArcLines(layer, pts, style) {
   });
 }
 
+// ── Orbital trajectory helpers ────────────────────────────────
+// Derive inclination from orbit type + mission context
+function orbitInclination(orbit, padLat, missionName) {
+  const abbrev = (orbit?.abbrev || '').toUpperCase();
+  const name   = (orbit?.name   || '').toUpperCase();
+  const mName  = (missionName   || '').toUpperCase();
+  if (abbrev === 'ISS' || name.includes('SPACE STATION')) return 51.6;
+  if (abbrev === 'CSS' || name.includes('TIANGONG'))      return 41.5;
+  if (abbrev === 'SSO' || name.includes('SUN-SYNC') || name.includes('SUN SYNC')) return 97.8;
+  if (abbrev === 'POLAR' || name.includes('POLAR ORBIT')) return 90;
+  if (abbrev === 'GTO' || abbrev === 'GEO' || name.includes('TRANSFER')) return Math.max(Math.abs(padLat) + 1, 27);
+  if (mName.includes('STARLINK')) return (Math.abs(padLat) > 33) ? 97.8 : 53;
+  if (mName.includes('GPS') || mName.includes('NAVSTAR')) return 55;
+  if (abbrev === 'LEO' || abbrev === 'MEO') return Math.max(Math.abs(padLat) + 8, 40);
+  return Math.max(Math.abs(padLat) + 5, 28);
+}
+
+// Launch azimuth (deg true north) from pad latitude and target inclination
+function launchAzimuth(padLat, inc) {
+  const sinβ = Math.cos(inc * Math.PI/180) / Math.cos(padLat * Math.PI/180);
+  if (Math.abs(sinβ) > 1) return 90; // equatorial fallback
+  let β = Math.asin(Math.min(1, Math.max(-1, sinβ))) * 180/Math.PI;
+  if (inc > 90) β = 180 - β; // retrograde orbits go south
+  return ((β % 360) + 360) % 360;
+}
+
+// Compute ground track waypoints along a constant initial azimuth (geodesic)
+function groundTrackPts(lat0, lon0, azDeg, steps, stepKm) {
+  const pts = [[lat0, lon0]];
+  let φ = lat0 * Math.PI/180, λ = lon0 * Math.PI/180;
+  const β = azDeg * Math.PI/180;
+  for (let n = 0; n < steps; n++) {
+    const d = stepKm / 6371;
+    const φ2 = Math.asin(Math.sin(φ)*Math.cos(d) + Math.cos(φ)*Math.sin(d)*Math.cos(β));
+    const Δλ = Math.atan2(Math.sin(β)*Math.sin(d)*Math.cos(φ), Math.cos(d) - Math.sin(φ)*Math.sin(φ2));
+    φ = φ2; λ = λ + Δλ;
+    pts.push([φ*180/Math.PI, (((λ*180/Math.PI) + 180) % 360) - 180]);
+  }
+  return pts;
+}
+
 function getMissionArcs(launch, isHot) {
-  const lspName = launch.launch_service_provider?.name || '';
-  const padName = (launch.pad?.name || '') + ' ' + (launch.pad?.location?.name || '');
+  const lspName    = launch.launch_service_provider?.name || '';
+  const padName    = (launch.pad?.name || '') + ' ' + (launch.pad?.location?.name || '');
+  const missionName = launch.mission?.name || launch.name || '';
+  const orbit      = launch.mission?.orbit;
   const op = isHot ? 0.75 : 0.45;
   const w  = isHot ? 2.0  : 1.5;
   const da = isHot ? '8 4' : '5 8';
@@ -1262,13 +1305,12 @@ function getMissionArcs(launch, isHot) {
   if (lspName.includes('SpaceX')) {
     if (/Starbase|Boca Chica/i.test(padName)) {
       padCoords = LAUNCH_PADS['starbase'];
-      // Booster: arc east into Gulf then boostback return to offshore splashdown near Starbase
+      // Starship booster: east into Gulf, boostback to Mechazilla
       const boosterWpts = [
         [padCoords.lat, padCoords.lon],
-        [26.8, -95.5], [26.5, -93.5],  // arc east (apex ~T+3min)
-        [26.0, -95.0], [25.9, -97.1]   // boostback return, land near coast
+        [26.8,-95.5],[26.5,-93.5],[26.0,-95.0],[25.9,-97.1]
       ];
-      // Ship: east/ESE through Gulf → Caribbean → Atlantic → Indian Ocean
+      // Ship: east then orbital insertion, through Caribbean/Atlantic/Indian Ocean
       const shipWpts = [
         [padCoords.lat, padCoords.lon],
         [25.5,-90.0],[24.0,-80.0],[21.0,-70.0],
@@ -1281,38 +1323,51 @@ function getMissionArcs(launch, isHot) {
       ];
     } else if (/Vandenberg|SLC-4/i.test(padName)) {
       padCoords = LAUNCH_PADS['slc4e'];
-      const dsV = S.vessels['368351350'];
-      const ocisly = dsV?.lat ? {lat:dsV.lat,lon:dsV.lon} : {lat:31.5,lon:-124.5};
-      // SSO/polar: azimuth ~195° (SSW). Sep ~300km downrange at ~32°N, 121.5°W
-      const sep = [32.0, -121.5];
+      const inc   = orbitInclination(orbit, padCoords.lat, missionName);
+      const az    = launchAzimuth(padCoords.lat, inc);
+      const sepPt = groundTrackPts(padCoords.lat, padCoords.lon, az, 1, 300)[1];
+      const dsPt  = groundTrackPts(padCoords.lat, padCoords.lon, az, 1, 650)[1];
+      const dsV   = S.vessels['368351350'];
+      const ocisly = dsV?.lat ? {lat:dsV.lat,lon:dsV.lon} : {lat:dsPt[0],lon:dsPt[1]};
+      const upperEndPt = groundTrackPts(sepPt[0], sepPt[1], az, 8, 200); // 1600km upper stage arc
       arcs = [
-        { pts:greatCircleArc(padCoords.lat,padCoords.lon,sep[0],sep[1]),    style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
-        { pts:greatCircleArc(sep[0],sep[1],ocisly.lat,ocisly.lon),          style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
-        { pts:greatCircleArc(sep[0],sep[1],15.0,-122.5),                    style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
+        { pts:groundTrackPts(padCoords.lat,padCoords.lon,az,6,50),          style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
+        { pts:greatCircleArc(sepPt[0],sepPt[1],ocisly.lat,ocisly.lon),      style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
+        { pts:upperEndPt,                                                     style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
       ];
     } else {
       padCoords = /LC-39A/i.test(padName) ? LAUNCH_PADS['lc39a'] : LAUNCH_PADS['slc40'];
-      const dsE = S.vessels['368219910'];
-      const asog = dsE?.lat ? {lat:dsE.lat,lon:dsE.lon} : {lat:31.5,lon:-74.5};
-      // Starlink ~53°: azimuth NE. Sep ~350km downrange at ~30.5°N, 76.5°W
-      const sep = [30.5, -76.5];
+      const inc   = orbitInclination(orbit, padCoords.lat, missionName);
+      const az    = launchAzimuth(padCoords.lat, inc);
+      const sepPt = groundTrackPts(padCoords.lat, padCoords.lon, az, 1, 350)[1];
+      const dsPt  = groundTrackPts(padCoords.lat, padCoords.lon, az, 1, 700)[1];
+      const dsE   = S.vessels['368219910'];
+      const asog  = dsE?.lat ? {lat:dsE.lat,lon:dsE.lon} : {lat:dsPt[0],lon:dsPt[1]};
+      const upperEndPt = groundTrackPts(sepPt[0], sepPt[1], az, 10, 200); // 2000km upper stage arc
       arcs = [
-        { pts:greatCircleArc(padCoords.lat,padCoords.lon,sep[0],sep[1]),    style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
-        { pts:greatCircleArc(sep[0],sep[1],asog.lat,asog.lon),              style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
-        { pts:greatCircleArc(sep[0],sep[1],36.0,-58.0),                     style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
+        { pts:groundTrackPts(padCoords.lat,padCoords.lon,az,7,50),           style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
+        { pts:greatCircleArc(sepPt[0],sepPt[1],asog.lat,asog.lon),           style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
+        { pts:upperEndPt,                                                      style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
       ];
     }
   } else if (lspName.includes('Blue Origin')) {
     padCoords = LAUNCH_PADS['lc36'];
+    const inc  = orbitInclination(orbit, padCoords.lat, missionName);
+    const az   = launchAzimuth(padCoords.lat, inc);
     const dsNG = S.vessels['368368960'];
-    const jacklyn = dsNG?.lat ? {lat:dsNG.lat,lon:dsNG.lon} : {lat:30.0,lon:-74.0};
+    const dsPt = groundTrackPts(padCoords.lat, padCoords.lon, az, 1, 700)[1];
+    const jacklyn = dsNG?.lat ? {lat:dsNG.lat,lon:dsNG.lon} : {lat:dsPt[0],lon:dsPt[1]};
     arcs = [
-      { pts:greatCircleArc(padCoords.lat,padCoords.lon,jacklyn.lat,jacklyn.lon), style:{color:'#44ccff',weight:w,opacity:op,dashArray:da} },
+      { pts:groundTrackPts(padCoords.lat,padCoords.lon,az,6,50),           style:{color:'#44ccff',weight:w,opacity:op,dashArray:da} },
+      { pts:greatCircleArc(dsPt[0],dsPt[1],jacklyn.lat,jacklyn.lon),       style:{color:'#4488ff',weight:w,opacity:op*.9,dashArray:da} },
     ];
   } else if (lspName.includes('Rocket Lab')) {
-    padCoords = LAUNCH_PADS['mahia'];
+    const rlPad = /LC-2|Wallops/i.test(padName) ? LAUNCH_PADS['rl_wallops'] : LAUNCH_PADS['mahia'];
+    padCoords = rlPad || LAUNCH_PADS['mahia'];
+    const inc = orbitInclination(orbit, padCoords.lat, missionName);
+    const az  = launchAzimuth(padCoords.lat, inc);
     arcs = [
-      { pts:greatCircleArc(padCoords.lat,padCoords.lon,-39.5,179.5), style:{color:'#ff8800',weight:w,opacity:op,dashArray:da} },
+      { pts:groundTrackPts(padCoords.lat,padCoords.lon,az,10,150), style:{color:'#ff3355',weight:w,opacity:op,dashArray:da} },
     ];
   }
   return { padCoords, arcs };
