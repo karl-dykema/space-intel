@@ -1022,27 +1022,23 @@ async function fetchActiveMissionTLEs() {
 async function fetchTLEs() {
   try {
     if (typeof satellite === 'undefined') { addLog('satellite.js not loaded', 'err'); return; }
-    let found = 0;
-    // Load local file (ISS, CSS modules, Soyuz, Progress, CSS crewed)
+    // Try same-origin TLE file first (no CORS, updated by GitHub Actions)
     try {
       const res = await fetch('data/stations.tle', { cache: 'no-cache' });
       if (res.ok) {
         const text = await res.text();
-        found = parseTLEText(text);
+        const found = parseTLEText(text);
         if (found > 0) {
-          addLog(`Orbit: loaded ${found} station TLEs`, 'sys');
-          // Supplement with active Dragon/Cygnus (not in STATIONS group)
-          const extra = await fetchActiveMissionTLEs();
-          if (extra > 0) addLog(`Orbit: +${extra} active mission TLEs`, 'sys');
+          addLog(`Orbit: loaded ${found} spacecraft TLEs`, 'sys');
           updateOrbits();
           return;
         }
       }
     } catch(e) {}
-    // Fallback: full Ivan API fetch
+    // Fallback: Ivan TLE API (CORS-open, JSON)
     addLog('TLE: trying backup API…', 'sys');
-    const fallback = await fetchTLEsFromIvanAPI();
-    if (fallback > 0) { addLog(`Orbit: loaded ${fallback} spacecraft (backup API)`, 'sys'); updateOrbits(); }
+    const found = await fetchTLEsFromIvanAPI();
+    if (found > 0) { addLog(`Orbit: loaded ${found} spacecraft (backup API)`, 'sys'); updateOrbits(); }
     else addLog('TLE: all sources failed', 'err');
   } catch(e) { addLog(`TLE error: ${e.message}`, 'err'); }
 }
@@ -1104,6 +1100,7 @@ function clusterSpacecraft() {
   const used = new Set();
   const clusters = [];
 
+  const STATION_SET = new Set(STATIONS);
   // First pass: build station clusters
   for (const stName of STATIONS) {
     const st = S_spacecraft[stName];
@@ -1112,6 +1109,7 @@ function clusterSpacecraft() {
     const members = [stName];
     for (const [other, osc] of positioned) {
       if (used.has(other)) continue;
+      if (STATION_SET.has(other)) continue; // never absorb one station core under another
       if (scDistKm(st.lat, st.lon, osc.lat, osc.lon) < 500) {
         members.push(other);
         used.add(other);
