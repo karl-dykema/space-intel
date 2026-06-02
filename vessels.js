@@ -3,6 +3,19 @@
 // ── Vessel Database ──────────────────────────────────────────
 const VESSEL_DB = {
   // ── SpaceX ──────────────────────────────────────────────────
+  // You'll Thank Me Later — MMSI TBD (Marmac 31, under construction at Port of Brownsville, TX)
+  // '???': {
+  //   name:"You'll Thank Me Later", abbr:'YTML',
+  //   operator:'SpaceX', role:'Autonomous Spaceport Drone Ship',
+  //   color:'#00d4ff', homePort:'Port of Brownsville, TX',
+  //   specs:{ type:'Self-propelled barge (ASDS)', hull:'Marmac 31' },
+  //   history:[
+  //     'Named after a ship in Iain M. Banks\' Culture novel series',
+  //     'Spotted at Port of Brownsville, TX — under construction / fitting out as of 2026',
+  //     'Likely designated for Starship program or additional Falcon 9 capacity',
+  //   ],
+  //   notes:'MMSI not yet confirmed — search MarineTraffic for "Marmac 31" at Port of Brownsville. Add MMSI when known.',
+  // },
   '368219910': {
     name:'A Shortfall of Gravitas', abbr:'ASOG',
     operator:'SpaceX', role:'Autonomous Spaceport Drone Ship',
@@ -239,6 +252,24 @@ const VESSEL_DB = {
       'Has supported multiple successful booster recoveries since 2022',
     ],
     notes:'Electron booster recovery vessel. [✓ MMSI confirmed]',
+  },
+  // Return on Investment — MMSI TBD (being converted from Oceanus at Bollinger, LA)
+  // '???': {
+  //   name:'Return On Investment', abbr:'ROI',
+  //   operator:'Rocket Lab', role:'Neutron Landing Platform',
+  //   color:'#ff3355', homePort:'TBD',
+  //   notes:'120m landing barge for Neutron first-stage recovery. Converted from offshore barge Oceanus at Bollinger Shipbuilding, Louisiana. MMSI not yet assigned. Add MMSI when vessel is commissioned.',
+  // },
+  '367586250': {
+    name:'Finn Falgout', abbr:'Finn Falgout',
+    operator:'SpaceX', role:'Support Tug (East Coast)',
+    color:'#00d4ff', homePort:'Port Canaveral, FL',
+    imo:'7390765', flag:'USA', verified:true,
+    specs:{ type:'Ocean tug' },
+    history:[
+      'Primary tugboat used by SpaceX to tow ASOG to and from Atlantic landing zones',
+    ],
+    notes:'Primary SpaceX East Coast drone ship tug. IMO 7390765. [✓ confirmed]',
   },
   // ── ULA ──────────────────────────────────────────────────────
   '338731000': {
