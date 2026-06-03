@@ -2512,7 +2512,7 @@ function buildOpsPanel(launch) {
   const op  = Object.entries(OPERATOR_MATCH).find(([k]) => lsp.includes(k))?.[1] || lsp;
   const col = opColor(op);
   const patch   = launch.mission_patches?.[0]?.image_url || launch.image || null;
-  const webcast = preferredWebcast(launch.vid_urls, op);
+  const webcast = preferredWebcast(launch.vid_urls);
   const pad = launch.pad?.name || launch.launch_service_provider?.name || '';
 
   const events = getOpsTimeline(launch);
@@ -2766,17 +2766,7 @@ async function showMissions() {
   }
 }
 
-// Hardcoded official channel URLs — these are authoritative regardless of what Space Devs lists
-const OFFICIAL_STREAMS = {
-  'SpaceX':          'https://www.youtube.com/spacex',
-  'Blue Origin':     'https://www.youtube.com/@BlueOrigin',
-  'Rocket Lab':      'https://www.youtube.com/@RocketLab',
-  'ULA':             'https://www.youtube.com/@ulalaunch',
-  'NASA':            'https://www.youtube.com/nasalive',
-  'Northrop Grumman':'https://www.youtube.com/@northropgrumman',
-};
-
-// Trusted channel URLs (must appear in the URL itself, not just title)
+// Trusted stream sources — URL must contain one of these (no title matching, fan channels abuse titles)
 const TRUSTED_CHANNEL_RES = [
   /youtube\.com\/@?spacex\b/i,
   /youtube\.com\/@?nasaspaceflight\b/i,
@@ -2789,22 +2779,19 @@ const TRUSTED_CHANNEL_RES = [
   /youtube\.com\/@?rgvaerialphotography\b/i,
   /spaceflightnow\.com/i,
   /nasa\.gov/i,
+  /x\.com\/spacex\b/i,
+  /twitter\.com\/spacex\b/i,
 ];
 
-function preferredWebcast(vid_urls, op) {
-  // 1. Prefer a vid_url whose URL matches a known trusted channel
-  if (vid_urls?.length) {
-    for (const re of TRUSTED_CHANNEL_RES) {
-      const hit = vid_urls.find(v => re.test(v.url || ''));
-      if (hit) return hit;
-    }
-    // 2. Accept Space Devs "Official Webcast" type as a secondary signal
-    const official = vid_urls.find(v => /official webcast$/i.test(v.type?.name || ''));
-    if (official) return official;
+function preferredWebcast(vid_urls) {
+  if (!vid_urls?.length) return null;
+  // Only match trusted channel URLs — no fallback to unknown streams
+  for (const re of TRUSTED_CHANNEL_RES) {
+    const hit = vid_urls.find(v => re.test(v.url || ''));
+    if (hit) return hit;
   }
-  // 3. Fall back to hardcoded operator channel (always safe)
-  const channelUrl = OFFICIAL_STREAMS[op];
-  return channelUrl ? { url: channelUrl } : null;
+  // Accept Space Devs "Official Webcast" type as secondary (they vet these)
+  return vid_urls.find(v => /official webcast$/i.test(v.type?.name || '')) || null;
 }
 
 function buildMissionCard(l, isPast=false) {
@@ -2831,7 +2818,7 @@ function buildMissionCard(l, isPast=false) {
 
   // Space Devs extras
   const patch    = l.mission_patches?.[0]?.image_url || null;
-  const webcast  = preferredWebcast(l.vid_urls, op);
+  const webcast  = preferredWebcast(l.vid_urls);
   const crew     = l.launch_crew || [];
   const programs = l.program || [];
   const apiTL    = (l.timeline||[]).sort((a,b)=>parseISODuration(a.relative_time)-parseISODuration(b.relative_time));
