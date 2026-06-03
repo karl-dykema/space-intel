@@ -373,6 +373,7 @@ let selectedMissionForArc=null;
 const _missionById={};
 const S_spacecraft={};  // name → { abbr, operator, role, col, longterm, lat, lon, alt, satrec }
 let tleData={};         // name → { satrec, meta }
+let dockedManifest={};  // station name → [{name, abbr, operator, col}] from Space Devs API
 
 // ── Port proximity ────────────────────────────────────────────
 // Known port zones — any vessel last seen within ~8km is considered in port
@@ -953,6 +954,46 @@ function updateAircraftMarker(reg) {
 // data/stations.tle is refreshed by GitHub Actions every 2h (same origin = no CORS).
 // Ivan API is a CORS-open fallback if the file is missing or stale.
 const IVAN_BASE = 'https://tle.ivanstanojevic.me/api/tle';
+
+// Space Devs station IDs for ISS and CSS (Tiangong space station)
+const SPACEDEVS_STATIONS = { 'ISS (ZARYA)': 4, 'CSS (TIANHE)': 18 };
+
+async function fetchDockedManifest() {
+  const since = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0]; // 6 months back
+  const classify = name => {
+    const n = name.toLowerCase();
+    if (/crew dragon/.test(n))         return { abbr:'Dragon',   operator:'SpaceX',            col:'#00d4ff' };
+    if (/cargo dragon|dragon crs/.test(n)) return { abbr:'Dragon', operator:'SpaceX',           col:'#00d4ff' };
+    if (/cygnus/.test(n))              return { abbr:'Cygnus',   operator:'Northrop Grumman',   col:'#dd8800' };
+    if (/progress/.test(n))            return { abbr:'Progress', operator:'Roscosmos',           col:'#9966ff' };
+    if (/soyuz/.test(n))               return { abbr:'Soyuz',    operator:'Roscosmos',           col:'#9966ff' };
+    if (/tianzhou/.test(n))            return { abbr:'Tianzhou', operator:'CNSA',                col:'#ff6644' };
+    if (/shenzhou/.test(n))            return { abbr:'Shenzhou', operator:'CNSA',                col:'#ff6644' };
+    if (/orion/.test(n))               return { abbr:'Orion',    operator:'NASA',                col:'#ff6600' };
+    return null;
+  };
+  const manifest = {};
+  for (const [stationName, stId] of Object.entries(SPACEDEVS_STATIONS)) {
+    try {
+      const url = `https://ll.thespacedevs.com/2.2.0/docking_event/?space_station=${stId}&docking__gte=${since}&departure__isnull=true&limit=20&format=json`;
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const docked = [];
+      for (const ev of (data.results || [])) {
+        const scName = ev.flight_vehicle?.spacecraft?.name || '';
+        const meta = classify(scName);
+        if (meta) docked.push({ name: scName, ...meta });
+      }
+      manifest[stationName] = docked;
+    } catch(e) {}
+  }
+  if (Object.values(manifest).some(d => d.length > 0)) {
+    dockedManifest = manifest;
+    addLog(`Orbit: docking manifest loaded (${Object.values(manifest).flat().length} craft)`, 'sys');
+    renderFleet();
+  }
+}
 
 function parseTLEText(text) {
   const lines = text.trim().split('\n').map(l => l.trim()).filter(Boolean);
@@ -1643,12 +1684,16 @@ function buildSpacecraftRow(cluster) {
   const sc = S_spacecraft[cluster.primary];
   if (!sc || sc.lat == null) return '';
   const col = sc.col || '#fff';
-  const docked = cluster.members.filter(n => n !== cluster.primary);
-  const dockedHtml = docked.map(n => {
-    const d = S_spacecraft[n]; if (!d) return '';
+  // Use Space Devs authoritative docking manifest when available, fall back to TLE cluster members
+  const manifestDocked = dockedManifest[cluster.primary];
+  const docked = manifestDocked
+    ? manifestDocked
+    : cluster.members.filter(n => n !== cluster.primary).map(n => S_spacecraft[n]).filter(Boolean);
+  const dockedHtml = docked.map(d => {
+    if (!d) return '';
     return `<div style="display:flex;align-items:center;gap:5px;padding-left:10px;margin-top:1px">
       <div style="width:5px;height:5px;border-radius:50%;background:${d.col||'#888'};flex-shrink:0"></div>
-      <span style="font-size:10px;color:${d.col||'#888'}">${esc(d.abbr||n)}</span>
+      <span style="font-size:10px;color:${d.col||'#888'}">${esc(d.abbr||d.name||'')}</span>
       <span style="font-size:10px;color:var(--t4)">${esc(d.operator)} · docked</span>
     </div>`;
   }).join('');
@@ -1873,19 +1918,22 @@ function renderFleet(){
     .sort((a,b)=>{ const ra=acRank(a),rb=acRank(b); if(ra!==rb) return ra-rb;
       return (S.aircraft[b]?._staleTs||S.aircraft[b]?.ts||0)-(S.aircraft[a]?._staleTs||S.aircraft[a]?.ts||0); });
 
-  // Spacecraft clusters
-  const scClusters=clusterSpacecraft().filter(c=>!c.longterm||showSpacecraft);
+  // Spacecraft clusters — roster always shows all; map layer visibility controlled by toggle
+  const scClusters=clusterSpacecraft();
   scClusters.sort((a,b)=>(a.longterm?1:0)-(b.longterm?1:0)||a.primary.localeCompare(b.primary));
 
-  const scHTML=scClusters.map(buildSpacecraftRow).filter(Boolean).join('');
+  const scHTML=showSpacecraft?scClusters.map(buildSpacecraftRow).filter(Boolean).join(''):'';
 
-  // Categories show full sorted roster — active items float to top via rank sort
   document.getElementById('fleet').innerHTML =
-    `<div class="lhdr" style="font-size:10px;color:var(--t4)">VESSELS</div>`
-    + allVessels.map(buildVesselRow).join('')
-    + `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>`
-    + allAC.map(buildAircraftRow).join('')
-    + (scHTML?`<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">SPACECRAFT</div>${scHTML}`:'');
+    (showVessels
+      ? `<div class="lhdr" style="font-size:10px;color:var(--t4)">VESSELS</div>` + allVessels.map(buildVesselRow).join('')
+      : '')
+    + (showAircraft
+      ? `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>` + allAC.map(buildAircraftRow).join('')
+      : '')
+    + (showSpacecraft && scHTML
+      ? `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">SPACECRAFT</div>` + scHTML
+      : '');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
   document.querySelectorAll('.vrow[data-reg]').forEach(el=>{el.onclick=()=>showAircraftDetail(el.dataset.reg);});
   document.querySelectorAll('.vrow[data-sc]').forEach(el=>{el.onclick=()=>showSpacecraftDetail(el.dataset.sc);});
@@ -3030,7 +3078,8 @@ window.onload=()=>{
     setInterval(pollAircraft, AIRCRAFT_POLL_MS);
   }
   fetchTLEs();
-  setInterval(()=>{ fetchTLEs(); }, 3600000);   // re-fetch TLEs every hour
+  fetchDockedManifest();
+  setInterval(()=>{ fetchTLEs(); fetchDockedManifest(); }, 3600000); // refresh every hour
   setInterval(()=>{ updateOrbits(); renderFleet(); }, 15000); // update positions every 15s
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
