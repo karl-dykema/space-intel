@@ -1925,6 +1925,13 @@ function cycleAircraft(regs, key) {
   showAircraftDetail(regs[_cycleIdx[key]]);
   _cycleIdx[key]++;
 }
+function cycleSpacecraft() {
+  const primaries = clusterSpacecraft().filter(c=>S_spacecraft[c.primary]?.lat!=null).map(c=>c.primary);
+  if(!primaries.length) return;
+  _cycleIdx['sc'] = ((_cycleIdx['sc']||0) % primaries.length);
+  showSpacecraftDetail(primaries[_cycleIdx['sc']]);
+  _cycleIdx['sc']++;
+}
 
 function updateHeaderStats(){
   const now=Date.now();
@@ -1936,14 +1943,14 @@ function updateHeaderStats(){
     const underway=tracked.filter(v=>v.sog!=null&&v.sog>0.5&&!isNearPort(v.lat,v.lon));
     const stationary=tracked.filter(v=>!underway.includes(v));
     const airborneRegs=Object.keys(AIRCRAFT_DB).filter(r=>{const ac=S.aircraft[r];return ac&&!ac._stale&&ac.alt!=='ground';});
-    const orbitingSC2=Object.keys(S_spacecraft||{}).filter(n=>S_spacecraft[n]?.lat!=null).length;
+    const orbitingSC2=clusterSpacecraft().filter(c=>S_spacecraft[c.primary]?.lat!=null).length;
     const underwayMMSIs=underway.map(v=>v.mmsi);
     const stationaryMMSIs=stationary.map(v=>v.mmsi);
     rows=[
-      [underway.length,  'UNDERWAY',  '#00ff88',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
-      [stationary.length,'STATIONARY','#338855',`cycleVessels(${safeArr(stationaryMMSIs)},'stationary')`],
-      [airborneRegs.length,'AIRBORNE','#ffcc00',`cycleAircraft(${safeArr(airborneRegs)},'airborne')`],
-      [orbitingSC2,'ORBITAL','#00d4ff',''],
+      [underway.length,  'UNDERWAY',  '#00ff88',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`,'MARINE ASSETS'],
+      [stationary.length,'STATIONARY','#338855',`cycleVessels(${safeArr(stationaryMMSIs)},'stationary')`,'MARINE ASSETS'],
+      [airborneRegs.length,'AIRBORNE ASSETS','#ffcc00',`cycleAircraft(${safeArr(airborneRegs)},'airborne')`],
+      [orbitingSC2,'SPACE ASSETS','#00d4ff','cycleSpacecraft()'],
     ];
   } else {
     const live=Object.values(S.vessels).filter(v=>v.lat&&!v._vapi&&v.ts&&(now-v.ts<600000));
@@ -1951,13 +1958,13 @@ function updateHeaderStats(){
     const liveMMSIs    =live.map(v=>v.mmsi);
     const underwayMMSIs=live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
     const airborneRegs =Object.keys(AIRCRAFT_DB).filter(r=>{ const ac=S.aircraft[r]; return ac&&!ac._stale&&ac.alt!=='ground'; });
-    const orbitingSC   =Object.keys(S_spacecraft||{}).filter(n=>S_spacecraft[n]?.lat!=null).length;
+    const orbitingSC   =clusterSpacecraft().filter(c=>S_spacecraft[c.primary]?.lat!=null).length;
     const stationaryMMSIs=live.filter(v=>v.sog<=0.5).map(v=>v.mmsi);
     rows=[
-      [moving,             'UNDERWAY',  '#00ff88',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`],
-      [live.length-moving, 'STATIONARY','#338855',`cycleVessels(${safeArr(stationaryMMSIs)},'stationary')`],
-      [airborneRegs.length,'AIRBORNE',  '#ffcc00',`cycleAircraft(${safeArr(airborneRegs)},'airborne')`],
-      [orbitingSC,         'ORBITAL',   '#00d4ff',''],
+      [moving,             'UNDERWAY',  '#00ff88',`cycleVessels(${safeArr(underwayMMSIs)},'underway')`,'MARINE ASSETS'],
+      [live.length-moving, 'STATIONARY','#338855',`cycleVessels(${safeArr(stationaryMMSIs)},'stationary')`,'MARINE ASSETS'],
+      [airborneRegs.length,'AIRBORNE ASSETS','#ffcc00',`cycleAircraft(${safeArr(airborneRegs)},'airborne')`],
+      [orbitingSC,         'SPACE ASSETS',  '#00d4ff','cycleSpacecraft()'],
     ];
     if(S.ws) {
       const parts=[`${KNOWN_MMSIS.length} vessels`];
@@ -1967,9 +1974,10 @@ function updateHeaderStats(){
     }
   }
   document.getElementById('hstats').innerHTML=rows
-    .map(([v,l,c,fn])=>`<div onclick="${fn}" style="cursor:${v>0?'pointer':'default'};text-align:center" title="${l}">
+    .map(([v,l,c,fn,grp])=>`<div onclick="${fn||''}" style="cursor:${v>0&&fn?'pointer':'default'};text-align:center" title="${l}">
       <div class="sv" style="color:${c}">${v}</div>
-      <div class="sl" style="text-decoration:${v>0?'underline':'none'};text-underline-offset:2px">${l}</div>
+      <div class="sl" style="text-decoration:${v>0&&fn?'underline':'none'};text-underline-offset:2px">${l}</div>
+      ${grp?`<div style="font-size:8px;color:var(--t5);letter-spacing:.06em;margin-top:1px">${grp}</div>`:''}
     </div>`).join('');
 }
 
