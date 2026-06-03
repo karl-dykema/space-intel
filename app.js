@@ -980,9 +980,12 @@ async function fetchDockedManifest() {
   for (const stId of [4, 18]) {
     try {
       const url = `https://ll.thespacedevs.com/2.2.0/docking_event/?space_station=${stId}&docking__gte=${since}&departure__isnull=true&limit=20&format=json`;
+      addLog(`SpaceDev: fetching station ${stId}...`, 'sys');
       const res = await fetch(url);
+      addLog(`SpaceDev[${stId}]: HTTP ${res.status}, ${res.ok ? 'ok' : 'FAIL'}`, 'sys');
       if (!res.ok) continue;
       const data = await res.json();
+      addLog(`SpaceDev[${stId}]: ${data.results?.length ?? 0} results`, 'sys');
       for (const ev of (data.results || [])) {
         const scName = ev.flight_vehicle?.spacecraft?.name || '';
         if (!scName || seen.has(scName)) continue;
@@ -993,7 +996,7 @@ async function fetchDockedManifest() {
         const { station, ...craft } = meta;
         manifest[station].push({ name: scName, ...craft });
       }
-    } catch(e) {}
+    } catch(e) { addLog(`SpaceDev[${stId}]: ERROR ${e.message}`, 'sys'); }
   }
   if (Object.values(manifest).some(d => d.length > 0)) {
     dockedManifest = manifest;
