@@ -2029,7 +2029,7 @@ function renderFleet(){
   const sections = [
     { show: showVessels,            best: allVessels.length ? vesselRank(allVessels[0]) : 99, label:'VESSELS',    html: allVessels.map(buildVesselRow).join('') },
     { show: showAircraft,           best: allAC.length      ? acRank(allAC[0])          : 99, label:'AIRCRAFT',   html: allAC.map(buildAircraftRow).join('') },
-    { show: showSpacecraft && !!scHTML, best: 99,                                              label:'SPACECRAFT', html: scHTML },
+    { show: showSpacecraft && !!scHTML, best: scClusters.some(c=>S_spacecraft[c.primary]?.lat!=null)?1:99, label:'SPACECRAFT', html: scHTML },
   ].filter(s=>s.show).sort((a,b)=>a.best-b.best);
 
   document.getElementById('fleet').innerHTML = sections.map((s,i)=>
