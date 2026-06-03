@@ -996,9 +996,16 @@ async function fetchTLEsFromIvanAPI() {
 }
 
 async function fetchActiveMissionTLEs() {
-  // Supplement local file with currently active Dragon/Cygnus/Orion (not in STATIONS group)
-  // page-size=1 = most recent only, avoiding stale old missions flooding the map
+  // Supplement local file with all currently active docked/mission craft.
+  // page-size=1 for mission-specific (Dragon, Cygnus, Orion — only 1 active at a time).
+  // page-size=3 for docking vehicles that can have multiple active simultaneously.
   const queries = [
+    `${IVAN_BASE}?search=SOYUZ-MS&page-size=3`,
+    `${IVAN_BASE}?search=PROGRESS-MS&page-size=3`,
+    `${IVAN_BASE}?search=SHENZHOU&page-size=2`,
+    `${IVAN_BASE}?search=TIANZHOU&page-size=2`,
+    `${IVAN_BASE}?search=WENTIAN&page-size=1`,
+    `${IVAN_BASE}?search=MENGTIAN&page-size=1`,
     `${IVAN_BASE}?search=CREW+DRAGON&page-size=1`,
     `${IVAN_BASE}?search=DRAGON+CRS&page-size=1`,
     `${IVAN_BASE}?search=CYGNUS+NG&page-size=1`,
@@ -1009,12 +1016,13 @@ async function fetchActiveMissionTLEs() {
   for (const res of results) {
     if (res.status !== 'fulfilled' || !res.value) continue;
     const items = Array.isArray(res.value.member) ? res.value.member : [res.value];
-    const item = items[0];
-    if (!item?.name || !item?.line1 || !item?.line2) continue;
-    if (/DEB|OBJECT|R\/B/i.test(item.name)) continue;
-    const pat = SPACECRAFT_PATTERNS.find(p => p.match(item.name));
-    if (!pat || tleData[item.name]) continue;
-    try { tleData[item.name] = { satrec: satellite.twoline2satrec(item.line1, item.line2), meta: pat, name: item.name }; found++; } catch(e) {}
+    for (const item of items) {
+      if (!item?.name || !item?.line1 || !item?.line2) continue;
+      if (/DEB|OBJECT|R\/B/i.test(item.name)) continue;
+      const pat = SPACECRAFT_PATTERNS.find(p => p.match(item.name));
+      if (!pat || tleData[item.name]) continue;
+      try { tleData[item.name] = { satrec: satellite.twoline2satrec(item.line1, item.line2), meta: pat, name: item.name }; found++; } catch(e) {}
+    }
   }
   return found;
 }
@@ -1030,9 +1038,9 @@ async function fetchTLEs() {
         const found = parseTLEText(text);
         if (found > 0) {
           addLog(`Orbit: loaded ${found} spacecraft TLEs`, 'sys');
-          updateOrbits();
-          // Supplement with active mission craft not in stations group (Dragon, Cygnus, Orion…)
-          fetchActiveMissionTLEs().then(n => { if (n > 0) { addLog(`Orbit: +${n} active mission TLEs`, 'sys'); updateOrbits(); } });
+          clearSatLayers(); updateOrbits();
+          // Supplement with all active docked/mission craft
+          fetchActiveMissionTLEs().then(n => { if (n > 0) { addLog(`Orbit: +${n} active mission TLEs`, 'sys'); clearSatLayers(); updateOrbits(); } });
           return;
         }
       }
@@ -1040,7 +1048,7 @@ async function fetchTLEs() {
     // Fallback: Ivan TLE API (CORS-open, JSON)
     addLog('TLE: trying backup API…', 'sys');
     const found = await fetchTLEsFromIvanAPI();
-    if (found > 0) { addLog(`Orbit: loaded ${found} spacecraft (backup API)`, 'sys'); updateOrbits(); }
+    if (found > 0) { addLog(`Orbit: loaded ${found} spacecraft (backup API)`, 'sys'); clearSatLayers(); updateOrbits(); }
     else addLog('TLE: all sources failed', 'err');
   } catch(e) { addLog(`TLE error: ${e.message}`, 'err'); }
 }
@@ -1093,29 +1101,36 @@ function scDistKm(lat1, lon1, lat2, lon2) {
 }
 
 // Group spacecraft — stations get priority as cluster primaries.
-// Docked craft show nested under station while within 500km (handles TLE drift).
-// Once a spacecraft departs and drifts >500km from all stations, it gets
-// its own standalone marker with ground track so departures can be monitored live.
+// Affinity-based: longterm docked craft always nest under their home station regardless
+// of TLE drift. Mission craft (Dragon, Cygnus) nest if within 2000km, otherwise standalone.
 function clusterSpacecraft() {
   const positioned = Object.entries(S_spacecraft).filter(([,sc]) => sc.lat != null);
   const STATIONS = ['ISS (ZARYA)', 'CSS (TIANHE)'];
+  const STATION_SET = new Set(STATIONS);
+  // Which abbr values belong to which station (longterm docked)
+  // Hard affinity: these craft only ever dock to one station
+  const ISS_ABBR = new Set(['Soyuz', 'Progress', 'Dragon', 'Cygnus', 'HTV', 'Orion']);
+  const CSS_ABBR = new Set(['Wentian', 'Mengtian', 'Shenzhou', 'Tianzhou']);
   const used = new Set();
   const clusters = [];
 
-  const STATION_SET = new Set(STATIONS);
   // First pass: build station clusters
   for (const stName of STATIONS) {
     const st = S_spacecraft[stName];
     if (!st?.lat) continue;
     used.add(stName);
     const members = [stName];
+    const isISS = stName === 'ISS (ZARYA)';
     for (const [other, osc] of positioned) {
       if (used.has(other)) continue;
-      if (STATION_SET.has(other)) continue; // never absorb one station core under another
-      if (scDistKm(st.lat, st.lon, osc.lat, osc.lon) < 2000) {
-        members.push(other);
-        used.add(other);
-      }
+      if (STATION_SET.has(other)) continue;
+      const abbr = osc.abbr || '';
+      // Longterm docked craft: always nest under their home station
+      const alwaysISS = ISS_ABBR.has(abbr);
+      const alwaysCSS = CSS_ABBR.has(abbr);
+      if (isISS && alwaysISS) { members.push(other); used.add(other); continue; }
+      if (!isISS && alwaysCSS) { members.push(other); used.add(other); continue; }
+      if (alwaysISS || alwaysCSS) continue; // claimed by other station, skip
     }
     clusters.push({ primary: stName, members, longterm: true });
   }
@@ -1194,13 +1209,20 @@ function updateSpacecraftMarker(primary, members, layer) {
   }
 }
 
+function clearSatLayers() {
+  if (orbitLayer)  orbitLayer.clearLayers();
+  if (rocketLayer) rocketLayer.clearLayers();
+  for (const k in spacecraftMarkers) delete spacecraftMarkers[k];
+  for (const k in orbitTracks)       delete orbitTracks[k];
+}
+
 function updateOrbits() {
   if (!map || !orbitLayer || !rocketLayer) return;
   const now = new Date();
-  // Propagate all positions first
+  // Propagate all positions first; skip craft with implausible altitudes (re-entered or bad TLE)
   for (const [name, tle] of Object.entries(tleData)) {
     const pos = propagateSat(tle.satrec, now);
-    if (!pos) continue;
+    if (!pos || pos.alt < 150 || pos.alt > 2200) continue;
     S_spacecraft[name] = { ...tle.meta, name, lat:pos.lat, lon:pos.lon, alt:pos.alt };
   }
   // Cluster and render one marker per cluster

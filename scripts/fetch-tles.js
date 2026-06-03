@@ -5,8 +5,10 @@ const path  = require('path');
 
 // NORAD IDs for spacecraft matching our SPACECRAFT_PATTERNS
 const BY_ID = [25544, 48274]; // ISS (ZARYA), CSS (TIANHE)
-// Long-term docked craft: page-size=5 OK (Soyuz/Progress/Shenzhou/Tianzhou rarely have >1 active at a time)
+// Docked/station craft that can have multiple active simultaneously
 const SEARCHES_MULTI = ['SOYUZ-MS', 'PROGRESS-MS', 'SHENZHOU', 'TIANZHOU'];
+// CSS modules (permanent): page-size=1
+const SEARCHES_CSS   = ['WENTIAN', 'MENGTIAN'];
 // Mission-specific craft: page-size=1 to avoid stale old missions flooding the map
 const SEARCHES_ONE   = ['CREW DRAGON', 'DRAGON CRS', 'CYGNUS NG'];
 
@@ -46,7 +48,8 @@ async function tryIvanAPI() {
 
   const fetchAll = [
     ...BY_ID.map(id => get(`${BASE}/${id}`)),
-    ...SEARCHES_MULTI.map(q => get(`${BASE}?search=${encodeURIComponent(q)}&page-size=5`)),
+    ...SEARCHES_MULTI.map(q => get(`${BASE}?search=${encodeURIComponent(q)}&page-size=3`)),
+    ...SEARCHES_CSS.map(q  => get(`${BASE}?search=${encodeURIComponent(q)}&page-size=1`)),
     ...SEARCHES_ONE.map(q  => get(`${BASE}?search=${encodeURIComponent(q)}&page-size=1`)),
   ];
 
