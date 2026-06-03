@@ -959,38 +959,44 @@ const IVAN_BASE = 'https://tle.ivanstanojevic.me/api/tle';
 const SPACEDEVS_STATIONS = { 'ISS (ZARYA)': 4, 'CSS (TIANHE)': 18 };
 
 async function fetchDockedManifest() {
-  const since = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0]; // 6 months back
+  const since = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0];
+  // station field determines which station this craft belongs to — name pattern is authoritative,
+  // not the Space Devs station ID (both IDs return overlapping results)
   const classify = name => {
     const n = name.toLowerCase();
-    if (/crew dragon/.test(n))         return { abbr:'Dragon',   operator:'SpaceX',            col:'#00d4ff' };
-    if (/cargo dragon|dragon crs/.test(n)) return { abbr:'Dragon', operator:'SpaceX',           col:'#00d4ff' };
-    if (/cygnus/.test(n))              return { abbr:'Cygnus',   operator:'Northrop Grumman',   col:'#dd8800' };
-    if (/progress/.test(n))            return { abbr:'Progress', operator:'Roscosmos',           col:'#9966ff' };
-    if (/soyuz/.test(n))               return { abbr:'Soyuz',    operator:'Roscosmos',           col:'#9966ff' };
-    if (/tianzhou/.test(n))            return { abbr:'Tianzhou', operator:'CNSA',                col:'#ff6644' };
-    if (/shenzhou/.test(n))            return { abbr:'Shenzhou', operator:'CNSA',                col:'#ff6644' };
-    if (/orion/.test(n))               return { abbr:'Orion',    operator:'NASA',                col:'#ff6600' };
+    if (/crew dragon/.test(n))              return { abbr:'Dragon',   operator:'SpaceX',           col:'#00d4ff', station:'ISS (ZARYA)' };
+    if (/cargo dragon|dragon crs/.test(n))  return { abbr:'Dragon',   operator:'SpaceX',           col:'#00d4ff', station:'ISS (ZARYA)' };
+    if (/cygnus/.test(n))                   return { abbr:'Cygnus',   operator:'Northrop Grumman', col:'#dd8800', station:'ISS (ZARYA)' };
+    if (/progress/.test(n))                 return { abbr:'Progress', operator:'Roscosmos',         col:'#9966ff', station:'ISS (ZARYA)' };
+    if (/soyuz/.test(n))                    return { abbr:'Soyuz',    operator:'Roscosmos',         col:'#9966ff', station:'ISS (ZARYA)' };
+    if (/tianzhou/.test(n))                 return { abbr:'Tianzhou', operator:'CNSA',              col:'#ff6644', station:'CSS (TIANHE)' };
+    if (/shenzhou/.test(n))                 return { abbr:'Shenzhou', operator:'CNSA',              col:'#ff6644', station:'CSS (TIANHE)' };
+    if (/orion/.test(n))                    return { abbr:'Orion',    operator:'NASA',              col:'#ff6600', station:'ISS (ZARYA)' };
     return null;
   };
-  const manifest = {};
-  for (const [stationName, stId] of Object.entries(SPACEDEVS_STATIONS)) {
+  // Fetch both station endpoints; deduplicate by name; assign to correct station by craft type
+  const manifest = { 'ISS (ZARYA)': [], 'CSS (TIANHE)': [] };
+  const seen = new Set();
+  for (const stId of [4, 18]) {
     try {
       const url = `https://ll.thespacedevs.com/2.2.0/docking_event/?space_station=${stId}&docking__gte=${since}&departure__isnull=true&limit=20&format=json`;
       const res = await fetch(url);
       if (!res.ok) continue;
       const data = await res.json();
-      const docked = [];
       for (const ev of (data.results || [])) {
         const scName = ev.flight_vehicle?.spacecraft?.name || '';
+        if (!scName || seen.has(scName)) continue;
+        seen.add(scName);
         const meta = classify(scName);
-        if (meta) docked.push({ name: scName, ...meta });
+        if (!meta) continue;
+        const { station, ...craft } = meta;
+        manifest[station].push({ name: scName, ...craft });
       }
-      manifest[stationName] = docked;
     } catch(e) {}
   }
   if (Object.values(manifest).some(d => d.length > 0)) {
     dockedManifest = manifest;
-    addLog(`Orbit: docking manifest loaded (${Object.values(manifest).flat().length} craft)`, 'sys');
+    addLog(`Orbit: docking manifest loaded (ISS:${manifest['ISS (ZARYA)'].length} CSS:${manifest['CSS (TIANHE)'].length})`, 'sys');
     renderFleet();
   }
 }
