@@ -988,6 +988,7 @@ async function fetchDockedManifest() {
         if (!scName || seen.has(scName)) continue;
         seen.add(scName);
         const meta = classify(scName);
+        addLog(`SpaceDev[${stId}]: "${scName}" → ${meta ? meta.station : 'NO MATCH'}`, 'sys');
         if (!meta) continue;
         const { station, ...craft } = meta;
         manifest[station].push({ name: scName, ...craft });
