@@ -715,7 +715,7 @@ function drawExclusionZones() {
 function drawZones() {
   [{id:'canaveral',lat:28.5,lon:-80.65,r:40},{id:'boca_chica',lat:26.0,lon:-97.15,r:25},
    {id:'vandenberg',lat:34.65,lon:-120.6,r:25},{id:'lc1_nz',lat:-39.25,lon:177.9,r:18},
-   {id:'atl_recovery',lat:28.5,lon:-76.0,r:110},{id:'pac_recovery',lat:29.8,lon:-120.4,r:160},
+   {id:'atl_recovery',lat:28.5,lon:-76.0,r:110},{id:'pac_recovery',lat:29.8,lon:-120.6,r:160},
    {id:'gulf_ops',lat:27.0,lon:-92.0,r:90}].forEach(z=>{
     const def=ZONES.find(zz=>zz.id===z.id);
     L.circle([z.lat,z.lon],{radius:z.r*1000,color:'#0c3352',fillColor:'#041525',fillOpacity:0.2,weight:1,dashArray:'4 4'})
