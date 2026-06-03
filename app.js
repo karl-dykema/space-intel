@@ -2025,16 +2025,16 @@ function renderFleet(){
 
   const scHTML=showSpacecraft?scClusters.map(buildSpacecraftRow).filter(Boolean).join(''):'';
 
-  document.getElementById('fleet').innerHTML =
-    (showVessels
-      ? `<div class="lhdr" style="font-size:10px;color:var(--t4)">VESSELS</div>` + allVessels.map(buildVesselRow).join('')
-      : '')
-    + (showAircraft
-      ? `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">AIRCRAFT</div>` + allAC.map(buildAircraftRow).join('')
-      : '')
-    + (showSpacecraft && scHTML
-      ? `<div class="lhdr" style="margin-top:10px;font-size:10px;color:var(--t4)">SPACECRAFT</div>` + scHTML
-      : '');
+  // Rank each section by its most active item so the hottest category rises to top
+  const sections = [
+    { show: showVessels,            best: allVessels.length ? vesselRank(allVessels[0]) : 99, label:'VESSELS',    html: allVessels.map(buildVesselRow).join('') },
+    { show: showAircraft,           best: allAC.length      ? acRank(allAC[0])          : 99, label:'AIRCRAFT',   html: allAC.map(buildAircraftRow).join('') },
+    { show: showSpacecraft && !!scHTML, best: 99,                                              label:'SPACECRAFT', html: scHTML },
+  ].filter(s=>s.show).sort((a,b)=>a.best-b.best);
+
+  document.getElementById('fleet').innerHTML = sections.map((s,i)=>
+    `<div class="lhdr" style="font-size:10px;color:var(--t4)${i>0?';margin-top:10px':''}">${s.label}</div>${s.html}`
+  ).join('');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
   document.querySelectorAll('.vrow[data-reg]').forEach(el=>{el.onclick=()=>showAircraftDetail(el.dataset.reg);});
   document.querySelectorAll('.vrow[data-sc]').forEach(el=>{el.onclick=()=>showSpacecraftDetail(el.dataset.sc);});
