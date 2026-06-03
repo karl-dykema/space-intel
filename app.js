@@ -363,6 +363,7 @@ function updateSBStatus() {
 const S = { ws:null, vessels:{}, aircraft:{}, selected:null, tab:'events' };
 let missionsCache = [];
 let pastMissionsCache = [];
+let deployedFleet = new Set(); // MMSIs currently deployed at sea (out of AIS range)
 const prevZones={};
 let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=null, aircraftLayer=null;
 let orbitLayer=null, rocketLayer=null, terminatorLayer=null, missionArcLayer=null;
@@ -2052,8 +2053,9 @@ function buildVesselRow(v){
   const moving=isLive&&!stationary;
   const recentMoving=!moving&&isRecent&&(v.sog!=null&&v.sog>0.5)&&!isNearPort(v.lat,v.lon);
   const recentStationary=!moving&&!stationary&&isRecent&&!recentMoving;
-  const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':recentMoving?'#44cc77':recentStationary?'#226644':'#2a3a4a';
-  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED':'NO AIS LOCK'):recentMoving?`UNDERWAY · LAST PING ${ageStr(v.ts)}`:recentStationary?`STATIONARY · ${ageStr(v.ts)}`:v.ts?`NO SIGNAL · ${ageStr(v.ts)}`:'NO SIGNAL';
+  const deployed=!isLive&&!isRecent&&deployedFleet.has(v.mmsi);
+  const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':recentMoving?'#44cc77':recentStationary?'#226644':deployed?'#ff8c00':'#2a3a4a';
+  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED':'NO AIS LOCK'):recentMoving?`UNDERWAY · LAST PING ${ageStr(v.ts)}`:recentStationary?`STATIONARY · ${ageStr(v.ts)}`:deployed?'DEPLOYED · OUT OF AIS RANGE':v.ts?`NO SIGNAL · ${ageStr(v.ts)}`:'NO SIGNAL';
   const nameCol=moving?col:stationary?col+'99':recentMoving?col:recentStationary?col+'88':v.ts?'var(--t3)':'var(--t4)';
   const roleCol=moving?col+'99':stationary?col+'55':recentMoving?col+'88':'var(--t4)';
   const bg=moving?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):stationary?(sel?'var(--bg4)':''):recentMoving?(sel?'var(--bg4)':'rgba(0,200,100,.015)'):sel?'var(--bg4)':'';
@@ -2593,6 +2595,26 @@ function startCountdowns() {
   }, 1000);
 }
 
+function updateDeployedFleet() {
+  deployedFleet.clear();
+  const now = Date.now();
+  const WINDOW_BEFORE = 48 * 3600000; // vessels deploy up to 48h before launch
+  const WINDOW_AFTER  =  8 * 3600000; // keep flagged 8h after NET (covers landing + return transit start)
+  for (const launch of missionsCache) {
+    const net = launch.net ? new Date(launch.net).getTime() : null;
+    if (!net || net < now - WINDOW_AFTER || net > now + WINDOW_BEFORE) continue;
+    const op      = Object.entries(OPERATOR_MATCH).find(([k]) => (launch.launch_service_provider?.name||'').includes(k))?.[1] || '';
+    const padName = (launch.pad?.name || '') + ' ' + (launch.pad?.location?.name || '');
+    // Primary droneship/recovery vessels from hints
+    vesselHintsForLaunch(op, padName).forEach(mmsi => deployedFleet.add(mmsi));
+    // Add support vessels by pad
+    if (/Vandenberg|SLC-4/i.test(padName)) {
+      deployedFleet.add('368237190'); // GO Beyond
+      deployedFleet.add('366888850'); // Lindsay C
+    }
+  }
+}
+
 async function fetchMissionsBackground() {
   try {
     const cachedUp   = JSON.parse(localStorage.getItem(LS.MISSIONS)     ||'null');
@@ -2605,6 +2627,7 @@ async function fetchMissionsBackground() {
     if(upFresh && pastFresh) {
       if(!missionsCache.length     && cachedUp.data)   missionsCache     = cachedUp.data;
       if(!pastMissionsCache.length && cachedPast.data) pastMissionsCache = cachedPast.data;
+      updateDeployedFleet();
       addLog(`Missions: cache fresh — skipping fetch`, 'sys');
       if(S.tab==='vessel') renderRight();
       return;
@@ -2692,6 +2715,7 @@ async function showMissions() {
     pastMissionsCache = past;
     saveMissions();
     savePastMissions();
+    updateDeployedFleet();
 
     addLog(`Missions: ${upcoming.length} upcoming, ${past.length} recent past`, 'sys');
     document.getElementById('missions-src').textContent =
