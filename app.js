@@ -2766,29 +2766,29 @@ async function showMissions() {
   }
 }
 
-// Prefer official / known-good streams; never fall back to unknown channels
+// Prefer official / known-good streams; never fall back to unknown channels.
+// Space Devs links direct youtube.com/watch?v= URLs so we check title+description too.
 function preferredWebcast(vid_urls) {
   if (!vid_urls?.length) return null;
   const TRUSTED = [
-    /youtube\.com\/@?spacex\b/i,                   // SpaceX official
-    /youtube\.com\/@?nasaspaceflight\b/i,           // NASASpaceflight (NSF)
-    /spaceflightnow\.com/i,                         // Spaceflight Now
-    /youtube\.com\/@?spaceflightnow\b/i,
-    /youtube\.com\/@?nasa\b/i,                      // NASA TV
-    /nasa\.gov/i,
-    /youtube\.com\/@?blueorigin\b/i,                // Blue Origin
-    /youtube\.com\/@?rocketlabusa\b/i,              // Rocket Lab
-    /youtube\.com\/@?ulalaunch\b/i,                 // ULA
-    /youtube\.com\/@?labpadre\b/i,                  // LabPadre (Starbase)
-    /youtube\.com\/@?rgvaerialphotography\b/i,      // RGV Aerial (Starbase)
+    { re:/spacex/i,                   label:'SpaceX' },
+    { re:/nasaspaceflight|NSF\b/i,    label:'NSF' },
+    { re:/spaceflight.?now/i,         label:'Spaceflight Now' },
+    { re:/\bnasa\b/i,                 label:'NASA' },
+    { re:/blue.?origin/i,             label:'Blue Origin' },
+    { re:/rocket.?lab/i,              label:'Rocket Lab' },
+    { re:/\bula\b|united.?launch/i,   label:'ULA' },
+    { re:/labpadre/i,                 label:'LabPadre' },
+    { re:/rgv.?aerial/i,              label:'RGV Aerial' },
   ];
-  for (const re of TRUSTED) {
-    const hit = vid_urls.find(v => re.test(v.url || ''));
+  const searchStr = v => `${v.url||''} ${v.title||''} ${v.description||''}`;
+  for (const { re } of TRUSTED) {
+    const hit = vid_urls.find(v => re.test(searchStr(v)));
     if (hit) return hit;
   }
-  // Accept "Official Webcast" type even if channel not in list above
+  // Accept "Official Webcast" type even if channel not in trusted list
   const official = vid_urls.find(v => /official/i.test(v.type?.name || ''));
-  return official || null; // no unknown fallback
+  return official || null; // never fall back to unknown streams
 }
 
 function buildMissionCard(l, isPast=false) {
