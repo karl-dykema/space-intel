@@ -59,6 +59,7 @@ const VESSEL_DB = {
       'Converted from Marmac 304 barge in 2015 (AIS registry confirmed)',
       'Operates 300–700km off Baja California coast for Pacific recovery zone',
       'Booster catch: Starlink 17-41 — May 30 2026',
+      'Booster landing: Starlink 17-47 — Jun 3 2026 (14:00Z)',
     ],
     notes:'Pacific ASDS for Vandenberg SFB launches. Hull: Marmac 304 (confirmed). MMSI confirmed. [✓ MMSI]',
   },
@@ -199,9 +200,9 @@ const VESSEL_DB = {
       'Operated by GO Maritime (Edison Chouest Offshore subsidiary) for SpaceX',
       'Replaced GO Quest as primary West Coast OCISLY support vessel in 2023',
       'Supports OCISLY deployments from Vandenberg SFB (SLC-4E)',
+      'Deploys with OCISLY for every West Coast booster landing — loses terrestrial AIS ~300km offshore',
     ],
     notes:'West Coast OCISLY support vessel. Replaced GO Quest 2023. IMO 9622655. [✓ MMSI]',
-    background:true,
   },
   // ── Blue Origin ──────────────────────────────────────────────
   '368368960': {
