@@ -995,10 +995,18 @@ async function fetchTLEsFromIvanAPI() {
   return found;
 }
 
+function tleEpochAgeDays(line1) {
+  const ep = line1.substring(18, 32).trim();
+  const yy = parseInt(ep.substring(0, 2));
+  const day = parseFloat(ep.substring(2));
+  const yr = yy < 57 ? 2000 + yy : 1900 + yy;
+  return (Date.now() - (Date.UTC(yr, 0, 1) + (day - 1) * 86400000)) / 86400000;
+}
+
 async function fetchActiveMissionTLEs() {
   // Supplement local file with all currently active docked/mission craft.
-  // page-size=1 for mission-specific (Dragon, Cygnus, Orion — only 1 active at a time).
-  // page-size=3 for docking vehicles that can have multiple active simultaneously.
+  // Epoch age check (14 days) filters out returned/ended missions — active docked
+  // craft receive daily TLE updates; anything older means the mission ended.
   const queries = [
     `${IVAN_BASE}?search=SOYUZ-MS&page-size=3`,
     `${IVAN_BASE}?search=PROGRESS-MS&page-size=3`,
@@ -1019,6 +1027,7 @@ async function fetchActiveMissionTLEs() {
     for (const item of items) {
       if (!item?.name || !item?.line1 || !item?.line2) continue;
       if (/DEB|OBJECT|R\/B/i.test(item.name)) continue;
+      if (tleEpochAgeDays(item.line1) > 14) continue; // skip ended missions
       const pat = SPACECRAFT_PATTERNS.find(p => p.match(item.name));
       if (!pat || tleData[item.name]) continue;
       try { tleData[item.name] = { satrec: satellite.twoline2satrec(item.line1, item.line2), meta: pat, name: item.name }; found++; } catch(e) {}
