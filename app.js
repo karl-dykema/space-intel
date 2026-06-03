@@ -2007,8 +2007,8 @@ function renderFleet(){
     .map(mmsi=>S.vessels[mmsi]||{mmsi,...VESSEL_DB[mmsi],_offline:true})
     .filter(v=>{
       if(SHARE_MODE && v.ts && (now-v.ts >= STALE_14D)) return false;
-      if(VESSEL_DB[v.mmsi]?.background && !v.lat) return false; // background vessels: hide until spotted
-      return !!(v.lat||v.ts); // hide if never seen at all
+      if(VESSEL_DB[v.mmsi]?.background && !v.lat) return false; // background: only show when spotted
+      return true; // always show non-background vessels even if never seen
     })
     .sort((a,b)=>{ const ra=vesselRank(a),rb=vesselRank(b); return ra!==rb?ra-rb:(b.ts||0)-(a.ts||0); });
 
@@ -2052,12 +2052,12 @@ function buildVesselRow(v){
   const moving=isLive&&!stationary;
   const recentMoving=!moving&&isRecent&&(v.sog!=null&&v.sog>0.5)&&!isNearPort(v.lat,v.lon);
   const recentStationary=!moving&&!stationary&&isRecent&&!recentMoving;
-  const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':recentMoving?'#44cc77':recentStationary?'#226644':isHist?'#4477ff55':stale?'#ffcc00':isOffline?'#1a3a4a':'#2a4a5a';
-  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED — NO SIGNAL':'NO AIS LOCK'):recentMoving?`UNDERWAY · LAST PING ${ageStr(v.ts)}`:recentStationary?`STATIONARY · ${ageStr(v.ts)}`:isHist?'HIST':stale?'STALE':isOffline?'IN PORT':'OFFLINE';
-  const nameCol=moving?col:stationary?col+'99':recentMoving?col:recentStationary?col+'88':isHist?col+'66':'var(--t3)';
-  const roleCol=moving?col+'99':stationary?col+'55':recentMoving?col+'88':isHist?col+'33':'var(--t4)';
+  const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':recentMoving?'#44cc77':recentStationary?'#226644':'#2a3a4a';
+  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED':'NO AIS LOCK'):recentMoving?`UNDERWAY · LAST PING ${ageStr(v.ts)}`:recentStationary?`STATIONARY · ${ageStr(v.ts)}`:v.ts?`NO SIGNAL · ${ageStr(v.ts)}`:'NO SIGNAL';
+  const nameCol=moving?col:stationary?col+'99':recentMoving?col:recentStationary?col+'88':v.ts?'var(--t3)':'var(--t4)';
+  const roleCol=moving?col+'99':stationary?col+'55':recentMoving?col+'88':'var(--t4)';
   const bg=moving?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):stationary?(sel?'var(--bg4)':''):recentMoving?(sel?'var(--bg4)':'rgba(0,200,100,.015)'):sel?'var(--bg4)':'';
-  const borderCol=moving?col:stationary?col+'55':recentMoving?col+'88':isHist?col+'33':'transparent';
+  const borderCol=moving?col:stationary?col+'55':recentMoving?col+'88':'transparent';
   return `<div class="vrow${sel?' sel':''}" data-mmsi="${esc(v.mmsi)}"
     style="border-left-color:${borderCol}${bg?';background:'+bg:''}${moving?';box-shadow:inset 2px 0 8px '+col+'22':''}">
     <div class="vn" style="color:${nameCol};${moving?'text-shadow:0 0 12px '+col+'66':''}">${esc(v.abbr||v.name)}</div>
@@ -2067,8 +2067,7 @@ function buildVesselRow(v){
       <div class="vdot" style="background:${dotCol}${moving?';box-shadow:0 0 5px '+dotCol+'88':''}"></div>
       <span style="color:${dotCol};font-size:10px;font-weight:${isLive?'700':'400'}">${status}</span>
       ${v.sog!=null&&moving?`<span style="color:var(--t2);font-size:11px;margin-left:4px">${v.sog.toFixed(1)} kn</span>`:''}
-      ${isHist?`<span style="color:var(--t4);font-size:10px;margin-left:auto">${ageStr(v.ts)}</span>`:''}
-      ${v.dest&&!v._historical?`<span style="color:${isLive?'var(--t)':'var(--t5)'};font-size:10px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">→ ${esc(v.dest)}</span>`:''}
+      ${v.dest&&(isLive||isRecent)?`<span style="color:${isLive?'var(--t)':'var(--t5)'};font-size:10px;margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:80px">→ ${esc(v.dest)}</span>`:''}
     </div>
   </div>`;
 }
@@ -2260,7 +2259,7 @@ function buildVesselDetail(){
     <div class="tbody">
       ${!SHARE_MODE&&!db.verified?`<div class="warn-box">⚠ MMSI ${esc(mmsi)} unverified — confirm at marinetraffic.com</div>`:''}
       ${!SHARE_MODE&&v._historical?`<div class="hist-box">📡 Showing last known position (${ageStr(v.ts)}). Connect AIS for live data.</div>`:''}
-      ${!SHARE_MODE&&v._offline?`<div style="background:rgba(0,0,0,.15);border:1px solid var(--bdr);padding:8px 11px;font-size:12px;color:var(--t4);margin-bottom:6px">IN PORT — no AIS signal. Will appear on map when underway.</div>`:''}
+      ${!SHARE_MODE&&(!v.lat||v._offline)?`<div style="background:rgba(0,0,0,.15);border:1px solid var(--bdr);padding:8px 11px;font-size:12px;color:var(--t4);margin-bottom:6px">NO SIGNAL${v.ts?` · last seen ${ageStr(v.ts)}`:' · never tracked'}. Will appear on map when underway.</div>`:''}
 
       ${carrying?(()=>{
         const home = DRONE_HOME_PORTS[mmsi];
