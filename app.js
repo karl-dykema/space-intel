@@ -958,6 +958,37 @@ const IVAN_BASE = 'https://tle.ivanstanojevic.me/api/tle';
 // Space Devs station IDs for ISS and CSS (Tiangong space station)
 const SPACEDEVS_STATIONS = { 'ISS (ZARYA)': 4, 'CSS (TIANHE)': 18 };
 
+// Static module info for space stations — permanent modules + visiting vehicle context.
+// visitingNotes: array of {match (regex), location?, note} — first match wins per spacecraft.
+const STATION_INFO = {
+  'CSS (TIANHE)': {
+    fullName: 'China Space Station (Tiangong)',
+    agency: 'CNSA',
+    modules: [
+      { name: 'Wentian',  role: 'Laboratory Module', location: 'Starboard berthing port', col: '#ff6644' },
+      { name: 'Mengtian', role: 'Laboratory Module', location: 'Port-side berthing port',  col: '#ff6644' },
+    ],
+    visitingNotes: [
+      { match: /shenzhou/i, location: 'Forward port', note: 'Crewed · 3-astronaut crew including first astronaut from Hong Kong · one crew member on a 1-year stay' },
+      { match: /tianzhou/i, location: 'Aft port',     note: 'Cargo · propellant, life support consumables, and scientific payloads' },
+    ]
+  },
+  'ISS (ZARYA)': {
+    fullName: 'International Space Station',
+    agency: 'NASA · Roscosmos · ESA · JAXA · CSA',
+    modules: [],
+    visitingNotes: [
+      { match: /crew dragon/i,    note: 'Expedition 74 crew transport · SpaceX Crew-12' },
+      { match: /cargo dragon/i,   note: 'Cargo resupply · SpaceX CRS-34, arrived May 2026' },
+      { match: /cygnus/i,         note: 'Northrop Grumman commercial cargo resupply' },
+      { match: /progress ms-34/i, note: 'Roscosmos uncrewed cargo and resupply · docked April 2026' },
+      { match: /progress ms-33/i, note: 'Roscosmos uncrewed cargo and resupply · docked March 2026' },
+      { match: /progress/i,       note: 'Roscosmos uncrewed cargo and resupply' },
+      { match: /soyuz/i,          note: 'Roscosmos crew transport · Soyuz MS-28' },
+    ]
+  }
+};
+
 async function fetchDockedManifest() {
   const CACHE_KEY = 'dockedManifestV1';
   const CACHE_TTL = 4 * 3600000; // 4 hours — well under Space Devs rate limit
@@ -1684,17 +1715,63 @@ function buildSpacecraftDetail() {
   const sc = S_spacecraft[name];
   const col = sc.col || '#fff';
   const alt = sc.alt ? `${Math.round(sc.alt)} km` : '—';
-  const pos = sc.lat != null ? `${sc.lat.toFixed(2)}, ${sc.lon.toFixed(2)}` : '—';
+  const pos = sc.lat != null ? `${sc.lat.toFixed(2)}°, ${sc.lon.toFixed(2)}°` : '—';
+  const info = STATION_INFO[name];
+
+  let modulesHtml = '';
+  let dockedHtml = '';
+
+  if (info) {
+    // Permanent modules section
+    if (info.modules.length) {
+      modulesHtml = `
+        <div style="margin-top:14px">
+          <div style="font-size:9px;letter-spacing:.1em;color:var(--t4);margin-bottom:6px">PERMANENT MODULES</div>
+          ${info.modules.map(m => `
+            <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:8px">
+              <div style="width:6px;height:6px;border-radius:50%;background:${m.col};margin-top:3px;flex-shrink:0"></div>
+              <div>
+                <div style="font-size:12px;color:${m.col};font-weight:600">${esc(m.name)}</div>
+                <div style="font-size:10px;color:var(--t3)">${esc(m.role)}</div>
+                <div style="font-size:10px;color:var(--t4)">${esc(m.location)}</div>
+              </div>
+            </div>`).join('')}
+        </div>`;
+    }
+
+    // Docked visiting vehicles from manifest
+    const docked = dockedManifest[name] || [];
+    if (docked.length) {
+      dockedHtml = `
+        <div style="margin-top:14px">
+          <div style="font-size:9px;letter-spacing:.1em;color:var(--t4);margin-bottom:6px">VISITING SPACECRAFT</div>
+          ${docked.map(d => {
+            const hint = (info.visitingNotes || []).find(r => r.match.test(d.name)) || {};
+            return `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px">
+              <div style="width:6px;height:6px;border-radius:50%;background:${d.col||'#888'};margin-top:3px;flex-shrink:0"></div>
+              <div>
+                <div style="font-size:12px;color:${d.col||'#ccc'};font-weight:600">${esc(d.name)}</div>
+                <div style="font-size:10px;color:var(--t3)">${esc(d.operator)}${hint.location ? ' · ' + hint.location : ''}</div>
+                ${hint.note ? `<div style="font-size:10px;color:var(--t4);margin-top:1px">${esc(hint.note)}</div>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+    }
+  }
+
   return `<div style="padding:14px 16px">
-    <div style="font-size:18px;font-weight:700;color:${col};letter-spacing:.04em;margin-bottom:2px">${esc(name)}</div>
-    <div style="font-size:12px;color:var(--t4);margin-bottom:12px">${esc(sc.operator)} · ${esc(sc.role)}</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
+    <div style="font-size:18px;font-weight:700;color:${col};letter-spacing:.04em;margin-bottom:2px">${esc(info?.fullName || name)}</div>
+    <div style="font-size:11px;color:var(--t4);margin-bottom:12px">${esc(info?.agency || sc.operator)} · ${esc(sc.role)}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
       ${stat('STATUS','IN ORBIT','#00ff88')}
-      ${stat('POSITION',pos,'var(--t2)')}
       ${stat('ALTITUDE',alt,'var(--t2)')}
-      ${stat('ABBR',esc(sc.abbr||name),col)}
+      ${stat('POSITION',pos,'var(--t2)')}
+      ${stat('ORBIT','LEO','var(--t3)')}
     </div>
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+    ${modulesHtml}
+    ${dockedHtml}
+    <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
       <a href="https://heavens-above.com/orbit.aspx" target="_blank"
         style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">HEAVENS-ABOVE ↗</a>
       <a href="https://www.n2yo.com" target="_blank"
