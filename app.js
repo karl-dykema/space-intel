@@ -2512,7 +2512,7 @@ function buildOpsPanel(launch) {
   const op  = Object.entries(OPERATOR_MATCH).find(([k]) => lsp.includes(k))?.[1] || lsp;
   const col = opColor(op);
   const patch   = launch.mission_patches?.[0]?.image_url || launch.image || null;
-  const webcast = launch.vid_urls?.find(v => /youtube|nasa\.gov/i.test(v.url||'')) || launch.vid_urls?.[0];
+  const webcast = preferredWebcast(launch.vid_urls);
   const pad = launch.pad?.name || launch.launch_service_provider?.name || '';
 
   const events = getOpsTimeline(launch);
@@ -2766,6 +2766,31 @@ async function showMissions() {
   }
 }
 
+// Prefer official / known-good streams; never fall back to unknown channels
+function preferredWebcast(vid_urls) {
+  if (!vid_urls?.length) return null;
+  const TRUSTED = [
+    /youtube\.com\/@?spacex\b/i,                   // SpaceX official
+    /youtube\.com\/@?nasaspaceflight\b/i,           // NASASpaceflight (NSF)
+    /spaceflightnow\.com/i,                         // Spaceflight Now
+    /youtube\.com\/@?spaceflightnow\b/i,
+    /youtube\.com\/@?nasa\b/i,                      // NASA TV
+    /nasa\.gov/i,
+    /youtube\.com\/@?blueorigin\b/i,                // Blue Origin
+    /youtube\.com\/@?rocketlabusa\b/i,              // Rocket Lab
+    /youtube\.com\/@?ulalaunch\b/i,                 // ULA
+    /youtube\.com\/@?labpadre\b/i,                  // LabPadre (Starbase)
+    /youtube\.com\/@?rgvaerialphotography\b/i,      // RGV Aerial (Starbase)
+  ];
+  for (const re of TRUSTED) {
+    const hit = vid_urls.find(v => re.test(v.url || ''));
+    if (hit) return hit;
+  }
+  // Accept "Official Webcast" type even if channel not in list above
+  const official = vid_urls.find(v => /official/i.test(v.type?.name || ''));
+  return official || null; // no unknown fallback
+}
+
 function buildMissionCard(l, isPast=false) {
   if (l.id) _missionById[l.id] = l;
   const lsp       = l.launch_service_provider?.name||'';
@@ -2790,9 +2815,7 @@ function buildMissionCard(l, isPast=false) {
 
   // Space Devs extras
   const patch    = l.mission_patches?.[0]?.image_url || null;
-  const webcast  = l.vid_urls?.find(v=>/youtube|nasa\.gov/i.test(v.url||''))
-                || l.vid_urls?.find(v=>v.type?.name==='Official Webcast')
-                || l.vid_urls?.[0] || null;
+  const webcast  = preferredWebcast(l.vid_urls);
   const crew     = l.launch_crew || [];
   const programs = l.program || [];
   const apiTL    = (l.timeline||[]).sort((a,b)=>parseISODuration(a.relative_time)-parseISODuration(b.relative_time));
