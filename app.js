@@ -2512,7 +2512,7 @@ function buildOpsPanel(launch) {
   const op  = Object.entries(OPERATOR_MATCH).find(([k]) => lsp.includes(k))?.[1] || lsp;
   const col = opColor(op);
   const patch   = launch.mission_patches?.[0]?.image_url || launch.image || null;
-  const webcast = preferredWebcast(launch.vid_urls);
+  const watchLinks = getLaunchWatchLinks(op);
   const pad = launch.pad?.name || launch.launch_service_provider?.name || '';
 
   const events = getOpsTimeline(launch);
@@ -2557,8 +2557,9 @@ function buildOpsPanel(launch) {
       <div style="font-size:10px;color:var(--t4);letter-spacing:.07em;text-transform:uppercase;margin:10px 0 6px">TIMELINE</div>
       ${tlHTML||'<div style="color:var(--t5);font-size:12px;padding:8px 0">No timeline data for this vehicle.</div>'}
     </div>
-    ${webcast?`<div style="padding:10px 18px;border-top:1px solid var(--bdr2);flex-shrink:0">
-      <a href="${esc(webcast.url)}" target="_blank" style="display:inline-block;font-size:12px;font-weight:700;padding:7px 16px;background:${col}22;border:1px solid ${col}55;color:${col};text-decoration:none;border-radius:2px">▶ WATCH LIVE</a>
+    ${watchLinks.length?`<div style="padding:10px 18px;border-top:1px solid var(--bdr2);flex-shrink:0;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:10px;color:var(--t4);letter-spacing:.06em;margin-right:2px">WATCH</span>
+      ${watchLinks.map(w=>`<a href="${esc(w.url)}" target="_blank" style="font-size:11px;font-weight:600;padding:4px 10px;background:${col}22;border:1px solid ${col}44;color:${col};text-decoration:none;border-radius:2px;white-space:nowrap">▶ ${esc(w.label)}</a>`).join('')}
     </div>`:''}
   </div>`;
 }
@@ -2766,33 +2767,34 @@ async function showMissions() {
   }
 }
 
-// Trusted stream sources — URL must contain one of these (no title matching, fan channels abuse titles)
-const TRUSTED_CHANNEL_RES = [
-  /youtube\.com\/@?spacex\b/i,
-  /youtube\.com\/@?nasaspaceflight\b/i,
-  /youtube\.com\/@?spaceflightnow\b/i,
-  /youtube\.com\/@?nasa(live)?\b/i,
-  /youtube\.com\/@?blueorigin\b/i,
-  /youtube\.com\/@?rocketlab(usa)?\b/i,
-  /youtube\.com\/@?ulalaunch\b/i,
-  /youtube\.com\/@?labpadre\b/i,
-  /youtube\.com\/@?rgvaerialphotography\b/i,
-  /spaceflightnow\.com/i,
-  /nasa\.gov/i,
-  /x\.com\/spacex\b/i,
-  /twitter\.com\/spacex\b/i,
-];
-
-function preferredWebcast(vid_urls) {
-  if (!vid_urls?.length) return null;
-  // Only match trusted channel URLs — no fallback to unknown streams
-  for (const re of TRUSTED_CHANNEL_RES) {
-    const hit = vid_urls.find(v => re.test(v.url || ''));
-    if (hit) return hit;
-  }
-  // Accept Space Devs "Official Webcast" type as secondary (they vet these)
-  return vid_urls.find(v => /official webcast$/i.test(v.type?.name || '')) || null;
-}
+// Curated "where to watch" links per operator — independent of Space Devs vid_urls.
+// /live suffix on YouTube channels opens live stream if active, else most recent video.
+const LAUNCH_WATCH_LINKS = {
+  'SpaceX': [
+    { label:'SpaceX',          url:'https://x.com/spacex' },
+    { label:'NSF',             url:'https://www.youtube.com/@NASASpaceflight/live' },
+    { label:'Spaceflight Now', url:'https://www.youtube.com/@SpaceflightNow/live' },
+  ],
+  'Blue Origin': [
+    { label:'Blue Origin',     url:'https://www.youtube.com/@BlueOrigin/live' },
+    { label:'NSF',             url:'https://www.youtube.com/@NASASpaceflight/live' },
+  ],
+  'Rocket Lab': [
+    { label:'Rocket Lab',      url:'https://www.youtube.com/@RocketLab/live' },
+    { label:'NSF',             url:'https://www.youtube.com/@NASASpaceflight/live' },
+    { label:'Spaceflight Now', url:'https://www.youtube.com/@SpaceflightNow/live' },
+  ],
+  'ULA': [
+    { label:'ULA',             url:'https://www.youtube.com/@ulalaunch/live' },
+    { label:'NSF',             url:'https://www.youtube.com/@NASASpaceflight/live' },
+    { label:'Spaceflight Now', url:'https://www.youtube.com/@SpaceflightNow/live' },
+  ],
+  'NASA': [
+    { label:'NASA',            url:'https://www.youtube.com/nasalive' },
+    { label:'NSF',             url:'https://www.youtube.com/@NASASpaceflight/live' },
+  ],
+};
+function getLaunchWatchLinks(op) { return LAUNCH_WATCH_LINKS[op] || []; }
 
 function buildMissionCard(l, isPast=false) {
   if (l.id) _missionById[l.id] = l;
@@ -2818,7 +2820,7 @@ function buildMissionCard(l, isPast=false) {
 
   // Space Devs extras
   const patch    = l.mission_patches?.[0]?.image_url || null;
-  const webcast  = preferredWebcast(l.vid_urls);
+  const watchLinks = getLaunchWatchLinks(op);
   const crew     = l.launch_crew || [];
   const programs = l.program || [];
   const apiTL    = (l.timeline||[]).sort((a,b)=>parseISODuration(a.relative_time)-parseISODuration(b.relative_time));
@@ -2870,10 +2872,9 @@ function buildMissionCard(l, isPast=false) {
       }).join('')}
     </div>` : '';
 
-  const linksHTML = (webcast||missionLinks||l.url||l.flightclub_url) ? `
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 6px">
-      ${webcast?`<a href="${esc(webcast.url)}" target="_blank"
-        style="font-size:11px;font-weight:700;padding:5px 11px;background:${col}25;border:1px solid ${col}55;color:${col};text-decoration:none;border-radius:2px;white-space:nowrap">▶ WATCH LIVE</a>`:''}
+  const linksHTML = (watchLinks.length||missionLinks||l.url||l.flightclub_url) ? `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 6px;align-items:center">
+      ${watchLinks.length?`<span style="font-size:10px;color:var(--t4);letter-spacing:.06em">WATCH</span>${watchLinks.map(w=>`<a href="${esc(w.url)}" target="_blank" style="font-size:11px;font-weight:600;padding:5px 10px;background:${col}25;border:1px solid ${col}55;color:${col};text-decoration:none;border-radius:2px;white-space:nowrap">▶ ${esc(w.label)}</a>`).join('')}`:''}
       ${missionLinks?.pressKit?`<a href="${esc(missionLinks.pressKit)}" target="_blank"
         style="font-size:11px;padding:5px 11px;background:#1a2a1a;border:1px solid #335533;color:#77bb77;text-decoration:none;border-radius:2px;white-space:nowrap">📄 PRESS KIT</a>`:''}
       ${missionLinks?.page?`<a href="${esc(missionLinks.page)}" target="_blank"
