@@ -288,19 +288,19 @@ function initSBRealtime() {
     ws.onopen = () => {
       addLog('Realtime: connected', 'db');
       loadSBData(); // immediate refresh on (re)connect to catch anything during subscription gap
+      // Separate phx_join per table — Supabase realtime v1 scopes each channel to one table
       ws.send(JSON.stringify({
         topic: 'realtime:public:positions',
         event: 'phx_join',
-        payload: {
-          config: {
-            broadcast: { self: false },
-            presence: { key: '' },
-            postgres_changes: [
-              { event: 'INSERT', schema: 'public', table: 'positions' },
-              { event: 'INSERT', schema: 'public', table: 'aircraft_positions' },
-            ],
-          },
-        },
+        payload: { config: { broadcast:{ self:false }, presence:{ key:'' },
+          postgres_changes: [{ event:'INSERT', schema:'public', table:'positions' }] } },
+        ref: String(++ref),
+      }));
+      ws.send(JSON.stringify({
+        topic: 'realtime:public:aircraft_positions',
+        event: 'phx_join',
+        payload: { config: { broadcast:{ self:false }, presence:{ key:'' },
+          postgres_changes: [{ event:'INSERT', schema:'public', table:'aircraft_positions' }] } },
         ref: String(++ref),
       }));
       hbTimer = setInterval(() => {
@@ -313,8 +313,8 @@ function initSBRealtime() {
       try {
         const msg = JSON.parse(ev.data);
         if (msg.event !== 'postgres_changes') return;
-        const rec = msg.payload?.data?.record;
-        const tbl = msg.payload?.data?.table;
+        const rec = msg.payload?.data?.record || msg.payload?.data?.new;
+        const tbl = msg.payload?.data?.table || (msg.topic||'').replace('realtime:public:','');
         if (!rec) return;
 
         if (tbl === 'aircraft_positions' && rec.reg) {
