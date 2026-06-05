@@ -2065,16 +2065,30 @@ function renderFleet(){
 
   const scHTML=showSpacecraft?scClusters.map(buildSpacecraftRow).filter(Boolean).join(''):'';
 
-  // Rank each section by its most active item so the hottest category rises to top
-  const sections = [
-    { show: showVessels,            best: allVessels.length ? vesselRank(allVessels[0]) : 99, label:'VESSELS',    html: allVessels.map(buildVesselRow).join('') },
-    { show: showAircraft,           best: allAC.length      ? acRank(allAC[0])          : 99, label:'AIRCRAFT',   html: allAC.map(buildAircraftRow).join('') },
-    { show: showSpacecraft && !!scHTML, best: 99, label:'SPACECRAFT', html: scHTML },
-  ].filter(s=>s.show).sort((a,b)=>a.best-b.best);
+  // Active = live vessels + airborne aircraft + orbiting spacecraft — all snap to top
+  const isVesselLive = v => vesselRank(v) <= 1;
+  const isACairborne = r => acRank(r) === 0;
+  const isOrbit      = c => S_spacecraft[c.primary]?.lat != null;
 
-  document.getElementById('fleet').innerHTML = sections.map((s,i)=>
-    `<div class="lhdr" style="font-size:10px;color:var(--t4)${i>0?';margin-top:10px':''}">${s.label}</div>${s.html}`
-  ).join('');
+  const activeRows = [
+    ...(showVessels    ? allVessels.filter(isVesselLive).map(buildVesselRow)                 : []),
+    ...(showAircraft   ? allAC.filter(isACairborne).map(buildAircraftRow)                    : []),
+    ...(showSpacecraft ? scClusters.filter(isOrbit).map(buildSpacecraftRow).filter(Boolean)  : []),
+    // spacecraft always at bottom of ACTIVE — they're always orbital, not event-driven
+  ].join('');
+
+  const inactVesselHTML = showVessels    ? allVessels.filter(v=>!isVesselLive(v)).map(buildVesselRow).join('')     : '';
+  const inactACHTML     = showAircraft   ? allAC.filter(r=>!isACairborne(r)).map(buildAircraftRow).join('')        : '';
+  const inactSCHTML     = showSpacecraft ? scClusters.filter(c=>!isOrbit(c)).map(buildSpacecraftRow).filter(Boolean).join('') : '';
+
+  const hdr = (label, mt=true) => `<div class="lhdr" style="font-size:10px;color:var(--t4)${mt?';margin-top:10px':''}">${label}</div>`;
+  const parts = [];
+  if (activeRows)     parts.push(`<div class="lhdr" style="font-size:10px;color:#00ff88;letter-spacing:.08em">● ACTIVE</div>${activeRows}`);
+  if (inactVesselHTML) parts.push(hdr('VESSELS', parts.length>0) + inactVesselHTML);
+  if (inactACHTML)     parts.push(hdr('AIRCRAFT', parts.length>0) + inactACHTML);
+  if (inactSCHTML)     parts.push(hdr('SPACECRAFT', parts.length>0) + inactSCHTML);
+
+  document.getElementById('fleet').innerHTML = parts.join('');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
   document.querySelectorAll('.vrow[data-reg]').forEach(el=>{el.onclick=()=>showAircraftDetail(el.dataset.reg);});
   document.querySelectorAll('.vrow[data-sc]').forEach(el=>{el.onclick=()=>showSpacecraftDetail(el.dataset.sc);});
