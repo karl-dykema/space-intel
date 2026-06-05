@@ -660,9 +660,9 @@ setInterval(()=>{
 
 // ── Map ───────────────────────────────────────────────────────
 function initMap() {
-  map=L.map('map',{zoomControl:true,attributionControl:true,minZoom:2,maxBounds:[[-85,-180],[85,180]],maxBoundsViscosity:1.0});
+  map=L.map('map',{zoomControl:true,attributionControl:true,minZoom:2,maxZoom:19,maxBounds:[[-90,-180],[90,180]],maxBoundsViscosity:1.0,worldCopyJump:false});
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-    attribution:'© CARTO © OSM',subdomains:'abcd',maxZoom:19,
+    attribution:'© CARTO © OSM',subdomains:'abcd',maxZoom:19,noWrap:true,bounds:[[-90,-180],[90,180]],
   }).addTo(map);
   terminatorLayer=L.layerGroup().addTo(map);
   exclusionLayer=L.layerGroup().addTo(map);
