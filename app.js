@@ -3260,17 +3260,18 @@ window.onload=()=>{
     }
   }, 5000);
 
-  loadSBData().then(()=>loadVapiPositions());
+  // Single Supabase load → then realtime subscription + vapiPositions
+  loadSBData().then(() => { loadVapiPositions(); initSBRealtime(); });
+  setInterval(loadSBData, 30000); // both modes poll every 30s — same data source
   fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
   pollAircraft();
   setInterval(pollAircraft, AIRCRAFT_POLL_MS);
   fetchTLEs();
   fetchDockedManifest();
-  setInterval(()=>{ fetchTLEs(); fetchDockedManifest(); }, 3600000); // refresh every hour
-  setInterval(()=>{ updateOrbits(); renderFleet(); }, 15000); // update positions every 15s
+  setInterval(()=>{ fetchTLEs(); fetchDockedManifest(); }, 3600000);
+  setInterval(()=>{ updateOrbits(); renderFleet(); }, 15000);
 
   if(!SHARE_MODE && !localStorage.getItem(LS.KEY)) showSettings();
   if(!SHARE_MODE && SB.ready) checkSuggestionsBadge();
   if(!SHARE_MODE && localStorage.getItem(LS.KEY)) setTimeout(()=>connect(localStorage.getItem(LS.KEY)), 4000);
-  if(SHARE_MODE) { loadSBData().then(() => { initSBRealtime(); }); setInterval(loadSBData, 30000); }
 };
