@@ -197,34 +197,36 @@ async function loadSBData() {
     if(S.tab==='events'||S.tab==='history') renderRight();
   }
 
+  // Single bulk query for all vessels — avoids per-vessel rate limiting
   const since30 = new Date(Date.now()-30*86400000).toISOString();
-  for(const mmsi of KNOWN_MMSIS) {
-    const rows = await SB.select('positions', {
-      mmsi:`eq.${mmsi}`, ts:`gte.${since30}`,
-      order:'ts.asc', limit:'1000', select:'lat,lon,ts,sog,cog',
-    });
-    if(!rows?.length) continue;
-    const pos = rows.map(r=>({lat:r.lat,lon:r.lon,ts:new Date(r.ts).getTime(),sog:r.sog,cog:r.cog}));
-
-    if(!history[mmsi]) {
-      history[mmsi]={positions:[],firstSeen:pos[0].ts,lastSeen:pos[pos.length-1].ts};
-    }
-    const existing = new Set(history[mmsi].positions.map(p=>Math.floor(p.ts/60000)));
-    pos.forEach(p=>{ if(!existing.has(Math.floor(p.ts/60000))) history[mmsi].positions.push(p); });
-    history[mmsi].positions.sort((a,b)=>a.ts-b.ts);
-    history[mmsi].firstSeen = history[mmsi].positions[0].ts;
-    history[mmsi].lastSeen  = history[mmsi].positions[history[mmsi].positions.length-1].ts;
-
-    // override VesselAPI fallback if Supabase has real position history
-    if(!S.vessels[mmsi] || S.vessels[mmsi]._vapi) {
-      const last = history[mmsi].positions[history[mmsi].positions.length-1];
-      S.vessels[mmsi] = {
-        mmsi, ...VESSEL_DB[mmsi],
-        lat:last.lat, lon:last.lon, sog:last.sog||0, cog:last.cog||0, ts:last.ts,
-        track:history[mmsi].positions.map(p=>[p.lat,p.lon]),
-        _historical:true,
-      };
-      updateMarker(S.vessels[mmsi]);
+  const allRows = await SB.select('positions', {
+    mmsi: `in.(${KNOWN_MMSIS.join(',')})`,
+    ts: `gte.${since30}`,
+    order: 'ts.asc', limit: '10000',
+    select: 'mmsi,lat,lon,ts,sog,cog',
+  });
+  if(allRows?.length) {
+    const byMmsi = {};
+    allRows.forEach(r => { (byMmsi[r.mmsi] = byMmsi[r.mmsi]||[]).push(r); });
+    for(const [mmsi, rows] of Object.entries(byMmsi)) {
+      if(!VESSEL_DB[mmsi]) continue;
+      const pos = rows.map(r=>({lat:r.lat,lon:r.lon,ts:new Date(r.ts).getTime(),sog:r.sog,cog:r.cog}));
+      if(!history[mmsi]) history[mmsi]={positions:[],firstSeen:pos[0].ts,lastSeen:pos[pos.length-1].ts};
+      const existing = new Set(history[mmsi].positions.map(p=>Math.floor(p.ts/60000)));
+      pos.forEach(p=>{ if(!existing.has(Math.floor(p.ts/60000))) history[mmsi].positions.push(p); });
+      history[mmsi].positions.sort((a,b)=>a.ts-b.ts);
+      history[mmsi].firstSeen = history[mmsi].positions[0].ts;
+      history[mmsi].lastSeen  = history[mmsi].positions[history[mmsi].positions.length-1].ts;
+      if(!S.vessels[mmsi] || S.vessels[mmsi]._vapi) {
+        const last = history[mmsi].positions[history[mmsi].positions.length-1];
+        S.vessels[mmsi] = {
+          mmsi, ...VESSEL_DB[mmsi],
+          lat:last.lat, lon:last.lon, sog:last.sog||0, cog:last.cog||0, ts:last.ts,
+          track:history[mmsi].positions.map(p=>[p.lat,p.lon]),
+          _historical:true,
+        };
+        updateMarker(S.vessels[mmsi]);
+      }
     }
   }
 
@@ -3314,7 +3316,7 @@ window.onload=()=>{
 
   // Single Supabase load → then realtime subscription + vapiPositions
   loadSBData().then(() => { loadVapiPositions(); initSBRealtime(); });
-  setInterval(loadSBData, 10000); // poll every 10s — fast sync between admin and share
+  setInterval(loadSBData, 60000); // poll every 60s — realtime handles instant updates, this catches gaps
   fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
   pollAircraft();
   setInterval(pollAircraft, AIRCRAFT_POLL_MS);
