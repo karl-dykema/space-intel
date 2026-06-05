@@ -295,7 +295,10 @@ function initSBRealtime() {
           config: {
             broadcast: { self: false },
             presence: { key: '' },
-            postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'positions' }],
+            postgres_changes: [
+              { event: 'INSERT', schema: 'public', table: 'positions' },
+              { event: 'INSERT', schema: 'public', table: 'aircraft_positions' },
+            ],
           },
         },
         ref: String(++ref),
@@ -311,6 +314,28 @@ function initSBRealtime() {
         const msg = JSON.parse(ev.data);
         if (msg.event !== 'postgres_changes') return;
         const rec = msg.payload?.data?.record;
+        const tbl = msg.payload?.data?.table;
+        if (!rec) return;
+
+        if (tbl === 'aircraft_positions' && rec.reg) {
+          const reg = rec.reg;
+          if (!AIRCRAFT_DB[reg]) return;
+          const ts = new Date(rec.ts).getTime();
+          const ac = S.aircraft[reg];
+          if (ac && ts <= (ac.ts || 0)) return;
+          const freshness = Date.now() - ts;
+          S.aircraft[reg] = {
+            ...(ac || {}),
+            reg, lat: rec.lat, lon: rec.lon,
+            alt: rec.alt, gs: rec.gs, track: rec.track ?? 0,
+            ts, _stale: freshness > 300000, _staleTs: freshness > 300000 ? ts : undefined,
+            _track: [...((ac?._track)||[]), [rec.lat, rec.lon]].slice(-500),
+          };
+          updateAircraftMarker(reg);
+          renderFleet();
+          return;
+        }
+
         if (!rec?.mmsi) return;
         const mmsi = String(rec.mmsi);
         if (!VESSEL_DB[mmsi]) return;
