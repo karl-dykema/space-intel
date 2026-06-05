@@ -894,9 +894,10 @@ const AIRCRAFT_DB = {
       'Only airworthy L-1011 TriStar remaining in service (2026)',
       '39 Pegasus launches conducted carrying ~100 satellites as of 2021',
       'Pegasus XL: 3-stage solid rocket, 443 kg to LEO, released at ~39,000 ft over ocean',
-      'Based at Vandenberg SFB (SLC-8); also operates from Cape Canaveral and Kwajalein',
+      'Based at Vandenberg SFB (SLC-8); also operates from Cape Canaveral and Kwajalein Atoll',
+      'UPCOMING: Swift Rescue Mission (NET Jun 30 2026) — launch from Kwajalein Atoll. Katalyst LINK spacecraft reboosts NASA Swift Observatory. Last Pegasus XL in inventory.',
     ],
-    notes:'N140SC. Operator: Northrop Grumman Launch & Targeting Systems. Photo: US Space Force / public domain.',
+    notes:'N140SC. Northrop Grumman Launch & Targeting Systems. Photo: US Space Force / public domain. Watch for N140SC ADS-B when it departs Vandenberg for Kwajalein pre-launch.',
   },
   // ── Jared Isaacman / Draken International (JDI Holdings LLC) ─
   'N82EM': {
