@@ -197,11 +197,14 @@ async function loadSBData() {
     if(S.tab==='events'||S.tab==='history') renderRight();
   }
 
-  // Single bulk query for all vessels — avoids per-vessel rate limiting
-  const since30 = new Date(Date.now()-30*86400000).toISOString();
+  // Bulk query: 30 days on first load (tracks), 2h on repeat polls (live sync only)
+  const _sinceHistoric = new Date(Date.now()-30*86400000).toISOString();
+  const _sinceLive     = new Date(Date.now()-2*3600000).toISOString();
+  const _isFirstLoad   = !window._sbLoaded;
+  window._sbLoaded     = true;
   const allRows = await SB.select('positions', {
     mmsi: `in.(${KNOWN_MMSIS.join(',')})`,
-    ts: `gte.${since30}`,
+    ts: `gte.${_isFirstLoad ? _sinceHistoric : _sinceLive}`,
     order: 'ts.asc', limit: '10000',
     select: 'mmsi,lat,lon,ts,sog,cog',
   });
@@ -3316,7 +3319,7 @@ window.onload=()=>{
 
   // Single Supabase load → then realtime subscription + vapiPositions
   loadSBData().then(() => { loadVapiPositions(); initSBRealtime(); });
-  setInterval(loadSBData, 60000); // poll every 60s — realtime handles instant updates, this catches gaps
+  setInterval(loadSBData, 15000); // poll every 15s — bulk query is cheap, matches vessel write throttle
   fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
   pollAircraft();
   setInterval(pollAircraft, AIRCRAFT_POLL_MS);
