@@ -2098,7 +2098,7 @@ function renderFleet(){
   const isVesselActive = v => {
     const age = v.ts ? now - v.ts : Infinity;
     const isLive = !!v.lat && !!v.ts && age < 600000 && !v._vapi;
-    const moving = isLive && (v.sog || 0) > 1.5 && !isNearPort(v.lat, v.lon);
+    const moving = isLive && (v.sog || 0) > 1.0;
     const carrying = !!isCarryingBooster(v.mmsi);
     return moving || (carrying && isLive);
   };
