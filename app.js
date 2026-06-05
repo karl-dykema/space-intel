@@ -2066,18 +2066,24 @@ function renderFleet(){
   const scHTML=showSpacecraft?scClusters.map(buildSpacecraftRow).filter(Boolean).join(''):'';
 
   // Active = live vessels + airborne aircraft + orbiting spacecraft — all snap to top
-  const isVesselLive = v => vesselRank(v) <= 1;
+  // Only truly moving vessels go to ACTIVE — docked/stationary stay in VESSELS
+  const isVesselActive = v => {
+    const age = v.ts ? now - v.ts : Infinity;
+    const isLive = !!v.lat && !!v.ts && age < 600000 && (!v._historical || SHARE_MODE) && !v._vapi;
+    const moving = isLive && (v.sog || 0) > 0.5;
+    const carrying = !!isCarryingBooster(v.mmsi);
+    return moving || (carrying && isLive); // underway OR active booster recovery
+  };
   const isACairborne = r => acRank(r) === 0;
   const isOrbit      = c => S_spacecraft[c.primary]?.lat != null;
 
   const activeRows = [
-    ...(showVessels    ? allVessels.filter(isVesselLive).map(buildVesselRow)                 : []),
+    ...(showVessels    ? allVessels.filter(isVesselActive).map(buildVesselRow)               : []),
     ...(showAircraft   ? allAC.filter(isACairborne).map(buildAircraftRow)                    : []),
     ...(showSpacecraft ? scClusters.filter(isOrbit).map(buildSpacecraftRow).filter(Boolean)  : []),
-    // spacecraft always at bottom of ACTIVE — they're always orbital, not event-driven
   ].join('');
 
-  const inactVesselHTML = showVessels    ? allVessels.filter(v=>!isVesselLive(v)).map(buildVesselRow).join('')     : '';
+  const inactVesselHTML = showVessels    ? allVessels.filter(v=>!isVesselActive(v)).map(buildVesselRow).join('')   : '';
   const inactACHTML     = showAircraft   ? allAC.filter(r=>!isACairborne(r)).map(buildAircraftRow).join('')        : '';
   const inactSCHTML     = showSpacecraft ? scClusters.filter(c=>!isOrbit(c)).map(buildSpacecraftRow).filter(Boolean).join('') : '';
 
