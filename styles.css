@@ -75,11 +75,11 @@ button{font-family:var(--f);cursor:pointer;}
 #right{width:370px;border-left:1px solid var(--bdr);background:var(--bg2);display:flex;flex-direction:column;flex-shrink:0;transition:width .15s ease;overflow:visible;position:relative;z-index:1001;}
 #right.collapsed{width:0;border-left:none;}
 #right.collapsed .rtabs,#right.collapsed #rpanel{display:none;}
-#rpanel-toggle{position:absolute;left:-26px;top:50%;transform:translateY(-50%);width:26px;height:68px;background:var(--bg4);border:1px solid var(--t5);border-right:none;border-radius:8px 0 0 8px;color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;z-index:50;transition:color .2s,background .2s,box-shadow .2s;font-size:16px;box-shadow:-2px 0 8px rgba(0,0,0,.4);}
+#rpanel-toggle{position:absolute;left:-26px;top:50%;transform:translateY(-50%);width:26px;height:68px;background:var(--bg4);border:1px solid var(--t5);border-right:none;border-radius:8px 0 0 8px;color:var(--t2);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;z-index:50;transition:color .2s,background .2s,box-shadow .2s,border-radius .15s;font-size:16px;box-shadow:-2px 0 8px rgba(0,0,0,.4);}
 #rpanel-toggle:hover{color:var(--acc);background:var(--bg3);border-color:var(--acc);box-shadow:-3px 0 12px rgba(0,212,255,.18);}
 #rpanel-toggle .chev{display:inline-block;width:9px;height:9px;border-right:2.5px solid currentColor;border-top:2.5px solid currentColor;transform:rotate(45deg);transition:transform .2s;flex-shrink:0;}
-#right.collapsed #rpanel-toggle{left:0;border-radius:0 8px 8px 0;border-right:1px solid var(--t5);border-left:none;}
-#right.collapsed #rpanel-toggle:hover{border-right-color:var(--acc);}
+#right.collapsed #rpanel-toggle{border:1px solid var(--t5);border-radius:8px;box-shadow:0 0 10px rgba(0,0,0,.5);}
+#right.collapsed #rpanel-toggle:hover{border-color:var(--acc);}
 #right.collapsed #rpanel-toggle .chev{transform:rotate(225deg);}
 .rtabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;}
 .rtab{flex:1;padding:9px 0;background:transparent;color:var(--t5);border:none;border-bottom:2px solid transparent;font-size:12px;letter-spacing:.06em;transition:all .12s;}
