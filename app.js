@@ -464,6 +464,10 @@ function isCarryingBooster(mmsi) {
 
   // After 36h+ if vessel is now stationary, it has returned and docked
   if(age > 36*3600000 && v?.sog != null && v.sog <= 0.1) return null;
+  // After 36h with no AIS since launch, assume it returned to port off-coverage
+  const mNet = new Date(mission.net).getTime();
+  const freshSinceLaunch = v?.ts && v.ts > mNet && (now - v.ts < 24*3600000);
+  if(age > 36*3600000 && !freshSinceLaunch) return null;
 
   return {...mission, _transit: age > 2*3600000};
 }
@@ -3233,11 +3237,8 @@ window.onload=()=>{
 
   loadSBData().then(()=>loadVapiPositions());
   fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
-  // Aircraft polling: admin only — share reads aircraft positions from Supabase
-  if (!SHARE_MODE) {
-    pollAircraft();
-    setInterval(pollAircraft, AIRCRAFT_POLL_MS);
-  }
+  pollAircraft();
+  setInterval(pollAircraft, AIRCRAFT_POLL_MS);
   fetchTLEs();
   fetchDockedManifest();
   setInterval(()=>{ fetchTLEs(); fetchDockedManifest(); }, 3600000); // refresh every hour
