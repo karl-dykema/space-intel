@@ -72,12 +72,14 @@ button{font-family:var(--f);cursor:pointer;}
 .mlt{color:var(--t4);letter-spacing:.07em;margin-bottom:6px;font-size:11px;}
 
 /* ── Right panel ── */
-#right{width:370px;border-left:1px solid var(--bdr);background:var(--bg2);display:flex;flex-direction:column;flex-shrink:0;transition:width .15s ease;overflow:hidden;}
-#right.collapsed{width:28px;}
+#right{width:370px;border-left:1px solid var(--bdr);background:var(--bg2);display:flex;flex-direction:column;flex-shrink:0;transition:width .15s ease;overflow:visible;position:relative;}
+#right.collapsed{width:0;border-left:none;}
 #right.collapsed .rtabs,#right.collapsed #rpanel{display:none;}
-#rpanel-toggle{background:none;border:none;border-bottom:1px solid var(--bdr2);color:var(--t4);cursor:pointer;padding:7px 0;font-size:11px;text-align:center;flex-shrink:0;width:100%;font-family:var(--f);letter-spacing:.04em;}
-#rpanel-toggle:hover{color:var(--t);background:rgba(0,200,255,.04);}
-#right.collapsed #rpanel-toggle{flex:1;border-bottom:none;writing-mode:vertical-rl;transform:rotate(180deg);padding:20px 0;}
+#rpanel-toggle{position:absolute;left:-20px;top:50%;transform:translateY(-50%);width:20px;height:52px;background:var(--bg2);border:1px solid var(--bdr);border-right:none;border-radius:6px 0 0 6px;color:var(--t4);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;z-index:50;transition:color .15s,background .15s;font-size:13px;}
+#rpanel-toggle:hover{color:var(--acc);background:var(--bg3);}
+#rpanel-toggle .chev{display:inline-block;transition:transform .15s;line-height:1;}
+#right.collapsed #rpanel-toggle{left:0;border-radius:0 6px 6px 0;border-right:1px solid var(--bdr);border-left:none;}
+#right.collapsed #rpanel-toggle .chev{transform:rotate(180deg);}
 .rtabs{display:flex;border-bottom:1px solid var(--bdr);flex-shrink:0;}
 .rtab{flex:1;padding:9px 0;background:transparent;color:var(--t5);border:none;border-bottom:2px solid transparent;font-size:12px;letter-spacing:.06em;transition:all .12s;}
 .rtab.act{color:var(--acc);border-bottom-color:var(--acc);background:var(--bg3);}

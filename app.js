@@ -1631,9 +1631,7 @@ function toggleRightPanel() {
   const right = document.getElementById('right');
   const btn   = document.getElementById('rpanel-toggle');
   const col   = right.classList.toggle('collapsed');
-  btn.textContent = col ? '▶' : '◀';
-  btn.title = col ? 'Expand panel' : 'Collapse panel';
-  // Wait for CSS transition to finish then tell Leaflet to repaint
+  btn.title = col ? 'Show panel' : 'Hide panel';
   setTimeout(() => { if(map) map.invalidateSize(); }, 160);
 }
 
