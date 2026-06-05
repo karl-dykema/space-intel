@@ -14,7 +14,7 @@ const SEARCHES_ONE   = ['CREW DRAGON', 'DRAGON CRS', 'CYGNUS NG'];
 
 function get(url) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { timeout: 12000 }, res => {
+    const req = https.get(url, { timeout: 20000 }, res => {
       let body = '';
       res.on('data', d => body += d);
       res.on('end', () => resolve({ status: res.statusCode, body }));
@@ -77,9 +77,17 @@ async function tryIvanAPI() {
 async function main() {
   let tle = await tryCelestrak();
   if (!tle) tle = await tryIvanAPI();
-  if (!tle) { console.error('All TLE sources failed'); process.exit(1); }
 
   const out = path.join(__dirname, '..', 'data', 'stations.tle');
+  if (!tle) {
+    if (fs.existsSync(out)) {
+      console.warn('All TLE sources failed — keeping existing file, will retry next run');
+      process.exit(0); // don't spam email; existing data still valid for a few hours
+    }
+    console.error('All TLE sources failed and no existing file');
+    process.exit(1);
+  }
+
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, tle);
   console.log(`Wrote → data/stations.tle`);
