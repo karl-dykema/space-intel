@@ -2098,7 +2098,7 @@ function renderFleet(){
   const isVesselActive = v => {
     const age = v.ts ? now - v.ts : Infinity;
     const isLive = !!v.lat && !!v.ts && age < 600000 && !v._vapi;
-    const moving = isLive && (v.sog || 0) > 1.0;
+    const moving = isLive && (v.sog || 0) > 0.5;
     const carrying = !!isCarryingBooster(v.mmsi);
     return moving || (carrying && isLive);
   };
@@ -2143,7 +2143,8 @@ function buildVesselRow(v){
   const recentStationary=!moving&&!stationary&&isRecent&&!recentMoving;
   const deployed=!isLive&&!isRecent&&deployedFleet.has(v.mmsi);
   const dotCol=moving?'#00ff88':stationary?'#338855':carrying?'#ff8c00':recentMoving?'#44cc77':recentStationary?'#226644':deployed?'#ff8c00':'#2a3a4a';
-  const status=moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED':'NO AIS LOCK'):recentMoving?`UNDERWAY · LAST PING ${ageStr(v.ts)}`:recentStationary?`STATIONARY · ${ageStr(v.ts)}`:deployed?'DEPLOYED · OUT OF AIS RANGE':v.ts?`NO SIGNAL · ${ageStr(v.ts)}`:'NO SIGNAL';
+  const maneuvering=moving&&isNearPort(v.lat,v.lon);
+  const status=maneuvering?'MANEUVERING':moving?'UNDERWAY':stationary?'DOCKED / STATIONARY':carrying&&!isLive?(carrying._transit?'BOOSTER EXPECTED':'NO AIS LOCK'):recentMoving?`UNDERWAY · LAST PING ${ageStr(v.ts)}`:recentStationary?`STATIONARY · ${ageStr(v.ts)}`:deployed?'DEPLOYED · OUT OF AIS RANGE':v.ts?`NO SIGNAL · ${ageStr(v.ts)}`:'NO SIGNAL';
   const nameCol=moving?col:stationary?col+'99':recentMoving?col:recentStationary?col+'88':v.ts?'var(--t3)':'var(--t4)';
   const roleCol=moving?col+'99':stationary?col+'55':recentMoving?col+'88':'var(--t4)';
   const bg=moving?(sel?'var(--bg4)':'rgba(0,200,255,.03)'):stationary?(sel?'var(--bg4)':''):recentMoving?(sel?'var(--bg4)':'rgba(0,200,100,.015)'):sel?'var(--bg4)':'';
