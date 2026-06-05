@@ -1823,15 +1823,37 @@ function toggleConnect() {
   connect(key);
 }
 
+let _aisReconnectDelay = 10000; // backoff: 10s → 20s → 40s → ... → 120s max
+let _aisReconnectTimer = null;
+let _aisManualDisconnect = false;
+
+function scheduleAISReconnect() {
+  if (_aisReconnectTimer || _aisManualDisconnect) return;
+  const key = localStorage.getItem(LS.KEY);
+  if (!key) return;
+  const secs = Math.round(_aisReconnectDelay / 1000);
+  setDot('off', `Reconnecting in ${secs}s…`);
+  addLog(`AIS: reconnecting in ${secs}s`, 'sys');
+  _aisReconnectTimer = setTimeout(() => { _aisReconnectTimer = null; connect(key); }, _aisReconnectDelay);
+  _aisReconnectDelay = Math.min(_aisReconnectDelay * 2, 120000);
+}
+
 function connect(key) {
   setDot('connecting','Connecting to aisstream.io…');
   addLog('Connecting to aisstream.io…', 'sys');
   const btn=document.getElementById('cbtn');
   btn.textContent='…'; btn.disabled=true;
-  const timeout=setTimeout(()=>{setDot('off','Timeout — check key & network');addLog('Connection timeout','err');},8000);
+  const timeout=setTimeout(()=>{
+    setDot('off','Timeout — check key & network');
+    addLog('Connection timeout','err');
+    btn.textContent='CONNECT'; btn.disabled=false;
+    scheduleAISReconnect();
+  },8000);
   const ws=new WebSocket('wss://stream.aisstream.io/v0/stream');
   ws.onopen=()=>{
     clearTimeout(timeout);
+    _aisReconnectDelay = 10000; // reset backoff on success
+    _aisManualDisconnect = false;
     ws.send(JSON.stringify({
       APIKey:key, BoundingBoxes:[[[-90,-180],[90,180]]],
       FiltersShipMMSI:KNOWN_MMSIS, FilterMessageTypes:['PositionReport','ShipStaticData'],
@@ -1852,14 +1874,17 @@ function connect(key) {
   ws.onclose=ev=>{
     clearTimeout(timeout);
     S.ws=null; btn.textContent='CONNECT'; btn.disabled=false; btn.classList.remove('on');
-    const msg=ev.code===4001||ev.code===4003?'Invalid API key':'Disconnected';
-    setDot('off',ev.code===4001||ev.code===4003?'Invalid API key — check ⚙ SETTINGS':`Disconnected (${ev.code})`);
-    addLog(`AIS ${msg} (code ${ev.code})`, ev.code===4001||ev.code===4003?'err':'sys');
+    const badKey = ev.code===4001||ev.code===4003;
+    setDot('off', badKey ? 'Invalid API key — check ⚙ SETTINGS' : `Disconnected (${ev.code})`);
+    addLog(`AIS ${badKey?'invalid key':'disconnected'} (code ${ev.code})`, badKey?'err':'sys');
+    if (!badKey) scheduleAISReconnect();
   };
   ws.onerror=()=>{clearTimeout(timeout);setDot('off','Connection error');addLog('AIS WebSocket error','err');};
 }
 
 function disconnect() {
+  _aisManualDisconnect = true;
+  if (_aisReconnectTimer) { clearTimeout(_aisReconnectTimer); _aisReconnectTimer = null; }
   if(S.ws){S.ws.close();S.ws=null;}
   Object.values(markers).forEach(m=>{try{layers?.removeLayer(m);}catch(e){}});
   Object.values(tracks).forEach(t=>{try{layers?.removeLayer(t);}catch(e){}});
