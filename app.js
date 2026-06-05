@@ -802,7 +802,7 @@ function showPingRing(lat, lon, col) {
 function updateMarker(v) {
   if(!map||!layers||!v.lat||!v.lon) return;
   const mmsi=v.mmsi, col=opColor(v.operator), sel=S.selected===mmsi;
-  const hist=v._historical&&!SHARE_MODE; // share mode treats historical as solid
+  const hist=!!v._historical&&(Date.now()-v.ts>600000); // dim only if historical AND older than 10min
   const vapi=v._vapi&&!SHARE_MODE;
   const stale=!hist&&!vapi&&!!v.ts&&(Date.now()-v.ts>7200000); // >2h old and not already flagged
   const hollow=hist||vapi||stale;
@@ -2025,7 +2025,7 @@ function renderFleet(){
 
   const vesselRank=v=>{
     // In share mode treat fresh Supabase positions as live (ignore _historical flag)
-    const isLive=!!v.lat&&!!v.ts&&(now-v.ts<600000)&&(!v._historical||SHARE_MODE)&&!v._vapi;
+    const isLive=!!v.lat&&!!v.ts&&(now-v.ts<600000)&&!v._vapi;
     const hasPos=!!v.lat&&!!v.ts;
     const carrying=!!isCarryingBooster(v.mmsi);
     if(carrying&&isLive) return 0;
@@ -2070,7 +2070,7 @@ function renderFleet(){
   // Only truly moving vessels go to ACTIVE — docked/stationary stay in VESSELS
   const isVesselActive = v => {
     const age = v.ts ? now - v.ts : Infinity;
-    const isLive = !!v.lat && !!v.ts && age < 600000 && (!v._historical || SHARE_MODE) && !v._vapi;
+    const isLive = !!v.lat && !!v.ts && age < 600000 && !v._vapi;
     const moving = isLive && (v.sog || 0) > 0.5;
     const carrying = !!isCarryingBooster(v.mmsi);
     return moving || (carrying && isLive); // underway OR active booster recovery
@@ -2104,8 +2104,8 @@ function renderFleet(){
 function buildVesselRow(v){
   const sel=S.selected===v.mmsi, col=opColor(v.operator);
   const now2=Date.now(), age2=v.ts?now2-v.ts:Infinity;
-  const isLive=!!v.lat&&!!v.ts&&age2<600000&&(!v._historical||SHARE_MODE);
-  const isRecent=!!v.lat&&!!v.ts&&age2<7200000&&(!v._historical||SHARE_MODE); // <2h, not fully stale
+  const isLive=!!v.lat&&!!v.ts&&age2<600000;
+  const isRecent=!!v.lat&&!!v.ts&&age2<7200000; // <2h, not fully stale
   const isHist=v._historical&&!SHARE_MODE;
   const stale=!!v.lat&&!isRecent&&!isHist;
   const isOffline=v._offline||(!v.lat&&!isHist);
