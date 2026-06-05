@@ -2067,13 +2067,15 @@ function renderFleet(){
   const scHTML=showSpacecraft?scClusters.map(buildSpacecraftRow).filter(Boolean).join(''):'';
 
   // Active = live vessels + airborne aircraft + orbiting spacecraft — all snap to top
-  // Only truly moving vessels go to ACTIVE — docked/stationary stay in VESSELS
+  // Only genuinely underway vessels go to ACTIVE.
+  // 1.5 kn threshold filters dock GPS drift (rarely exceeds 1 kn).
+  // isNearPort guards against slow harbour maneuvering.
   const isVesselActive = v => {
     const age = v.ts ? now - v.ts : Infinity;
     const isLive = !!v.lat && !!v.ts && age < 600000 && !v._vapi;
-    const moving = isLive && (v.sog || 0) > 0.5;
+    const moving = isLive && (v.sog || 0) > 1.5 && !isNearPort(v.lat, v.lon);
     const carrying = !!isCarryingBooster(v.mmsi);
-    return moving || (carrying && isLive); // underway OR active booster recovery
+    return moving || (carrying && isLive);
   };
   const isACairborne = r => acRank(r) === 0;
   const isOrbit      = c => S_spacecraft[c.primary]?.lat != null;
