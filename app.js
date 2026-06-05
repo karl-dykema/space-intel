@@ -287,6 +287,7 @@ function initSBRealtime() {
 
     ws.onopen = () => {
       addLog('Realtime: connected', 'db');
+      loadSBData(); // immediate refresh on (re)connect to catch anything during subscription gap
       ws.send(JSON.stringify({
         topic: 'realtime:public:positions',
         event: 'phx_join',
@@ -3282,7 +3283,7 @@ window.onload=()=>{
 
   // Single Supabase load → then realtime subscription + vapiPositions
   loadSBData().then(() => { loadVapiPositions(); initSBRealtime(); });
-  setInterval(loadSBData, 30000); // both modes poll every 30s — same data source
+  setInterval(loadSBData, 10000); // poll every 10s — fast sync between admin and share
   fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
   pollAircraft();
   setInterval(pollAircraft, AIRCRAFT_POLL_MS);
