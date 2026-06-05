@@ -21,6 +21,7 @@ const VESSEL_DB = {
     operator:'SpaceX', role:'Autonomous Spaceport Drone Ship',
     color:'#00d4ff', homePort:'Port Canaveral, FL',
     imo:'9869052', flag:'USA', built:2020, verified:true,
+    photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/SpaceX_Falcon_9_Booster_B1060-10-01-22_%2851837166644%29.jpg/480px-SpaceX_Falcon_9_Booster_B1060-10-01-22_%2851837166644%29.jpg',
     specs:{ length:'91m', beam:'52m', type:'Self-propelled barge (ASDS)', propulsion:'4 diesel thrusters' },
     history:[
       'Converted 2020 from Marmac 302; replaced OCISLY on East Coast',
@@ -51,6 +52,7 @@ const VESSEL_DB = {
     operator:'SpaceX', role:'Autonomous Spaceport Drone Ship',
     color:'#00d4ff', homePort:'Port Hueneme, CA',
     flag:'USA', built:2015, verified:true,
+    photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/5/54/CRS-8_%2826239020092%29.jpg/480px-CRS-8_%2826239020092%29.jpg',
     specs:{ length:'91m', beam:'52m', type:'Self-propelled barge (ASDS)', propulsion:'4 diesel thrusters' },
     history:[
       'Pacific ASDS for all Vandenberg SFB (SLC-4E) Falcon 9 launches',
@@ -883,10 +885,18 @@ const AIRCRAFT_DB = {
   },
   // ── Northrop Grumman ─────────────────────────────────────────
   'N140SC': {
-    name:'Northrop L-1011 Star Gazer', abbr:'Star Gazer',
-    operator:'Northrop Grumman', role:'Pegasus XL air-launch carrier',
-    model:'Lockheed L-1011 TriStar', type:'carrier', background:true,
-    notes:'Modified L-1011 widebody. Carries Pegasus XL rocket attached beneath fuselage; drops at ~40,000ft altitude over ocean for orbital launches. Based at Vandenberg SFB. Operator: Northrop Grumman Launch & Targeting Systems.',
+    name:'L-1011 Star Gazer + Pegasus XL', abbr:'Star Gazer',
+    operator:'Northrop Grumman', role:'Air-launch carrier / Pegasus XL orbital rocket',
+    model:'Lockheed L-1011-100 TriStar', type:'carrier', background:true,
+    photo:'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fc/U.S._Space_Force_successfully_launches_first_tactically_responsive_launch_mission_210613-F-XXZZZ-0001.jpg/480px-U.S._Space_Force_successfully_launches_first_tactically_responsive_launch_mission_210613-F-XXZZZ-0001.jpg',
+    history:[
+      'Built 1974; modified 1994 by Orbital Sciences as Pegasus XL air-launch platform',
+      'Only airworthy L-1011 TriStar remaining in service (2026)',
+      '39 Pegasus launches conducted carrying ~100 satellites as of 2021',
+      'Pegasus XL: 3-stage solid rocket, 443 kg to LEO, released at ~39,000 ft over ocean',
+      'Based at Vandenberg SFB (SLC-8); also operates from Cape Canaveral and Kwajalein',
+    ],
+    notes:'N140SC. Operator: Northrop Grumman Launch & Targeting Systems. Photo: US Space Force / public domain.',
   },
   // ── Jared Isaacman / Draken International (JDI Holdings LLC) ─
   'N82EM': {

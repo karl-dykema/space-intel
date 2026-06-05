@@ -2245,6 +2245,7 @@ function buildAircraftDetail() {
   const statusLabel = airborne ? 'AIRBORNE' : taxiing ? 'TAXIING' : recentLanded ? `LANDED ${ageStr(ac._staleTs)}` : staleAirborneD ? 'NO SIGNAL' : 'ON GROUND';
   const statusCol   = airborne ? '#00ff88' : taxiing ? '#88dd44' : recentLanded ? '#ffcc00' : staleAirborneD ? '#ffcc00' : 'var(--t4)';
   return `<div style="padding:14px 16px">
+    ${db.photo?`<img src="${esc(db.photo)}" style="width:100%;max-height:160px;object-fit:cover;border-radius:3px;margin-bottom:10px;background:#0a1a2a" loading="lazy" onerror="this.style.display='none'">`:''}
     <div style="font-size:18px;font-weight:700;color:${col};letter-spacing:.04em;margin-bottom:2px">${esc(db.name)}</div>
     <div style="font-size:12px;color:var(--t4);margin-bottom:12px">${esc(db.operator)} · ${esc(db.model)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">
@@ -2256,7 +2257,8 @@ function buildAircraftDetail() {
       ${stat('HEADING', hdg, 'var(--t2)')}
       ${stat('REG', reg, col)}
     </div>
-    <div style="font-size:11px;color:var(--t4);line-height:1.6">${esc(db.notes||'')}</div>
+    ${db.history?.length?`<div style="margin-bottom:10px">${db.history.map(h=>`<div style="font-size:11px;color:var(--t4);line-height:1.7;padding-left:8px;border-left:2px solid var(--bdr2)">· ${esc(h)}</div>`).join('')}</div>`:''}
+    <div style="font-size:11px;color:var(--t5);line-height:1.6">${esc(db.notes||'')}</div>
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
       <a href="https://globe.adsbexchange.com/?icao=${esc(ac?.hex||'')}" target="_blank"
         style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none${!ac?.hex?';opacity:.4;pointer-events:none':''}">ADSBEXCHANGE ↗</a>
@@ -2342,6 +2344,7 @@ function buildVesselDetail(){
   const carrying         = isCarryingBooster(mmsi);
 
   return`
+    ${db.photo?`<img src="${esc(db.photo)}" style="width:100%;max-height:180px;object-fit:cover;background:#0a1a2a" loading="lazy" onerror="this.style.display='none'">`:''}
     <div class="dhdr" style="border-left:4px solid ${col}">
       <div class="dname" style="color:${col}">${esc(db.name)}</div>
       <div style="font-size:12px;color:var(--t5);margin-top:2px">${esc(db.operator)} · ${esc(db.role)}</div>
