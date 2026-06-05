@@ -2154,7 +2154,7 @@ function renderFleet(){
   if (facClusters.length) {
     const facHTML = facClusters.map(f => {
       const names = [...f.vessels].slice(0, 3).join(', ') + (f.vessels.size > 3 ? ` +${f.vessels.size - 3}` : '');
-      const knownPt = POINTS.find(p => {
+      const knownPt = LANDMARKS.find(p => {
         const dLat = f.lat - p.lat, dLon = f.lon - p.lon;
         return Math.sqrt(dLat*dLat + dLon*dLon) * 111 < 10;
       });
