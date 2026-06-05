@@ -220,8 +220,9 @@ async function loadSBData() {
       history[mmsi].positions.sort((a,b)=>a.ts-b.ts);
       history[mmsi].firstSeen = history[mmsi].positions[0].ts;
       history[mmsi].lastSeen  = history[mmsi].positions[history[mmsi].positions.length-1].ts;
-      if(!S.vessels[mmsi] || S.vessels[mmsi]._vapi) {
-        const last = history[mmsi].positions[history[mmsi].positions.length-1];
+      const last = history[mmsi].positions[history[mmsi].positions.length-1];
+      // Share: Supabase is the only source — always apply latest. Admin: don't overwrite live AIS.
+      if(SHARE_MODE || !S.vessels[mmsi] || last.ts > (S.vessels[mmsi].ts||0) || S.vessels[mmsi]._vapi) {
         S.vessels[mmsi] = {
           mmsi, ...VESSEL_DB[mmsi],
           lat:last.lat, lon:last.lon, sog:last.sog||0, cog:last.cog||0, ts:last.ts,
@@ -538,6 +539,30 @@ function addEvent(mmsi, type, detail, lat, lon) {
   addLog(`EVT [${type}] ${info.abbr||mmsi} — ${detail}`, 'event');
   if(S.tab==='events') prependEventRow(ev);
   return ev;
+}
+
+// ── Facility cluster detection ────────────────────────────────
+function detectFacilityClusters(radiusKm = 2) {
+  const mooredEvs = events.filter(e => e.type === 'MOORED' && e.lat != null && e.lon != null);
+  const clusters = [];
+  for (const ev of mooredEvs) {
+    let best = null, bestDist = radiusKm;
+    for (const c of clusters) {
+      const dLat = ev.lat - c.lat, dLon = ev.lon - c.lon;
+      const d = Math.sqrt(dLat*dLat + dLon*dLon) * 111;
+      if (d < bestDist) { best = c; bestDist = d; }
+    }
+    if (best) {
+      const n = best.count;
+      best.lat = (best.lat * n + ev.lat) / (n + 1);
+      best.lon = (best.lon * n + ev.lon) / (n + 1);
+      best.count++;
+      best.vessels.add(ev.abbr || ev.name || String(ev.mmsi));
+    } else {
+      clusters.push({ lat: ev.lat, lon: ev.lon, count: 1, vessels: new Set([ev.abbr || ev.name || String(ev.mmsi)]) });
+    }
+  }
+  return clusters.filter(c => c.count >= 2).sort((a, b) => b.count - a.count);
 }
 
 // ── AIS handler ───────────────────────────────────────────────
@@ -1363,7 +1388,7 @@ function updateOrbits() {
   for (const [name, tle] of Object.entries(tleData)) {
     const pos = propagateSat(tle.satrec, now);
     if (!pos || pos.alt < 150 || pos.alt > 2200) continue;
-    S_spacecraft[name] = { ...tle.meta, name, lat:pos.lat, lon:pos.lon, alt:pos.alt };
+    S_spacecraft[name] = { ...tle.meta, name, lat:pos.lat, lon:pos.lon, alt:pos.alt, incDeg: tle.satrec.inclo * (180/Math.PI) };
   }
   // Cluster and render one marker per cluster
   const clusters = clusterSpacecraft();
@@ -1801,7 +1826,7 @@ function buildSpacecraftDetail() {
       ${stat('STATUS','IN ORBIT','#00ff88')}
       ${stat('ALTITUDE',alt,'var(--t2)')}
       ${stat('POSITION',pos,'var(--t2)')}
-      ${stat('ORBIT','LEO','var(--t3)')}
+      ${stat('INCLINATION', sc.incDeg != null ? sc.incDeg.toFixed(1)+'°' : 'LEO', 'var(--t3)')}
     </div>
     ${modulesHtml}
     ${dockedHtml}
@@ -1839,7 +1864,7 @@ function buildSpacecraftRow(cluster) {
     <div class="vbottom">
       <div class="vdot" style="background:#00ff88;box-shadow:0 0 5px #00ff8888"></div>
       <span style="color:#00ff88;font-size:10px;font-weight:700">IN ORBIT</span>
-      ${sc.alt ? `<span style="color:var(--t4);font-size:10px;margin-left:4px">${Math.round(sc.alt)} km</span>` : ''}
+      ${sc.alt ? `<span style="color:var(--t4);font-size:10px;margin-left:4px">${Math.round(sc.alt)} km${sc.incDeg != null ? ` · ${sc.incDeg.toFixed(1)}°` : ''}</span>` : ''}
     </div>
   </div>`;
 }
@@ -2124,6 +2149,27 @@ function renderFleet(){
   if (inactVesselHTML) parts.push(hdr('VESSELS', parts.length>0) + inactVesselHTML);
   if (inactACHTML)     parts.push(hdr('AIRCRAFT', parts.length>0) + inactACHTML);
   if (inactSCHTML)     parts.push(hdr('SPACECRAFT', parts.length>0) + inactSCHTML);
+
+  const facClusters = detectFacilityClusters();
+  if (facClusters.length) {
+    const facHTML = facClusters.map(f => {
+      const names = [...f.vessels].slice(0, 3).join(', ') + (f.vessels.size > 3 ? ` +${f.vessels.size - 3}` : '');
+      const knownPt = POINTS.find(p => {
+        const dLat = f.lat - p.lat, dLon = f.lon - p.lon;
+        return Math.sqrt(dLat*dLat + dLon*dLon) * 111 < 10;
+      });
+      const label = knownPt ? knownPt.name : `${f.lat.toFixed(3)}°, ${f.lon.toFixed(3)}°`;
+      return `<div class="vrow" onclick="map&&map.setView([${f.lat.toFixed(5)},${f.lon.toFixed(5)}],10)" style="cursor:pointer">
+        <div class="vn" style="color:var(--t2);font-size:12px">${esc(label)}</div>
+        <div class="vop" style="color:var(--t4)">${esc(names)}</div>
+        <div class="vbottom">
+          <div class="vdot" style="background:#ffcc00;box-shadow:0 0 4px #ffcc0066"></div>
+          <span style="color:var(--t3);font-size:10px">${f.count} stop${f.count>1?'s':''} · ${f.vessels.size} vessel${f.vessels.size>1?'s':''}</span>
+        </div>
+      </div>`;
+    }).join('');
+    parts.push(hdr('DETECTED LOCATIONS', true) + facHTML);
+  }
 
   document.getElementById('fleet').innerHTML = parts.join('');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
