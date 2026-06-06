@@ -509,6 +509,24 @@ function showPingRing(lat, lon, col) {
   setTimeout(() => { try { layers.removeLayer(m); } catch(e) {} }, 5000);
 }
 
+// Split a track into continuous segments, breaking when consecutive points jump >300km
+// (catches AIS dropouts where the reconnect line would cross land)
+function _splitTrack(track) {
+  const segs = [], R = 6371;
+  let cur = [track[0]];
+  for (let i = 1; i < track.length; i++) {
+    const [la1,lo1] = track[i-1], [la2,lo2] = track[i];
+    const r = Math.PI/180;
+    const dLa=(la2-la1)*r, dLo=(lo2-lo1)*r;
+    const a = Math.sin(dLa/2)**2 + Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dLo/2)**2;
+    const km = 2*R*Math.asin(Math.sqrt(a));
+    if (km > 300) { segs.push(cur); cur = [track[i]]; }
+    else cur.push(track[i]);
+  }
+  segs.push(cur);
+  return segs;
+}
+
 function updateMarker(v) {
   if(!map||!layers||!v.lat||!v.lon) return;
   const mmsi=v.mmsi, col=opColor(v.operator), sel=S.selected===mmsi;
@@ -541,8 +559,17 @@ function updateMarker(v) {
   );
   if(v.track&&v.track.length>1) {
     const trackStyle={color:col,weight:stale?1:2,opacity:hist?0.55:vapi?0.4:stale?0.2:0.55,dashArray:vapi?'3 5':null};
-    if(tracks[mmsi]) { tracks[mmsi].setLatLngs(v.track); tracks[mmsi].setStyle(trackStyle); }
-    else tracks[mmsi]=L.polyline(v.track,trackStyle).addTo(layers).on('click',()=>selectVessel(mmsi));
+    const segs = _splitTrack(v.track);
+    if(tracks[mmsi]) { tracks[mmsi].clearLayers(); }
+    else { tracks[mmsi] = L.layerGroup().addTo(layers); tracks[mmsi].on('click',()=>selectVessel(mmsi)); }
+    segs.forEach((seg, i) => {
+      if(seg.length>1) L.polyline(seg,{...trackStyle,interactive:false}).addTo(tracks[mmsi]);
+      // Dotted gap line connecting end of this segment to start of the next
+      if(i < segs.length-1 && segs[i+1].length) {
+        const gapStyle={color:col,weight:1,opacity:0.25,dashArray:'4 8',interactive:false};
+        L.polyline([seg[seg.length-1], segs[i+1][0]], gapStyle).addTo(tracks[mmsi]);
+      }
+    });
   }
   // COG heading arrow — project forward 10 min at current SOG
   if(!hollow && v.sog>0.5 && v.cog!=null && v.lat && v.lon) {
