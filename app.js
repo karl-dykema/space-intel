@@ -561,13 +561,13 @@ function updateMarker(v) {
     const trackStyle={color:col,weight:stale?1:2,opacity:hist?0.55:vapi?0.4:stale?0.2:0.55,dashArray:vapi?'3 5':null};
     const segs = _splitTrack(v.track);
     if(tracks[mmsi]) { tracks[mmsi].clearLayers(); }
-    else { tracks[mmsi] = L.layerGroup().addTo(layers); tracks[mmsi].on('click',()=>selectVessel(mmsi)); }
+    else { tracks[mmsi] = L.featureGroup().addTo(layers).on('click',()=>selectVessel(mmsi)); }
     segs.forEach((seg, i) => {
-      if(seg.length>1) L.polyline(seg,{...trackStyle,interactive:false}).addTo(tracks[mmsi]);
-      // Dotted gap line connecting end of this segment to start of the next
+      if(seg.length>1) L.polyline(seg, trackStyle).addTo(tracks[mmsi]);
       if(i < segs.length-1 && segs[i+1].length) {
-        const gapStyle={color:col,weight:1,opacity:0.25,dashArray:'4 8',interactive:false};
-        L.polyline([seg[seg.length-1], segs[i+1][0]], gapStyle).addTo(tracks[mmsi]);
+        L.polyline([seg[seg.length-1], segs[i+1][0]],
+          {color:col,weight:1,opacity:0.22,dashArray:'4 8',interactive:false}
+        ).addTo(tracks[mmsi]);
       }
     });
   }
