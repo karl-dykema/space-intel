@@ -160,7 +160,7 @@ async function loadSBData() {
       history[mmsi].firstSeen = history[mmsi].positions[0].ts;
       history[mmsi].lastSeen  = history[mmsi].positions[history[mmsi].positions.length-1].ts;
       const last = history[mmsi].positions[history[mmsi].positions.length-1];
-      const dbTrack = history[mmsi].positions.map(p=>[p.lat,p.lon]);
+      const dbTrack = history[mmsi].positions.map(p=>[p.lat,p.lon,p.ts]);
       if(!S.vessels[mmsi]) {
         // Vessel not yet seen — create from DB history
         S.vessels[mmsi] = { mmsi, ...VESSEL_DB[mmsi], lat:last.lat, lon:last.lon, sog:last.sog||0, cog:last.cog||0, ts:last.ts, track:dbTrack, _historical:true };

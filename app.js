@@ -271,7 +271,7 @@ function handleAIS(msg) {
 
       const lt=v.track.slice(-1)[0];
       if(!lt||Math.abs(lat-lt[0])>0.0002||Math.abs(lon-lt[1])>0.0002) {
-        v.track.push([lat,lon]);
+        v.track.push([lat,lon,now]);
         if(v.track.length>MAX_POS) v.track.shift();
       }
       showPingRing(v.lat, v.lon, opColor(info.operator));
@@ -509,22 +509,30 @@ function showPingRing(lat, lon, col) {
   setTimeout(() => { try { layers.removeLayer(m); } catch(e) {} }, 5000);
 }
 
-// Split a track into continuous segments, breaking when consecutive points jump >300km
-// (catches AIS dropouts where the reconnect line would cross land)
+// Split a track into continuous segments; break when consecutive points:
+//   - jump >300km (position teleport), OR
+//   - have a >4h time gap (AIS dark / different voyage day)
+// Returns { segs: [[lat,lon],...], gapIsTime: bool[] } — time-gap splits don't get dotted connectors.
 function _splitTrack(track) {
-  const segs = [], R = 6371;
-  let cur = [track[0]];
+  const segs = [], gapIsTime = [], R = 6371, GAP_MS = 4 * 3600000;
+  let cur = [[track[0][0], track[0][1]]];
   for (let i = 1; i < track.length; i++) {
-    const [la1,lo1] = track[i-1], [la2,lo2] = track[i];
+    const [la1, lo1, ts1] = track[i-1], [la2, lo2, ts2] = track[i];
     const r = Math.PI/180;
     const dLa=(la2-la1)*r, dLo=(lo2-lo1)*r;
     const a = Math.sin(dLa/2)**2 + Math.cos(la1*r)*Math.cos(la2*r)*Math.sin(dLo/2)**2;
     const km = 2*R*Math.asin(Math.sqrt(a));
-    if (km > 300) { segs.push(cur); cur = [track[i]]; }
-    else cur.push(track[i]);
+    const tGap = (ts1 && ts2) ? ts2 - ts1 : 0;
+    if (km > 300 || tGap > GAP_MS) {
+      segs.push(cur);
+      gapIsTime.push(tGap > GAP_MS && km <= 300);
+      cur = [[la2, lo2]];
+    } else {
+      cur.push([la2, lo2]);
+    }
   }
   segs.push(cur);
-  return segs;
+  return { segs, gapIsTime };
 }
 
 function updateMarker(v) {
@@ -559,12 +567,12 @@ function updateMarker(v) {
   );
   if(v.track&&v.track.length>1) {
     const trackStyle={color:col,weight:stale?1:2,opacity:hist?0.55:vapi?0.4:stale?0.2:0.55,dashArray:vapi?'3 5':null};
-    const segs = _splitTrack(v.track);
+    const { segs, gapIsTime } = _splitTrack(v.track);
     if(tracks[mmsi]) { tracks[mmsi].clearLayers(); }
     else { tracks[mmsi] = L.featureGroup().addTo(layers).on('click',()=>selectVessel(mmsi)); }
     segs.forEach((seg, i) => {
       if(seg.length>1) L.polyline(seg, trackStyle).addTo(tracks[mmsi]);
-      if(i < segs.length-1 && segs[i+1].length) {
+      if(i < segs.length-1 && segs[i+1].length && !gapIsTime[i]) {
         L.polyline([seg[seg.length-1], segs[i+1][0]],
           {color:col,weight:1,opacity:0.22,dashArray:'4 8',interactive:false}
         ).addTo(tracks[mmsi]);
