@@ -8,7 +8,13 @@ function fetchUrl(url) {
   return new Promise((resolve, reject) => {
     const mod = url.startsWith('https') ? https : http;
     const req = mod.get(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SpaceFleetTracker/1.0)' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Accept-Encoding': 'identity',
+        'Cache-Control': 'no-cache',
+      },
       timeout: 15000,
     }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
@@ -63,6 +69,37 @@ function parseCameronCounty(html) {
     if (s.includes('scheduled') || s.includes('possible')) status = 'scheduled';
   }
   return { closures, delays, status };
+}
+
+// ── Cameron County RSS parser ─────────────────────────────────
+function parseCameronCountyRSS(xml) {
+  const closures = [];
+  const itemRx = /<item>([\s\S]*?)<\/item>/g;
+  let m;
+  while ((m = itemRx.exec(xml)) !== null) {
+    const block = m[1];
+    const getTag = tag => {
+      const r = new RegExp(`<${tag}[^>]*><!\\[CDATA\\[([\\s\\S]*?)\\]\\]><\\/${tag}>|<${tag}[^>]*>([^<]*)<\\/${tag}>`);
+      const x = r.exec(block);
+      return x ? (x[1]||x[2]||'').trim() : '';
+    };
+    const title  = getTag('title');
+    const date   = getTag('pubDate');
+    if (!title) continue;
+    // Parse date/time from title, e.g. "Order Closing … July 31, 2025, from 7 a.m. to 7 p.m."
+    const dateMatch = title.match(/([A-Z][a-z]+ \d{1,2},\s*\d{4})/);
+    const timeMatch = title.match(/from\s+([\d:apm. ]+)\s+to\s+([\d:apm. ]+)/i);
+    const isClosed  = /close|closure|closed/i.test(title);
+    closures.push({
+      type:   'Primary Day',
+      date:   dateMatch ? dateMatch[1] : date,
+      time:   timeMatch ? `${timeMatch[1]} to ${timeMatch[2]}` : '',
+      status: isClosed ? 'Closure Scheduled' : title.slice(0, 60),
+    });
+  }
+  const status = closures.some(c => /closed/i.test(c.status)) ? 'closed'
+               : closures.length ? 'scheduled' : 'open';
+  return { closures, delays: [], status };
 }
 
 // ── FAA TFR parser ────────────────────────────────────────────
@@ -161,11 +198,23 @@ async function main() {
   console.log('Fetching Cameron County closures…');
   let closureData = { closures: [], delays: [], status: 'unknown' };
   try {
-    const html = await fetchUrl('https://www.cameroncountytx.gov/spacex/');
-    closureData = parseCameronCounty(html);
-    console.log(`  Status: ${closureData.status}, entries: ${closureData.closures.length}`);
-  } catch(e) {
-    console.warn('  Cameron County fetch failed:', e.message);
+    // Try RSS feed first — avoids Cloudflare DDoS page protection on the main site
+    const rss = await fetchUrl('https://www.cameroncountytx.gov/spacex/feed/');
+    if (rss.includes('<rss') || rss.includes('<feed')) {
+      closureData = parseCameronCountyRSS(rss);
+      console.log(`  RSS: status=${closureData.status}, entries=${closureData.closures.length}`);
+    } else {
+      throw new Error('RSS not available');
+    }
+  } catch(_) {
+    try {
+      const html = await fetchUrl('https://www.cameroncountytx.gov/spacex/');
+      if (html.includes('DDOS') || html.includes('Block ID')) throw new Error('Cloudflare block');
+      closureData = parseCameronCounty(html);
+      console.log(`  HTML: status=${closureData.status}, entries=${closureData.closures.length}`);
+    } catch(e) {
+      console.warn('  Cameron County fetch failed:', e.message);
+    }
   }
 
   console.log('Fetching FAA TFRs…');
