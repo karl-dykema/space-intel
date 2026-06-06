@@ -182,3 +182,50 @@ body.share-mode .share-only{display:initial!important;}
 .ops-event.current .ops-et{color:#ff8800;}
 .ops-event.current .ops-el{color:#fff;}
 .ops-tplus{font-family:'Share Tech Mono','Courier New',monospace;font-size:30px;font-weight:700;letter-spacing:.04em;line-height:1.1;}
+
+/* ── Mobile ── */
+#mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:4999;}
+#mob-overlay.active{display:block;}
+#mob-fleet-btn,#mob-events-btn{
+  display:none;position:absolute;bottom:70px;z-index:1000;
+  background:var(--bg2);border:1px solid var(--bdr);color:var(--t2);
+  padding:10px 16px;font-size:12px;letter-spacing:.06em;cursor:pointer;
+  box-shadow:0 2px 14px rgba(0,0,0,.5);font-family:var(--f);
+}
+#mob-fleet-btn{left:12px;border-radius:3px;}
+#mob-events-btn{right:12px;border-radius:3px;}
+
+@media(max-width:768px){
+  .hs,.hstats{display:none!important;}
+  #hdr{padding:7px 12px;}
+  .ht{font-size:15px;}
+
+  #cbar{overflow-x:auto;flex-wrap:nowrap;padding:5px 10px;gap:8px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  #cbar::-webkit-scrollbar{display:none;}
+  .cbtn{white-space:nowrap;flex-shrink:0;}
+
+  #left{
+    position:fixed;top:0;left:-100%;width:85vw;max-width:320px;
+    height:100%;z-index:5000;transition:left .2s ease;
+    box-shadow:4px 0 24px rgba(0,0,0,.7);
+  }
+  #left.mob-open{left:0;}
+
+  #right{
+    position:fixed!important;top:0;right:0!important;
+    width:88vw!important;max-width:390px!important;
+    height:100%;z-index:5000;transition:transform .2s ease;
+    transform:translateX(110%);
+    box-shadow:-4px 0 24px rgba(0,0,0,.7);
+    border-left:1px solid var(--bdr)!important;
+  }
+  #right:not(.collapsed){transform:translateX(0);}
+  #right.collapsed{transform:translateX(110%)!important;width:88vw!important;border-left:1px solid var(--bdr)!important;}
+  #right.collapsed .rtabs{display:flex!important;}
+  #right.collapsed #rpanel{display:block!important;}
+  #rpanel-toggle{display:none!important;}
+
+  #mob-fleet-btn,#mob-events-btn{display:block;}
+  #mleg{bottom:64px;}
+  #missions-panel{width:100vw!important;}
+}

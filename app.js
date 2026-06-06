@@ -693,6 +693,7 @@ function updateAircraftMarker(reg) {
 
 window.onload=()=>{
   loadLS();
+  if(window.innerWidth <= 768) document.getElementById('right').classList.add('collapsed');
 
   if(SHARE_MODE) {
     document.body.classList.add('share-mode');

@@ -661,3 +661,27 @@ async function loadVapiPositions() {
   } catch(e) { /* vapi-positions.json not present */ }
 }
 
+function toggleMobileFleet() {
+  const left = document.getElementById('left');
+  const overlay = document.getElementById('mob-overlay');
+  const opening = !left.classList.contains('mob-open');
+  left.classList.toggle('mob-open', opening);
+  overlay.classList.toggle('active', opening);
+  if (opening) document.getElementById('right').classList.add('collapsed');
+}
+
+function toggleMobileEvents() {
+  const right = document.getElementById('right');
+  const overlay = document.getElementById('mob-overlay');
+  const opening = right.classList.contains('collapsed');
+  right.classList.toggle('collapsed', !opening);
+  overlay.classList.toggle('active', opening);
+  if (opening) document.getElementById('left').classList.remove('mob-open');
+}
+
+function closeMobilePanels() {
+  document.getElementById('left').classList.remove('mob-open');
+  document.getElementById('right').classList.add('collapsed');
+  document.getElementById('mob-overlay').classList.remove('active');
+}
+
