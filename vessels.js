@@ -670,6 +670,26 @@ const LANDMARKS = [
 // ── Aircraft Database ─────────────────────────────────────────
 // Keyed by registration. Polled live from airplanes.live every 60s.
 const AIRCRAFT_DB = {
+  // ── NASA KSC H135 helicopters ────────────────────────────────
+  'N425NA': {
+    name:'NASA H135 (N425NA)', abbr:'NASA Helo 1',
+    operator:'NASA', role:'Security / rescue / VIP transport — KSC',
+    model:'Airbus H135 (EC-135T3)', type:'helicopter',
+    notes:'One of three H135s based at Kennedy Space Center Launch & Landing Facility. Delivered Sep 2020. Replaced Bell UH-1 Hueys. Missions: launch-area security, EMS, crew/executive transport. MSN 2073.',
+  },
+  'N435NA': {
+    name:'NASA H135 (N435NA)', abbr:'NASA Helo 2',
+    operator:'NASA', role:'Security / rescue / VIP transport — KSC',
+    model:'Airbus H135 (EC-135T3)', type:'helicopter',
+    notes:'One of three H135s based at KSC. Delivered Sep 2020. MSN 2081. Operated under NASA KSC Flight Operations.',
+  },
+  'N442NA': {
+    name:'NASA H135 (N442NA)', abbr:'NASA Helo 3',
+    operator:'NASA', role:'Security / rescue / VIP transport — KSC',
+    model:'Airbus H135 (EC-135T3)', type:'helicopter',
+    notes:'Third KSC H135 — arrived Mar 11 2021, completing the three-ship fleet. Used May 29 2026 by NASA Administrator Jared Isaacman for aerial survey of Blue Origin LC-36 after New Glenn static-fire explosion (May 28 2026, largest explosion in Cape Canaveral history).',
+  },
+  // ── Rocket Lab ───────────────────────────────────────────────
   'ZK-HEV': {
     name:'Rocket Lab Capture Helicopter', abbr:'ZK-HEV',
     operator:'Rocket Lab', role:'Electron mid-air recovery',
