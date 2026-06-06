@@ -220,30 +220,6 @@ function addEvent(mmsi, type, detail, lat, lon) {
   return ev;
 }
 
-// ── Facility cluster detection ────────────────────────────────
-function detectFacilityClusters(radiusKm = 2) {
-  const mooredEvs = events.filter(e => e.type === 'MOORED' && e.lat != null && e.lon != null);
-  const clusters = [];
-  for (const ev of mooredEvs) {
-    let best = null, bestDist = radiusKm;
-    for (const c of clusters) {
-      const dLat = ev.lat - c.lat, dLon = ev.lon - c.lon;
-      const d = Math.sqrt(dLat*dLat + dLon*dLon) * 111;
-      if (d < bestDist) { best = c; bestDist = d; }
-    }
-    if (best) {
-      const n = best.count;
-      best.lat = (best.lat * n + ev.lat) / (n + 1);
-      best.lon = (best.lon * n + ev.lon) / (n + 1);
-      best.count++;
-      best.vessels.add(ev.abbr || ev.name || String(ev.mmsi));
-    } else {
-      clusters.push({ lat: ev.lat, lon: ev.lon, count: 1, vessels: new Set([ev.abbr || ev.name || String(ev.mmsi)]) });
-    }
-  }
-  return clusters.filter(c => c.count >= 2).sort((a, b) => b.count - a.count);
-}
-
 // ── AIS handler ───────────────────────────────────────────────
 function handleAIS(msg) {
   const m=msg.MetaData||{};

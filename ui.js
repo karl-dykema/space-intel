@@ -156,27 +156,6 @@ function renderFleet(){
   if (inactACHTML)     parts.push(hdr('AIRCRAFT', parts.length>0) + inactACHTML);
   if (inactSCHTML)     parts.push(hdr('SPACECRAFT', parts.length>0) + inactSCHTML);
 
-  const facClusters = detectFacilityClusters();
-  if (facClusters.length) {
-    const facHTML = facClusters.map(f => {
-      const names = [...f.vessels].slice(0, 3).join(', ') + (f.vessels.size > 3 ? ` +${f.vessels.size - 3}` : '');
-      const knownPt = LANDMARKS.find(p => {
-        const dLat = f.lat - p.lat, dLon = f.lon - p.lon;
-        return Math.sqrt(dLat*dLat + dLon*dLon) * 111 < 10;
-      });
-      const label = knownPt ? knownPt.name : `${f.lat.toFixed(3)}°, ${f.lon.toFixed(3)}°`;
-      return `<div class="vrow" onclick="map&&map.setView([${f.lat.toFixed(5)},${f.lon.toFixed(5)}],10)" style="cursor:pointer">
-        <div class="vn" style="color:var(--t2);font-size:12px">${esc(label)}</div>
-        <div class="vop" style="color:var(--t4)">${esc(names)}</div>
-        <div class="vbottom">
-          <div class="vdot" style="background:#ffcc00;box-shadow:0 0 4px #ffcc0066"></div>
-          <span style="color:var(--t3);font-size:10px">${f.count} stop${f.count>1?'s':''} · ${f.vessels.size} vessel${f.vessels.size>1?'s':''}</span>
-        </div>
-      </div>`;
-    }).join('');
-    parts.push(hdr('DETECTED LOCATIONS', true) + facHTML);
-  }
-
   document.getElementById('fleet').innerHTML = parts.join('');
   document.querySelectorAll('.vrow[data-mmsi]').forEach(el=>{el.onclick=()=>selectVessel(el.dataset.mmsi);});
   document.querySelectorAll('.vrow[data-reg]').forEach(el=>{el.onclick=()=>showAircraftDetail(el.dataset.reg);});
