@@ -1,7 +1,44 @@
 {
-  "closures": [],
+  "closures": [
+    {
+      "type": "URL:",
+      "date": "www.cameroncountytx.gov/spacex/",
+      "time": "",
+      "status": ""
+    },
+    {
+      "type": "Your Browser:",
+      "date": "Mozilla/5.0 (compatible; SpaceFleetTracker/1.0)",
+      "time": "",
+      "status": ""
+    },
+    {
+      "type": "Block ID:",
+      "date": "DDOS22",
+      "time": "",
+      "status": ""
+    },
+    {
+      "type": "Block reason:",
+      "date": "DDOS attempt was blocked.",
+      "time": "",
+      "status": ""
+    },
+    {
+      "type": "Time:",
+      "date": "2026-06-06 16:25:35",
+      "time": "",
+      "status": ""
+    },
+    {
+      "type": "Server ID:",
+      "date": "14007",
+      "time": "",
+      "status": ""
+    }
+  ],
   "delays": [],
-  "status": "unknown",
+  "status": "open",
   "tfrs": [],
-  "fetchedAt": null
+  "fetchedAt": "2026-06-06T20:25:35.889Z"
 }
