@@ -10,13 +10,19 @@ let _tfrLayers    = {};
 async function loadClosuresData() {
   try {
     const r = await fetch('data/closures.json?_=' + Date.now());
-    if (!r.ok) return;
+    if (!r.ok) { addLog('Closures: data/closures.json not found', 'sys'); return; }
     const data = await r.json();
+    const ageH = data.fetchedAt ? ((Date.now() - new Date(data.fetchedAt).getTime()) / 3600000).toFixed(1) : '?';
+    const tfrCount  = (data.tfrs  || []).length;
+    const spxTFRs   = (data.tfrs  || []).filter(t => t.isSpaceX).length;
+    const closureStatus = data.status || 'unknown';
+    addLog(`Closures: Boca Chica=${closureStatus} · TFRs=${tfrCount} (${spxTFRs} SpaceX) · data ${ageH}h old`, 'sys');
+    if (tfrCount > 0) addLog(`TFRs: ${(data.tfrs||[]).map(t=>`${t.notamNum||t.id}${t.isSpaceX?' [SpX]':''}`).join(', ')}`, 'ais');
     applyClosureOverlay(data);
     updateClosureBadge(data);
     applyTFROverlays(data.tfrs || []);
     if (!SHARE_MODE) _checkClosuresAge(data.fetchedAt);
-  } catch(_) {}
+  } catch(e) { addLog(`Closures: load error — ${e.message}`, 'err'); }
 }
 
 // ── Staleness check (admin only) ─────────────────────────────
