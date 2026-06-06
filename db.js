@@ -1,5 +1,24 @@
 'use strict';
 
+// Tab leader election — only one tab writes positions to Supabase at a time.
+// Leader renews its claim every 5s. If claim goes stale (>15s), any tab can take over.
+const _TAB_ID = Math.random().toString(36).slice(2);
+const _LEADER_KEY = 'sft_leader';
+const _LEADER_TS  = 'sft_leader_ts';
+
+function _claimLeader() {
+  localStorage.setItem(_LEADER_KEY, _TAB_ID);
+  localStorage.setItem(_LEADER_TS,  Date.now().toString());
+}
+function _isLeader() {
+  const owner = localStorage.getItem(_LEADER_KEY);
+  const ts    = parseInt(localStorage.getItem(_LEADER_TS) || '0');
+  if (owner === _TAB_ID) return true;
+  if (Date.now() - ts > 15000) { _claimLeader(); return true; } // stale — take over
+  return false;
+}
+setInterval(() => { if (localStorage.getItem(_LEADER_KEY) === _TAB_ID) _claimLeader(); }, 5000);
+
 const SB = {
   url:   null,
   akey:  null,
@@ -54,7 +73,7 @@ function smoothPos(prevLat, prevLon, rawLat, rawLon, sog) {
 
 const sbLastPos = {};
 function maybeSBPos(mmsi, lat, lon, sog, cog, ts) {
-  if(!SB.ready) return;
+  if(!SB.ready || !_isLeader()) return;
   const moving = sog != null && sog > 0.5;
   const throttle = moving ? 15000 : 90000;
   if(sbLastPos[mmsi] && ts-sbLastPos[mmsi] < throttle) return;
@@ -64,14 +83,14 @@ function maybeSBPos(mmsi, lat, lon, sog, cog, ts) {
 
 const sbLastAcPos = {};
 function maybeSBAcPos(reg, lat, lon, alt, gs, track, ts) {
-  if(!SB.ready || SHARE_MODE) return;
+  if(!SB.ready || SHARE_MODE || !_isLeader()) return;
   if(sbLastAcPos[reg] && ts - sbLastAcPos[reg] < 30000) return;
   sbLastAcPos[reg] = ts;
   SB.insert('aircraft_positions', { reg, lat, lon, alt: alt ?? null, gs: gs ?? null, track: track ?? null, ts: new Date(ts).toISOString() });
 }
 
 function sbWriteEvent(ev) {
-  if(!SB.ready) return;
+  if(!SB.ready || !_isLeader()) return;
   SB.insert('events', {
     mmsi:ev.mmsi, vessel_name:ev.name, operator:ev.operator,
     type:ev.type, detail:ev.detail, lat:ev.lat, lon:ev.lon,

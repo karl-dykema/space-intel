@@ -37,8 +37,9 @@ function connect(key) {
   const ws=new WebSocket('wss://stream.aisstream.io/v0/stream');
   ws.onopen=()=>{
     clearTimeout(timeout);
-    _aisReconnectDelay = 10000; // reset backoff on success
+    _aisReconnectDelay = 10000;
     _aisManualDisconnect = false;
+    _claimLeader();
     ws.send(JSON.stringify({
       APIKey:key, BoundingBoxes:[[[-90,-180],[90,180]]],
       FiltersShipMMSI:KNOWN_MMSIS, FilterMessageTypes:['PositionReport','ShipStaticData'],
