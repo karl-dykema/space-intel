@@ -908,7 +908,7 @@ function updateMarker(v) {
 function selectVessel(mmsi) {
   S.selected=mmsi;
   const v=S.vessels[mmsi];
-  if(v?.lat&&v?.lon&&map) map.setView([v.lat,v.lon],7);
+  if(v?.lat&&v?.lon&&map) map.setView([v.lat,v.lon],10);
   Object.values(S.vessels).forEach(vv=>{if(vv.lat)updateMarker(vv);});
   renderFleet();
   setTab('vessel');
