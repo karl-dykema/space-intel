@@ -53,7 +53,7 @@ graph TD
     end
 
     AIS -->|admin only| AISAPI
-    APP -->|poll| ADSB
+    APP -->|admin only| ADSB
     DB <-->|read/write| SB
     SC -->|fetch| TLE
     MS -->|fetch| LL
@@ -149,7 +149,7 @@ graph TD
 ## Features
 
 - **Live AIS** via [aisstream.io](https://aisstream.io) WebSocket — global coverage, all tracked MMSIs
-- **Live ADS-B** via [airplanes.live](https://airplanes.live) — polled every 60 seconds (admin only; share page syncs via database)
+- **Live ADS-B** via [airplanes.live](https://airplanes.live) — polled every 60 seconds (admin only); share page gets aircraft positions from Supabase
 - **Orbital tracking** — TLE propagation via satellite.js, positions updated every 15 seconds
 - **Mission linkage** — [Launch Library 2](https://thespacedevs.com) data links vessels to assigned missions; trajectory arcs use real orbital inclination
 - **Booster projections** — estimated drone ship arrival computed from mission timing and live vessel position

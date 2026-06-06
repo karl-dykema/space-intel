@@ -733,8 +733,7 @@ window.onload=()=>{
   loadSBData().then(() => { loadVapiPositions(); initSBRealtime(); });
   setInterval(loadSBData, 15000); // poll every 15s — bulk query is cheap, matches vessel write throttle
   fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
-  pollAircraft();
-  setInterval(pollAircraft, AIRCRAFT_POLL_MS);
+  if(!SHARE_MODE) { pollAircraft(); setInterval(pollAircraft, AIRCRAFT_POLL_MS); }
   fetchTLEs();
   fetchDockedManifest();
   setInterval(()=>{ fetchTLEs(); fetchDockedManifest(); }, 3600000);
