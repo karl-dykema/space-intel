@@ -277,14 +277,39 @@ function updateSBStatus() {
   const lbl=document.getElementById('sbstatus');
   if(!dot||!lbl) return;
   if(SB.ready) {
-    dot.style.background='#4477ff';
-    dot.style.boxShadow='0 0 5px #4477ff';
-    lbl.textContent='DB ✓';
-    lbl.style.color='#4477ff';
+    const st = window._dbStorage;
+    const col = st?.pct >= 90 ? '#ff4444' : st?.pct >= 70 ? '#ff8800' : '#4477ff';
+    const icon = st?.pct >= 90 ? '!!!' : st?.pct >= 70 ? '⚠' : '✓';
+    dot.style.background = col;
+    dot.style.boxShadow = `0 0 5px ${col}`;
+    lbl.textContent = `DB ${icon}`;
+    lbl.style.color = col;
+    lbl.title = st ? `~${st.estimatedMB}MB used of 500MB (${st.pct}%) — ${st.total.toLocaleString()} rows` : '';
   } else {
     dot.style.background='#2a3a4a';
     dot.style.boxShadow='none';
     lbl.textContent='DB —';
     lbl.style.color='var(--t4)';
   }
+}
+
+async function checkDBStorage() {
+  if (!SB.ready || SHARE_MODE) return;
+  try {
+    const counts = await Promise.all(['positions','aircraft_positions','events'].map(async t => {
+      const r = await fetch(`${SB.url}/rest/v1/${t}?select=count`, {
+        headers: { ...SB._h({}), 'Prefer':'count=exact', 'Range-Unit':'items', 'Range':'0-0' },
+      });
+      return parseInt(r.headers.get('content-range')?.split('/')[1] || '0');
+    }));
+    const [posCount, acCount, evCount] = counts;
+    const total = posCount + acCount + evCount;
+    const estimatedMB = Math.round(total * 110 / 1e6); // ~110 bytes/row average
+    const pct = Math.min(Math.round(estimatedMB / 500 * 100), 100);
+    window._dbStorage = { posCount, acCount, evCount, total, estimatedMB, pct };
+    updateSBStatus();
+    if (pct >= 90) addLog(`DB STORAGE CRITICAL: ~${estimatedMB}MB / 500MB (${pct}%) — consider pruning old rows`, 'err');
+    else if (pct >= 70) addLog(`DB STORAGE WARNING: ~${estimatedMB}MB / 500MB (${pct}%)`, 'news');
+    else addLog(`DB storage: ~${estimatedMB}MB / 500MB (${pct}%) — ${total.toLocaleString()} rows`, 'db');
+  } catch(e) { console.warn('[db] storage check failed:', e.message); }
 }

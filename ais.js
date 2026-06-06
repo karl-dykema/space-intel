@@ -100,6 +100,14 @@ function showSettings() {
   const sk=localStorage.getItem(LS.SB_AKEY)||'';
   document.getElementById('sb-key-input').value=sk?'•'.repeat(20):'';
   document.getElementById('settings-msg').textContent='';
+  const st = window._dbStorage;
+  const storageEl = document.getElementById('settings-storage');
+  if (storageEl && st) {
+    const col = st.pct >= 90 ? '#ff4444' : st.pct >= 70 ? '#ff8800' : '#00cc88';
+    storageEl.innerHTML = `<span style="color:${col}">~${st.estimatedMB}MB / 500MB (${st.pct}%)</span> &nbsp;·&nbsp; positions: ${st.posCount.toLocaleString()} &nbsp;·&nbsp; aircraft: ${st.acCount.toLocaleString()} &nbsp;·&nbsp; events: ${st.evCount.toLocaleString()}`;
+  } else if (storageEl) {
+    storageEl.textContent = 'checking…';
+  }
   loadSuggestions();
 }
 function closeSettings(){document.getElementById('settingsmodal').style.display='none';}
