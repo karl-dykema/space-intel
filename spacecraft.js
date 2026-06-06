@@ -553,19 +553,13 @@ function getMissionArcs(launch, isHot) {
       const sepPt = groundTrackPts(padCoords.lat, padCoords.lon, az, 1, 300)[1];
       const dsPt  = groundTrackPts(padCoords.lat, padCoords.lon, az, 1, 650)[1];
       const dsV   = S.vessels['368351350'];
-      const upperEndPt = groundTrackPts(sepPt[0], sepPt[1], az, 8, 200);
+      const ocisly = dsV?.lat ? {lat:dsV.lat,lon:dsV.lon} : {lat:dsPt[0],lon:dsPt[1]};
+      const upperEndPt = groundTrackPts(sepPt[0], sepPt[1], az, 8, 200); // 1600km upper stage arc
       arcs = [
-        { pts:groundTrackPts(padCoords.lat,padCoords.lon,az,6,50), style:{color:'#ff8800',weight:w,opacity:op,dashArray:da} },
-        { pts:upperEndPt,                                           style:{color:'#44aaff',weight:w,opacity:op,dashArray:da} },
+        { pts:groundTrackPts(padCoords.lat,padCoords.lon,az,6,50),          style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
+        { pts:greatCircleArc(sepPt[0],sepPt[1],ocisly.lat,ocisly.lon),      style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
+        { pts:upperEndPt,                                                     style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
       ];
-      if (dsV?.lat) {
-        const r = Math.PI/180;
-        const dLat = (dsV.lat - padCoords.lat)*r, dLon = (dsV.lon - padCoords.lon)*r;
-        const a = Math.sin(dLat/2)**2 + Math.cos(padCoords.lat*r)*Math.cos(dsV.lat*r)*Math.sin(dLon/2)**2;
-        if (2*6371*Math.asin(Math.sqrt(a)) > 400) arcs.push({ pts:greatCircleArc(sepPt[0],sepPt[1],dsV.lat,dsV.lon), style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} });
-      } else {
-        arcs.push({ pts:greatCircleArc(sepPt[0],sepPt[1],dsPt[0],dsPt[1]), style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} });
-      }
     } else {
       padCoords = /LC-39A/i.test(padName) ? LAUNCH_PADS['lc39a'] : LAUNCH_PADS['slc40'];
       const inc   = orbitInclination(orbit, padCoords.lat, missionName);
@@ -573,21 +567,13 @@ function getMissionArcs(launch, isHot) {
       const sepPt = groundTrackPts(padCoords.lat, padCoords.lon, az, 1, 350)[1];
       const dsPt  = groundTrackPts(padCoords.lat, padCoords.lon, az, 1, 700)[1];
       const dsE   = S.vessels['368219910'];
-      const upperEndPt = groundTrackPts(sepPt[0], sepPt[1], az, 10, 200);
+      const asog  = dsE?.lat ? {lat:dsE.lat,lon:dsE.lon} : {lat:dsPt[0],lon:dsPt[1]};
+      const upperEndPt = groundTrackPts(sepPt[0], sepPt[1], az, 10, 200); // 2000km upper stage arc
       arcs = [
-        { pts:groundTrackPts(padCoords.lat,padCoords.lon,az,7,50), style:{color:'#ff8800',weight:w,opacity:op,dashArray:da} },
-        { pts:upperEndPt,                                           style:{color:'#44aaff',weight:w,opacity:op,dashArray:da} },
+        { pts:groundTrackPts(padCoords.lat,padCoords.lon,az,7,50),           style:{color:'#ff8800',weight:w,opacity:op,  dashArray:da} },
+        { pts:greatCircleArc(sepPt[0],sepPt[1],asog.lat,asog.lon),           style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} },
+        { pts:upperEndPt,                                                      style:{color:'#44aaff',weight:w,opacity:op,  dashArray:da} },
       ];
-      // Only draw booster-to-ship arc when drone ship is deployed (>400km from pad)
-      if (dsE?.lat) {
-        const r = Math.PI/180;
-        const dLat = (dsE.lat - padCoords.lat)*r, dLon = (dsE.lon - padCoords.lon)*r;
-        const a = Math.sin(dLat/2)**2 + Math.cos(padCoords.lat*r)*Math.cos(dsE.lat*r)*Math.sin(dLon/2)**2;
-        const shipDistKm = 2*6371*Math.asin(Math.sqrt(a));
-        if (shipDistKm > 400) arcs.push({ pts:greatCircleArc(sepPt[0],sepPt[1],dsE.lat,dsE.lon), style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} });
-      } else {
-        arcs.push({ pts:greatCircleArc(sepPt[0],sepPt[1],dsPt[0],dsPt[1]), style:{color:'#ff4444',weight:w,opacity:op*.9,dashArray:da} });
-      }
     }
   } else if (lspName.includes('Blue Origin')) {
     padCoords = LAUNCH_PADS['lc36'];
