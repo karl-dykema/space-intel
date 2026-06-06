@@ -18,6 +18,54 @@ Real-time map of every vessel, aircraft, and spacecraft supporting commercial sp
 
 ---
 
+## Architecture
+
+```mermaid
+graph TD
+    HTML[index.html] --> CFG[config.js<br/>constants · SHARE_MODE]
+    HTML --> SDB[ships_db.js<br/>VESSEL_DB · LANDMARKS<br/>ZONES · VESSEL_HINTS]
+    HTML --> ADB[aircraft_db.js<br/>AIRCRAFT_DB]
+    HTML --> DB[db.js<br/>Supabase client<br/>loadSBData · realtime WS]
+    HTML --> SC[spacecraft.js<br/>TLE · SGP4 propagation<br/>ISS manifest · orbit markers]
+    HTML --> MS[missions.js<br/>Launch Library · mission cards<br/>ops panel · countdowns]
+    HTML --> AIS[ais.js<br/>aisstream.io WebSocket<br/>connect · settings]
+    HTML --> UI[ui.js<br/>renderFleet · detail panels<br/>event feed · formatting]
+    HTML --> APP[app.js<br/>state · map · AIS handler<br/>aircraft poll · init]
+
+    CFG --> DB
+    CFG --> AIS
+    SDB --> DB
+    SDB --> MS
+    ADB --> DB
+    DB --> UI
+    DB --> APP
+    SC --> APP
+    MS --> APP
+    AIS --> APP
+    UI --> APP
+
+    subgraph Data Sources
+        AISAPI[aisstream.io<br/>live AIS WebSocket]
+        ADSB[airplanes.live<br/>ADS-B poll 60s]
+        SB[(Supabase<br/>position history)]
+        TLE[Celestrak TLEs<br/>via GitHub Actions]
+        LL[Launch Library 2<br/>mission schedule]
+    end
+
+    AIS -->|admin only| AISAPI
+    APP -->|poll| ADSB
+    DB <-->|read/write| SB
+    SC -->|fetch| TLE
+    MS -->|fetch| LL
+```
+
+**Load order** (left to right in `index.html`):  
+`config` → `ships_db` → `aircraft_db` → `db` → `spacecraft` → `missions` → `ais` → `ui` → `app`
+
+**Share mode** (`?share`): Supabase is the only data source. AIS WebSocket never connects. All `db.js` update conditions start with `SHARE_MODE ||` so the shared page stays live via 15s poll + realtime subscription.
+
+---
+
 ## Fleet
 
 ### SpaceX — Vessels
@@ -80,6 +128,7 @@ Real-time map of every vessel, aircraft, and spacecraft supporting commercial sp
 | N426NA | P-3B Orion | Airborne science |
 | N917NA / N918NA / N960NA / N963NA / N966NA / N967NA | T-38 Talon fleet | Astronaut jet proficiency training |
 | N908NA | T-38A | Research support — NASA Ames (Moffett Field) |
+| N425NA / N435NA / N442NA | Airbus H135 (×3) | Security / rescue / VIP transport — KSC |
 
 ### Draken International / Jared Isaacman
 | Registration | Aircraft | Role |
@@ -127,7 +176,27 @@ Toggle buttons at the top control **Landmarks & Facilities**, **Vessels**, **Air
 **Optional — Supabase persistence:**
 1. Create a free project at [supabase.com](https://supabase.com)
 2. Run `supabase_schema.sql` in the SQL editor
-3. Set `CFG_SB_URL` and `CFG_SB_AKEY` at the top of `app.js`
+3. Paste your URL and anon key in ⚙ SETTINGS
+
+---
+
+## Files
+
+| File | Lines | Description |
+|------|-------|-------------|
+| `index.html` | ~255 | App shell, layout, script load order |
+| `config.js` | ~18 | Supabase URL/key, SHARE_MODE flag, log colors |
+| `ships_db.js` | ~876 | VESSEL_DB, LANDMARKS, ZONES, VESSEL_HINTS, operator config |
+| `aircraft_db.js` | ~368 | AIRCRAFT_DB — all tracked aircraft registrations |
+| `db.js` | ~232 | Supabase REST client, loadSBData, realtime WebSocket |
+| `spacecraft.js` | ~862 | TLE fetch/propagation, orbit markers, ISS docked manifest |
+| `missions.js` | ~669 | Launch Library fetch, mission cards, ops panel, countdowns |
+| `ais.js` | ~126 | aisstream.io WebSocket, connect/disconnect, settings modal |
+| `ui.js` | ~663 | Fleet list, detail panels, event feed, formatting helpers |
+| `app.js` | ~747 | State, map init, AIS message handler, aircraft poll, init |
+| `styles.css` | ~184 | All styles |
+| `supabase_schema.sql` | — | Database schema for position history and events |
+| `scripts/fetch-tles.js` | — | GitHub Actions TLE updater (runs every 2h) |
 
 ---
 
@@ -142,21 +211,9 @@ Toggle buttons at the top control **Landmarks & Facilities**, **Vessels**, **Air
 
 ---
 
-## Files
-
-| File | Description |
-|------|-------------|
-| `index.html` | App shell and layout |
-| `vessels.js` | Vessel/aircraft database, zones, landmarks, operator config |
-| `app.js` | AIS/ADS-B/TLE logic, Supabase client, map, UI |
-| `supabase_schema.sql` | Database schema for position history and events |
-| `scripts/fetch-tles.js` | GitHub Actions TLE updater |
-
----
-
 ## Contributing
 
-MMSIs, aircraft registrations, and vessel details live in `vessels.js`. PRs and issues welcome — especially for:
+MMSIs, aircraft registrations, and vessel details live in `ships_db.js` and `aircraft_db.js`. PRs and issues welcome — especially for:
 
 - Support tugs and secondary vessels that are hard to verify
 - New operator fleets (Firefly, Relativity, etc.)
