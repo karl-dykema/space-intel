@@ -143,8 +143,13 @@ async function loadSBData() {
     ? await SB.rpc('get_recent_tracks', { since_ts: _sinceHistoric, max_per_vessel: 300 })
     : await SB.select('positions', { mmsi:`in.(${KNOWN_MMSIS.join(',')})`, ts:`gte.${_sinceLive}`, order:'ts.asc', limit:'2000', select:'mmsi,lat,lon,ts,sog,cog' });
   if(allRows?.length) {
+    // RPC returns {mmsi, positions:[{lat,lon,sog,cog,ts},...]}; live poll returns flat rows
     const byMmsi = {};
-    allRows.forEach(r => { (byMmsi[r.mmsi] = byMmsi[r.mmsi]||[]).push(r); });
+    if(_isFirstLoad) {
+      allRows.forEach(r => { byMmsi[r.mmsi] = r.positions || []; });
+    } else {
+      allRows.forEach(r => { (byMmsi[r.mmsi] = byMmsi[r.mmsi]||[]).push(r); });
+    }
     for(const [mmsi, rows] of Object.entries(byMmsi)) {
       if(!VESSEL_DB[mmsi]) continue;
       const pos = rows.map(r=>({lat:r.lat,lon:r.lon,ts:new Date(r.ts).getTime(),sog:r.sog,cog:r.cog}));
