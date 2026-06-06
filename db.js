@@ -146,16 +146,21 @@ async function loadSBData() {
       history[mmsi].firstSeen = history[mmsi].positions[0].ts;
       history[mmsi].lastSeen  = history[mmsi].positions[history[mmsi].positions.length-1].ts;
       const last = history[mmsi].positions[history[mmsi].positions.length-1];
-      // SHARE_MODE: Supabase is the only data source — always apply latest position
-      if(SHARE_MODE || !S.vessels[mmsi] || last.ts > (S.vessels[mmsi].ts||0) || S.vessels[mmsi]._vapi) {
-        S.vessels[mmsi] = {
-          mmsi, ...VESSEL_DB[mmsi],
-          lat:last.lat, lon:last.lon, sog:last.sog||0, cog:last.cog||0, ts:last.ts,
-          track:history[mmsi].positions.map(p=>[p.lat,p.lon]),
-          _historical:true,
-        };
-        updateMarker(S.vessels[mmsi]);
+      const dbTrack = history[mmsi].positions.map(p=>[p.lat,p.lon]);
+      if(!S.vessels[mmsi]) {
+        // Vessel not yet seen — create from DB history
+        S.vessels[mmsi] = { mmsi, ...VESSEL_DB[mmsi], lat:last.lat, lon:last.lon, sog:last.sog||0, cog:last.cog||0, ts:last.ts, track:dbTrack, _historical:true };
+      } else {
+        // Vessel already exists (live AIS) — always prepend DB history to track so trail shows
+        S.vessels[mmsi].track = [...dbTrack, ...S.vessels[mmsi].track].slice(-MAX_POS);
+        // Only update position if DB is newer (share mode) or we have no position yet
+        if(SHARE_MODE || last.ts > (S.vessels[mmsi].ts||0) || S.vessels[mmsi]._vapi) {
+          S.vessels[mmsi].lat = last.lat; S.vessels[mmsi].lon = last.lon;
+          S.vessels[mmsi].sog = last.sog||0; S.vessels[mmsi].cog = last.cog||0;
+          S.vessels[mmsi].ts = last.ts; S.vessels[mmsi]._historical = true;
+        }
       }
+      updateMarker(S.vessels[mmsi]);
     }
   }
 
