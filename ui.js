@@ -628,7 +628,7 @@ async function loadVapiPositions() {
           lat: vp.lat, lon: vp.lon,
           sog: vp.sog||0, cog: vp.cog||0,
           ts: vpTs,
-          track: [],
+          track: existing?.track || [],
           _vapi: true,
           _vapiAge: fetchedTs,
         };
