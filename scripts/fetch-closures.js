@@ -115,9 +115,48 @@ async function fetchTFRs() {
   }
 }
 
+// ── Launch proximity check ────────────────────────────────────
+async function hoursToNextLaunch() {
+  try {
+    const json = await fetchUrl('https://api.spacexdata.com/v5/launches/upcoming');
+    const launches = JSON.parse(json);
+    const now = Date.now();
+    let nearest = Infinity;
+    for (const l of launches) {
+      if (!l.date_utc) continue;
+      const diff = (new Date(l.date_utc).getTime() - now) / 3600000;
+      if (diff > 0) nearest = Math.min(nearest, diff);
+    }
+    return nearest === Infinity ? 9999 : nearest;
+  } catch(e) {
+    console.warn('  Launch check failed:', e.message);
+    return 9999; // assume no launch imminent on error
+  }
+}
+
 // ── Main ──────────────────────────────────────────────────────
 async function main() {
   const outPath = path.join(__dirname, '..', 'data', 'closures.json');
+
+  // Smart skip: only re-fetch external sites when needed
+  // - launch within 48h  → always re-fetch (every 2h action run)
+  // - no launch near     → skip if data < 20h old
+  const hoursUntilLaunch = await hoursToNextLaunch();
+  console.log(`Next launch in: ${hoursUntilLaunch === 9999 ? 'unknown' : hoursUntilLaunch.toFixed(1) + 'h'}`);
+
+  if (hoursUntilLaunch > 48 && fs.existsSync(outPath)) {
+    try {
+      const prev = JSON.parse(fs.readFileSync(outPath, 'utf8'));
+      const ageH = prev.fetchedAt ? (Date.now() - new Date(prev.fetchedAt).getTime()) / 3600000 : 999;
+      if (ageH < 20) {
+        // Update fetchedAt so the staleness check in the frontend stays quiet
+        prev.fetchedAt = new Date().toISOString();
+        fs.writeFileSync(outPath, JSON.stringify(prev, null, 2));
+        console.log(`No launch within 48h and data is ${ageH.toFixed(1)}h old — skipping external fetch`);
+        return;
+      }
+    } catch(_) {}
+  }
 
   console.log('Fetching Cameron County closures…');
   let closureData = { closures: [], delays: [], status: 'unknown' };

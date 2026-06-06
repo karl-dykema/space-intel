@@ -2,7 +2,7 @@ name: Fetch Closures & TFRs
 
 on:
   schedule:
-    - cron: '0 */6 * * *'   # 4x/day (every 6 hours)
+    - cron: '0 */2 * * *'   # every 2h — script skips fetch when no launch within 48h and data <20h old
   workflow_dispatch:          # manual trigger
 
 jobs:
