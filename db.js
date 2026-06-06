@@ -139,9 +139,9 @@ async function loadSBData() {
     }
   }
 
-  const since24h = new Date(Date.now() - 24 * 3600000).toISOString();
+  const since3d = new Date(Date.now() - 3 * 86400000).toISOString();
   const acRows = await SB.select('aircraft_positions', {
-    ts: `gte.${since24h}`, order: 'ts.asc', limit: '3000',
+    ts: `gte.${since3d}`, order: 'ts.asc', limit: '6000',
     select: 'reg,lat,lon,alt,gs,track,ts',
   });
   if (acRows?.length) {
@@ -149,13 +149,18 @@ async function loadSBData() {
     acRows.forEach(r => { (byReg[r.reg] = byReg[r.reg] || []).push(r); });
     for (const [reg, rows] of Object.entries(byReg)) {
       if (!AIRCRAFT_DB[reg]) continue;
+      // Split into segments at gaps > 4h — avoids long connector lines between flights
       const GAP_AC = 4 * 3600000;
-      let segStart = 0;
-      for (let i = 1; i < rows.length; i++) {
-        if (new Date(rows[i].ts).getTime() - new Date(rows[i-1].ts).getTime() > GAP_AC) segStart = i;
+      const segments = [];
+      let cur = [];
+      for (let i = 0; i < rows.length; i++) {
+        if (i > 0 && new Date(rows[i].ts).getTime() - new Date(rows[i-1].ts).getTime() > GAP_AC) {
+          if (cur.length) { segments.push(cur); cur = []; }
+        }
+        cur.push([rows[i].lat, rows[i].lon]);
       }
-      const segRows = rows.slice(segStart);
-      const pts = segRows.map(r => [r.lat, r.lon]);
+      if (cur.length) segments.push(cur);
+      const pts = segments.length === 1 ? segments[0] : segments;
       const last = rows[rows.length - 1];
       const lastTs = new Date(last.ts).getTime();
       const existing = S.aircraft[reg];
