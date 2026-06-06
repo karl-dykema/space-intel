@@ -10,7 +10,7 @@ let _closurePollTimer = null;
 let _tfrPollTimer     = null;
 
 // ── Smart poll intervals ──────────────────────────────────────
-// Normal: 30 min. Within 48h of launch: 15 min. Within 2h: 3 min.
+// Normal: 24h. Within 48h of launch: 3h.
 function _closurePollMs() {
   const missions = (typeof missionsCache !== 'undefined' ? missionsCache : []);
   const now = Date.now();
@@ -19,9 +19,8 @@ function _closurePollMs() {
     const t0 = m.T0 ? new Date(m.T0).getTime() : 0;
     if (t0 > now) nearest = Math.min(nearest, t0 - now);
   }
-  if (nearest < 2 * 3600000)  return 3  * 60000;  // < 2h  → 3 min
-  if (nearest < 48 * 3600000) return 15 * 60000;  // < 48h → 15 min
-  return 30 * 60000;                                // else  → 30 min
+  if (nearest < 48 * 3600000) return 3 * 3600000;  // < 48h → 3h
+  return 24 * 3600000;                               // else  → 24h
 }
 
 // ── Closures ──────────────────────────────────────────────────
