@@ -62,6 +62,19 @@ const SB = {
       return data;
     } catch(e) { console.warn(`[sb] select ${table}:`,e.message); addLog(`DB ERR select ${table}: ${e.message}`, 'err'); return null; }
   },
+
+  async rpc(fn, params) {
+    if(!this.ready) return null;
+    try {
+      const r = await fetch(`${this.url}/rest/v1/rpc/${fn}`, {
+        method:'POST', headers:this._h({}), body:JSON.stringify(params),
+      });
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      addLog(`DB rpc ${fn} — ${data?.length??0} rows`, 'db');
+      return data;
+    } catch(e) { console.warn(`[sb] rpc ${fn}:`,e.message); addLog(`DB ERR rpc ${fn}: ${e.message}`, 'err'); return null; }
+  },
 };
 
 // Hold display position if new reading is within ~55m and SOG ≤ 0.5 kn (suppress GPS dock noise)
@@ -122,22 +135,18 @@ async function loadSBData() {
     if(S.tab==='events'||S.tab==='history') renderRight();
   }
 
-  const _sinceHistoric = new Date(Date.now()-3*86400000).toISOString(); // 3 days, newest first — avoids returning ancient rows before recent ones
+  const _sinceHistoric = new Date(Date.now()-3*86400000).toISOString();
   const _sinceLive     = new Date(Date.now()-2*3600000).toISOString();
   const _isFirstLoad   = !window._sbLoaded;
   window._sbLoaded     = true;
-  const allRows = await SB.select('positions', {
-    mmsi: `in.(${KNOWN_MMSIS.join(',')})`,
-    ts: `gte.${_isFirstLoad ? _sinceHistoric : _sinceLive}`,
-    order: 'ts.desc', limit: '20000',
-    select: 'mmsi,lat,lon,ts,sog,cog',
-  });
+  const allRows = _isFirstLoad
+    ? await SB.rpc('get_recent_tracks', { since_ts: _sinceHistoric, max_per_vessel: 300 })
+    : await SB.select('positions', { mmsi:`in.(${KNOWN_MMSIS.join(',')})`, ts:`gte.${_sinceLive}`, order:'ts.asc', limit:'2000', select:'mmsi,lat,lon,ts,sog,cog' });
   if(allRows?.length) {
     const byMmsi = {};
     allRows.forEach(r => { (byMmsi[r.mmsi] = byMmsi[r.mmsi]||[]).push(r); });
     for(const [mmsi, rows] of Object.entries(byMmsi)) {
       if(!VESSEL_DB[mmsi]) continue;
-      rows.reverse(); // desc → asc for chronological track rendering
       const pos = rows.map(r=>({lat:r.lat,lon:r.lon,ts:new Date(r.ts).getTime(),sog:r.sog,cog:r.cog}));
       if(!history[mmsi]) history[mmsi]={positions:[],firstSeen:pos[0].ts,lastSeen:pos[pos.length-1].ts};
       const existing = new Set(history[mmsi].positions.map(p=>Math.floor(p.ts/60000)));
