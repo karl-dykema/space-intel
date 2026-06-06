@@ -568,12 +568,16 @@ function updateMarker(v) {
   if(v.track&&v.track.length>1) {
     const trackStyle={color:col,weight:stale?1:2,opacity:hist?0.55:vapi?0.4:stale?0.2:0.55,dashArray:vapi?'3 5':null};
     const { segs, gapIsTime } = _splitTrack(v.track);
+    // Only show the current voyage: drop everything before the last time-gap boundary
+    const lastTG = gapIsTime.lastIndexOf(true);
+    const curSegs = lastTG >= 0 ? segs.slice(lastTG + 1) : segs;
+    const curGaps = lastTG >= 0 ? gapIsTime.slice(lastTG + 1) : gapIsTime;
     if(tracks[mmsi]) { tracks[mmsi].clearLayers(); }
     else { tracks[mmsi] = L.featureGroup().addTo(layers).on('click',()=>selectVessel(mmsi)); }
-    segs.forEach((seg, i) => {
+    curSegs.forEach((seg, i) => {
       if(seg.length>1) L.polyline(seg, trackStyle).addTo(tracks[mmsi]);
-      if(i < segs.length-1 && segs[i+1].length && !gapIsTime[i]) {
-        L.polyline([seg[seg.length-1], segs[i+1][0]],
+      if(i < curSegs.length-1 && curSegs[i+1].length && !curGaps[i]) {
+        L.polyline([seg[seg.length-1], curSegs[i+1][0]],
           {color:col,weight:1,opacity:0.22,dashArray:'4 8',interactive:false}
         ).addTo(tracks[mmsi]);
       }
