@@ -692,7 +692,7 @@ const LS = {
   MISSIONS_PAST:'space_intel_missions_past_v2',
 };
 const MAX_EVENTS = 500;
-const MAX_POS    = 3000;
+const MAX_POS    = 10000;
 
 // ── Missions data ─────────────────────────────────────────────
 const OPERATOR_MATCH = {

@@ -272,7 +272,7 @@ function handleAIS(msg) {
       const lt=v.track.slice(-1)[0];
       if(!lt||Math.abs(lat-lt[0])>0.0002||Math.abs(lon-lt[1])>0.0002) {
         v.track.push([lat,lon]);
-        if(v.track.length>1000) v.track.shift();
+        if(v.track.length>MAX_POS) v.track.shift();
       }
       showPingRing(v.lat, v.lon, opColor(info.operator));
     }
