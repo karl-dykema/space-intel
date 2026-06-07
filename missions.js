@@ -227,6 +227,12 @@ async function showMissions() {
     return;
   }
 
+  if(SHARE_MODE) {
+    document.getElementById('missions-src').textContent = 'Missions data not loaded on share view';
+    document.getElementById('missions-content').innerHTML =
+      '<div style="padding:20px;color:var(--t4);font-size:13px">Launch calendar is available in the full admin view.</div>';
+    return;
+  }
   document.getElementById('missions-content').innerHTML =
     '<div style="padding:24px;color:var(--t4)">Loading…</div>';
   addLog('Missions: fetching from The Space Devs API…', 'sys');
@@ -657,21 +663,15 @@ function _calOpColor(l) {
 
 async function fetchCalendarData() {
   try {
-    const cached = JSON.parse(localStorage.getItem(LS.CAL_MISSIONS) || 'null');
-    if (cached?.ts && Date.now() - cached.ts < 7200000 && cached.data?.length) {
-      calendarCache = cached.data; return;
-    }
-    const r = await fetch('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=100&ordering=net&mode=list');
-    if (!r.ok) {
-      if (r.status === 429) { addLog('Calendar: API rate limited — using cached data', 'sys'); if (cached?.data) calendarCache = cached.data; return; }
-      throw new Error(`HTTP ${r.status}`);
-    }
+    const r = await fetch('data/calendar.json?_=' + Math.floor(Date.now() / 7200000));
+    if (!r.ok) throw new Error(`calendar.json not found (HTTP ${r.status})`);
     const d = await r.json();
-    calendarCache = d.results || [];
-    localStorage.setItem(LS.CAL_MISSIONS, JSON.stringify({ ts: Date.now(), data: calendarCache }));
-    addLog(`Calendar: loaded ${calendarCache.length} launches (all agencies)`, 'sys');
+    if (!d.launches?.length) throw new Error('calendar.json empty — Action not yet run');
+    calendarCache = d.launches;
+    const ageH = d.fetchedAt ? ((Date.now() - new Date(d.fetchedAt).getTime()) / 3600000).toFixed(1) : '?';
+    addLog(`Calendar: ${calendarCache.length} launches · data ${ageH}h old`, 'sys');
   } catch(e) {
-    addLog(`Calendar fetch: ${e.message}`, 'err');
+    addLog(`Calendar: ${e.message}`, 'err');
     if (!calendarCache.length) calendarCache = [...missionsCache, ...pastMissionsCache];
   }
 }

@@ -748,7 +748,7 @@ window.onload=()=>{
   // Single Supabase load → then realtime subscription + vapiPositions
   loadSBData().then(() => { loadVapiPositions(); initSBRealtime(); });
   setInterval(loadSBData, 15000); // poll every 15s — bulk query is cheap, matches vessel write throttle
-  fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
+  if(!SHARE_MODE) fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
   if(!SHARE_MODE) { pollAircraft(); setInterval(pollAircraft, AIRCRAFT_POLL_MS); }
   fetchTLEs();
   fetchDockedManifest();
