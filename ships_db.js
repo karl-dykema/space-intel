@@ -3,19 +3,10 @@
 // ── Vessel Database ──────────────────────────────────────────
 const VESSEL_DB = {
   // ── SpaceX ──────────────────────────────────────────────────
-  // You'll Thank Me Later — MMSI TBD (Marmac 31, under construction at Port of Brownsville, TX)
-  // '???': {
-  //   name:"You'll Thank Me Later", abbr:'YTML',
-  //   operator:'SpaceX', role:'Autonomous Spaceport Drone Ship',
-  //   color:'#00d4ff', homePort:'Port of Brownsville, TX',
-  //   specs:{ type:'Self-propelled barge (ASDS)', hull:'Marmac 31' },
-  //   history:[
-  //     'Named after a ship in Iain M. Banks\' Culture novel series',
-  //     'Spotted at Port of Brownsville, TX — under construction / fitting out as of 2026',
-  //     'Likely designated for Starship program or additional Falcon 9 capacity',
-  //   ],
-  //   notes:'MMSI not yet confirmed — search MarineTraffic for "Marmac 31" at Port of Brownsville. Add MMSI when known.',
-  // },
+  // You'll Thank Me Later (YTML) — non-self-propelled barge, likely no AIS transponder; towed by Signet Lightning
+  // Hull: Marmac 31 (260ft × 72ft). Role: Starship/Booster transport, Starbase TX → Port Canaveral FL (~1000nm Gulf crossing).
+  // Fitted with curved canopy/tent for hardware protection. First arrived Port Canaveral May 2026.
+  // Track Signet Lightning (MMSI 368549000) to follow YTML transits.
   '368219910': {
     name:'A Shortfall of Gravitas', abbr:'ASOG',
     operator:'SpaceX', role:'Autonomous Spaceport Drone Ship',
@@ -167,6 +158,21 @@ const VESSEL_DB = {
       'Anchor handling / escort tug for ASOG Atlantic deployments',
     ],
     notes:'East Coast ASOG anchor handling tug. IMO 9388132. [✓ MMSI]',
+    background:true,
+  },
+  '368549000': {
+    name:'Signet Lightning', abbr:'Lightning',
+    operator:'SpaceX', role:'Starship Transport Tug',
+    color:'#00d4ff', homePort:'Port of Brownsville, TX',
+    imo:'8969305', flag:'USA', built:1998, verified:true,
+    specs:{ length:'38m', beam:'12m', grossTonnage:'632 GT', type:'Offshore tug/supply ship', operator:'Signet Maritime Corporation (contracted)' },
+    history:[
+      'Operated by Signet Maritime Corporation, contracted to SpaceX',
+      'Primary tug for You\'ll Thank Me Later (YTML) Starship transport barge (Marmac 31)',
+      'Tows YTML on ~1000nm Gulf crossing between Starbase TX and Port Canaveral FL',
+      'YTML carries Starship/Super Heavy hardware horizontally under curved canopy',
+    ],
+    notes:'Track this vessel to follow YTML Starship transport runs. YTML itself is non-self-propelled and likely has no AIS. IMO 8969305. [✓ MMSI]',
     background:true,
   },
   '368448940': {
