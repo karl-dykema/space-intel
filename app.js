@@ -650,7 +650,7 @@ async function pollAircraft() {
         ts: acTs,
         _stale: false,
         _track,
-        dst: ac.dst || ac.dest_iata || null,
+        dst: ac.dst || ac.dest_iata || ac.destination || null,
         flight: ac.flight?.trim() || null,
       };
       if (moved) maybeSBAcPos(reg, ac.lat, ac.lon, ac.alt_baro, ac.gs, ac.track ?? 0, acTs);
