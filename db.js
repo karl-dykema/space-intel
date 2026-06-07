@@ -97,9 +97,12 @@ function maybeSBPos(mmsi, lat, lon, sog, cog, ts) {
 const sbLastAcPos = {};
 function maybeSBAcPos(reg, lat, lon, alt, gs, track, ts) {
   if(!SB.ready || SHARE_MODE || !_isLeader()) return;
-  if(sbLastAcPos[reg] && ts - sbLastAcPos[reg] < 30000) return;
-  sbLastAcPos[reg] = ts;
-  SB.insert('aircraft_positions', { reg, lat, lon, alt: alt ?? null, gs: gs ?? null, track: track ?? null, ts: new Date(ts).toISOString() });
+  const now = Date.now();
+  if(sbLastAcPos[reg] && now - sbLastAcPos[reg] < 30000) return;
+  sbLastAcPos[reg] = now;
+  // airplanes.live data.now is in seconds; normalize to ms for DB
+  const tsMs = ts != null && ts < 1e10 ? ts * 1000 : (ts || now);
+  SB.insert('aircraft_positions', { reg, lat, lon, alt: alt ?? null, gs: gs ?? null, track: track ?? null, ts: new Date(tsMs).toISOString() });
 }
 
 function sbWriteEvent(ev) {
