@@ -4,6 +4,6 @@ node_modules/
 proxy.js
 space_proxy.js
 test-vapi.js
-package.json
-package-lock.json
+/package.json
+/package-lock.json
 "dark_vessel_intel (1).html"

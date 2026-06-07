@@ -664,11 +664,11 @@ function _calOpColor(l) {
 async function fetchCalendarData() {
   if (!SB.init()) { addLog('Calendar: Supabase not configured', 'sys'); return; }
   try {
-    const rows = await SB.select('launch_cache', { key: 'eq.upcoming' });
-    if (!rows?.length || !rows[0].launches?.length) {
-      addLog('Calendar: no data in DB yet — run the Fetch Launch Calendar Action', 'sys'); return;
+    const rows = await SB.select('app_cache', { key: 'eq.launches.upcoming' });
+    if (!rows?.length || !rows[0].data?.length) {
+      addLog('Calendar: no data in DB — run Fetch Launch Calendar Action', 'sys'); return;
     }
-    calendarCache = rows[0].launches;
+    calendarCache = rows[0].data;
     const ageH = rows[0].fetched_at
       ? ((Date.now() - new Date(rows[0].fetched_at).getTime()) / 3600000).toFixed(1) : '?';
     addLog(`Calendar: ${calendarCache.length} launches · data ${ageH}h old`, 'sys');

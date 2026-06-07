@@ -6,22 +6,23 @@ const STARBASE_LON = -97.1497;
 let _closureLayer = null;
 let _tfrLayers    = {};
 
-// ── Load from static JSON (written by GitHub Action) ─────────
+// ── Load from Supabase app_cache ─────────────────────────────
 async function loadClosuresData() {
+  if (!SB.init()) { addLog('Closures: Supabase not configured', 'sys'); return; }
   try {
-    const r = await fetch('data/closures.json?_=' + Date.now());
-    if (!r.ok) { addLog('Closures: data/closures.json not found', 'sys'); return; }
-    const data = await r.json();
-    const ageH = data.fetchedAt ? ((Date.now() - new Date(data.fetchedAt).getTime()) / 3600000).toFixed(1) : '?';
-    const tfrCount  = (data.tfrs  || []).length;
-    const spxTFRs   = (data.tfrs  || []).filter(t => t.isSpaceX).length;
-    const closureStatus = data.status || 'unknown';
-    addLog(`Closures: Boca Chica=${closureStatus} · TFRs=${tfrCount} (${spxTFRs} SpaceX) · data ${ageH}h old`, 'sys');
+    const rows = await SB.select('app_cache', { key: 'eq.closures.bocachica' });
+    if (!rows?.length) { addLog('Closures: no data in DB — run Fetch Closures & TFRs Action', 'sys'); return; }
+    const row  = rows[0];
+    const data = { ...row.data, fetchedAt: row.fetched_at };
+    const ageH = row.fetched_at ? ((Date.now() - new Date(row.fetched_at).getTime()) / 3600000).toFixed(1) : '?';
+    const tfrCount = (data.tfrs  || []).length;
+    const spxTFRs  = (data.tfrs  || []).filter(t => t.isSpaceX).length;
+    addLog(`Closures: Boca Chica=${data.status||'unknown'} · TFRs=${tfrCount} (${spxTFRs} SpaceX) · data ${ageH}h old`, 'sys');
     if (tfrCount > 0) addLog(`TFRs: ${(data.tfrs||[]).map(t=>`${t.notamNum||t.id}${t.isSpaceX?' [SpX]':''}`).join(', ')}`, 'ais');
     applyClosureOverlay(data);
     updateClosureBadge(data);
     applyTFROverlays(data.tfrs || []);
-    if (!SHARE_MODE) _checkClosuresAge(data.fetchedAt);
+    if (!SHARE_MODE) _checkClosuresAge(row.fetched_at);
   } catch(e) { addLog(`Closures: load error — ${e.message}`, 'err'); }
 }
 

@@ -1,8 +1,7 @@
 'use strict';
 const https = require('https');
 const http  = require('http');
-const fs    = require('fs');
-const path  = require('path');
+const { ensureSchema, upsertCache, readCache } = require('./db');
 
 function fetchUrl(url) {
   return new Promise((resolve, reject) => {
@@ -173,83 +172,65 @@ async function hoursToNextLaunch() {
 
 // ── Main ──────────────────────────────────────────────────────
 async function main() {
-  const outPath = path.join(__dirname, '..', 'data', 'closures.json');
+  console.log('=== fetch-closures ===');
+  await ensureSchema();
 
-  // Smart skip: only re-fetch external sites when needed
-  // - launch within 48h  → always re-fetch (every 2h action run)
-  // - no launch near     → skip if data < 20h old
+  // Smart skip: only re-fetch Cameron County when needed
+  // - launch within 48h  → always re-fetch
+  // - no launch near     → skip if DB data < 20h old
   const hoursUntilLaunch = await hoursToNextLaunch();
   console.log(`Next launch in: ${hoursUntilLaunch === 9999 ? 'unknown' : hoursUntilLaunch.toFixed(1) + 'h'}`);
 
-  if (hoursUntilLaunch > 48 && fs.existsSync(outPath)) {
-    try {
-      const prev = JSON.parse(fs.readFileSync(outPath, 'utf8'));
-      const ageH = prev.fetchedAt ? (Date.now() - new Date(prev.fetchedAt).getTime()) / 3600000 : 999;
+  if (hoursUntilLaunch > 48) {
+    const cur = await readCache('closures.bocachica');
+    if (cur?.fetched_at) {
+      const ageH = (Date.now() - new Date(cur.fetched_at).getTime()) / 3600000;
       if (ageH < 20) {
-        // Update fetchedAt so the staleness check in the frontend stays quiet
-        prev.fetchedAt = new Date().toISOString();
-        fs.writeFileSync(outPath, JSON.stringify(prev, null, 2));
-        console.log(`No launch within 48h and data is ${ageH.toFixed(1)}h old — skipping external fetch`);
+        const r = await fetch(
+          (process.env.SUPABASE_URL || '').replace(/\/+$/, '') + '/rest/v1/app_cache?key=eq.closures.bocachica',
+          { method: 'PATCH',
+            headers: { 'apikey': process.env.SUPABASE_SERVICE_KEY, 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ fetched_at: new Date().toISOString() }) }
+        );
+        if (!r.ok) throw new Error(`PATCH HTTP ${r.status}`);
+        console.log(`No launch within 48h, data ${ageH.toFixed(1)}h old — skipped fetch, refreshed fetched_at`);
         return;
       }
-    } catch(_) {}
+    }
   }
 
   console.log('Fetching Cameron County closures…');
   let closureData = { closures: [], delays: [], status: 'unknown' };
   try {
-    // Try RSS feed first — avoids Cloudflare DDoS page protection on the main site
     const rss = await fetchUrl('https://www.cameroncountytx.gov/spacex/feed/');
     if (rss.includes('<rss') || rss.includes('<feed')) {
       closureData = parseCameronCountyRSS(rss);
       console.log(`  RSS: status=${closureData.status}, entries=${closureData.closures.length}`);
-    } else {
-      throw new Error('RSS not available');
-    }
+    } else throw new Error('RSS not available');
   } catch(_) {
     try {
       const html = await fetchUrl('https://www.cameroncountytx.gov/spacex/');
       if (html.includes('DDOS') || html.includes('Block ID')) throw new Error('Cloudflare block');
       closureData = parseCameronCounty(html);
       console.log(`  HTML: status=${closureData.status}, entries=${closureData.closures.length}`);
-    } catch(e) {
-      console.warn('  Cameron County fetch failed:', e.message);
-    }
+    } catch(e) { console.warn('  Cameron County fetch failed:', e.message); }
   }
 
   console.log('Fetching FAA TFRs…');
   const tfrs = await fetchTFRs();
   console.log(`  ${tfrs.length} TFRs parsed`);
 
-  const result = {
-    closures:  closureData.closures,
-    delays:    closureData.delays,
-    status:    closureData.status,
+  const payload = {
+    closures: closureData.closures,
+    delays:   closureData.delays,
+    status:   closureData.status,
     tfrs,
-    fetchedAt: new Date().toISOString(),
   };
 
-  // Only write if substantive content changed (ignore fetchedAt)
-  let changed = true;
-  if (fs.existsSync(outPath)) {
-    try {
-      const prev = JSON.parse(fs.readFileSync(outPath, 'utf8'));
-      const strip = o => { const c = {...o}; delete c.fetchedAt; return JSON.stringify(c); };
-      changed = strip(prev) !== strip(result);
-    } catch(_) {}
-  }
-
-  if (changed) {
-    fs.mkdirSync(path.dirname(outPath), { recursive: true });
-    fs.writeFileSync(outPath, JSON.stringify(result, null, 2));
-    console.log('Written:', outPath);
-  } else {
-    // Always update fetchedAt so the age check in the frontend stays fresh
-    const prev = JSON.parse(fs.readFileSync(outPath, 'utf8'));
-    prev.fetchedAt = result.fetchedAt;
-    fs.writeFileSync(outPath, JSON.stringify(prev, null, 2));
-    console.log('No content change — updated fetchedAt only');
-  }
+  await upsertCache('closures.bocachica', payload, {
+    source:    'cameroncountytx.gov',
+    fetchedAt: new Date().toISOString(),
+  });
 }
 
-main().catch(e => { console.error(e); process.exit(1); });
+main().catch(e => { console.error(e.message); process.exit(1); });

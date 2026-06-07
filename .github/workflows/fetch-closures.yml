@@ -2,28 +2,23 @@ name: Fetch Closures & TFRs
 
 on:
   schedule:
-    - cron: '0 */2 * * *'   # every 2h — script skips fetch when no launch within 48h and data <20h old
-  workflow_dispatch:          # manual trigger
+    - cron: '0 */2 * * *'   # every 2h — script skips external fetch when no launch within 48h and data <20h old
+  workflow_dispatch:
 
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-
-      - name: Fetch Cameron County closures and FAA TFRs
+      - name: Install dependencies
+        run: npm install
+        working-directory: scripts
+      - name: Fetch Cameron County closures and FAA TFRs → Supabase
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          SUPABASE_DB_URL:      ${{ secrets.SUPABASE_DB_URL }}
         run: node scripts/fetch-closures.js
-
-      - name: Commit if changed
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/closures.json
-          git diff --cached --quiet || git commit -m "chore: update closures/TFR data [skip ci]"
-          git push
