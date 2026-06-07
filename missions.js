@@ -113,7 +113,7 @@ function selectVesselFromOps(mmsi) {
 
 // ── Missions (The Space Devs API) ─────────────────────────────
 let countdownTimer = null;
-let calendarCache = [], _calView = 'list';
+let calendarCache = [], _calView = 'calendar';
 let _calYear = new Date().getFullYear(), _calMonth = new Date().getMonth();
 let _calSelectedDay = null, _calByDay = {};
 function startCountdowns() {
@@ -498,7 +498,7 @@ function buildMissionCard(l, isPast=false) {
       </button>
     </div>` : '';
 
-  return `<div class="mcard" style="border-left-color:${col}">
+  return `<div class="mcard" data-mid="${esc(l.id||'')}" style="border-left-color:${col}">
     ${headerHTML}
     ${countdownHTML}
     ${programsHTML}
@@ -765,7 +765,9 @@ function _buildCalDayDetail() {
     const veh    = l.rocket?.configuration?.name || '';
     const status = l.status?.name || '';
     const scol   = /Go|Success/i.test(status)?'#00ff88':/Hold|Delay/i.test(status)?'#ff4444':'var(--t5)';
-    return `<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 14px;border-bottom:1px solid var(--bdr2)">
+    return `<div onclick="calMissionClick('${esc(l.id||'')}')"
+      onmouseenter="this.style.background='rgba(255,136,0,.07)'" onmouseleave="this.style.background=''"
+      style="display:flex;gap:9px;align-items:flex-start;padding:8px 14px;border-bottom:1px solid var(--bdr2);cursor:pointer">
       <span style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0;margin-top:3px"></span>
       <div style="flex:1;min-width:0">
         <div style="font-size:12px;font-weight:600;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name||'Unknown Mission')}</div>
@@ -790,6 +792,88 @@ function calNav(delta) {
 function calClickDay(dateStr) {
   _calSelectedDay = _calSelectedDay === dateStr ? null : dateStr;
   renderMissionsCalendar();
+}
+
+function calMissionClick(id) {
+  if (!id) return;
+  const l = calendarCache.find(x => x.id === id);
+  if (!l) return;
+  _showCalMissionPopup(l);
+}
+
+function closeCalMissionPopup() {
+  const el = document.getElementById('cal-mission-popup');
+  if (el) el.remove();
+}
+
+function _openListToMission(id) {
+  setMissionsView('list');
+  const tryScroll = (attempts = 0) => {
+    const el = document.querySelector(`[data-mid="${id}"]`);
+    if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (attempts < 12) setTimeout(() => tryScroll(attempts + 1), 120);
+  };
+  setTimeout(tryScroll, 200);
+}
+
+function _showCalMissionPopup(l) {
+  closeCalMissionPopup();
+  const col     = _calOpColor(l);
+  const net     = l.net ? new Date(l.net).getTime() : null;
+  const netStr  = net ? fmtTime(net) : 'TBD';
+  const status  = l.status || '';
+  const scol    = /Go|Success/i.test(status) ? '#00ff88' : /Hold|Delay/i.test(status) ? '#ff4444' : '#ff8800';
+  const lspName = l.lsp || '';
+  const lspAbbr = l.lspAbbr || lspName;
+  const vehicle = l.vehicle || '';
+  const isTracked = !SHARE_MODE && Object.keys(OPERATOR_MATCH).some(k => lspName.includes(k));
+  const watchLinks = getLaunchWatchLinks(Object.entries(OPERATOR_MATCH).find(([k]) => lspName.includes(k))?.[1] || '');
+
+  const overlay = document.createElement('div');
+  overlay.id = 'cal-mission-popup';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+  overlay.onclick = e => { if (e.target === overlay) closeCalMissionPopup(); };
+
+  overlay.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid ${col}44;border-top:3px solid ${col};border-radius:4px;max-width:460px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.8)">
+      <div style="padding:16px 18px 12px;background:linear-gradient(180deg,${col}16 0%,transparent 90px)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:10px;color:${col};text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:4px">${esc(lspAbbr)}${vehicle?' · '+esc(vehicle):''}</div>
+            <div style="font-size:16px;font-weight:700;color:#fff;line-height:1.3;margin-bottom:8px">${esc(l.name||'Unknown Mission')}</div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              <span style="font-size:10px;padding:2px 8px;background:${scol}22;border:1px solid ${scol}44;color:${scol};border-radius:2px">${esc(status)}</span>
+              ${lspAbbr !== lspName ? `<span style="font-size:10px;padding:2px 8px;background:${col}18;border:1px solid ${col}33;color:${col};border-radius:2px">${esc(lspName)}</span>` : ''}
+            </div>
+          </div>
+          <button onclick="closeCalMissionPopup()" style="background:none;border:none;color:var(--t4);font-size:18px;cursor:pointer;padding:0 2px;line-height:1;flex-shrink:0;margin-top:-2px">✕</button>
+        </div>
+      </div>
+      <div style="padding:0 18px 16px">
+        <div style="padding:10px 0;border-top:1px solid var(--bdr2)">
+          <div style="font-size:10px;color:var(--t5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">NET LAUNCH</div>
+          <div style="font-size:15px;font-weight:600;color:var(--t);margin-bottom:4px">${esc(netStr)}</div>
+          ${net ? `<div style="font-size:13px;color:${col};font-family:var(--fm)" data-net="${net}">calculating…</div>` : ''}
+        </div>
+        ${(l.pad||l.loc) ? `<div style="padding:10px 0;border-top:1px solid var(--bdr2)">
+          <div style="font-size:10px;color:var(--t5);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">LAUNCH SITE</div>
+          <div style="font-size:13px;color:var(--t2)">${esc(l.pad||'')}${l.pad&&l.loc?' · ':''}${esc(l.loc||'')}</div>
+        </div>` : ''}
+        ${watchLinks.length ? `<div style="padding:10px 0;border-top:1px solid var(--bdr2);display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:10px;color:var(--t4);letter-spacing:.06em">WATCH</span>
+          ${watchLinks.map(w=>`<a href="${esc(w.url)}" target="_blank" style="font-size:11px;font-weight:600;padding:4px 10px;background:${col}20;border:1px solid ${col}44;color:${col};text-decoration:none;border-radius:2px;white-space:nowrap">▶ ${esc(w.label)}</a>`).join('')}
+        </div>` : ''}
+        ${isTracked ? `<div style="padding:12px 0 0;border-top:1px solid var(--bdr2)">
+          <button onclick="closeCalMissionPopup();_openListToMission('${esc(l.id||'')}')"
+            style="font-size:11px;font-weight:700;padding:6px 14px;background:#0a1e30;border:1px solid ${col}55;color:${col};cursor:pointer;letter-spacing:.05em;border-radius:2px">
+            VIEW FULL DETAILS ↗
+          </button>
+        </div>` : ''}
+      </div>
+    </div>`;
+
+  document.body.appendChild(overlay);
+  startCountdowns();
 }
 
 function setMissionsView(mode) {
