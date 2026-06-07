@@ -7,17 +7,19 @@ const _LEADER_KEY = 'sft_leader';
 const _LEADER_TS  = 'sft_leader_ts';
 
 function _claimLeader() {
+  if (SHARE_MODE) return;
   localStorage.setItem(_LEADER_KEY, _TAB_ID);
   localStorage.setItem(_LEADER_TS,  Date.now().toString());
 }
 function _isLeader() {
+  if (SHARE_MODE) return false;
   const owner = localStorage.getItem(_LEADER_KEY);
   const ts    = parseInt(localStorage.getItem(_LEADER_TS) || '0');
   if (owner === _TAB_ID) return true;
   if (Date.now() - ts > 15000) { _claimLeader(); return true; } // stale — take over
   return false;
 }
-setInterval(() => { if (localStorage.getItem(_LEADER_KEY) === _TAB_ID) _claimLeader(); }, 5000);
+setInterval(() => { if (!SHARE_MODE && localStorage.getItem(_LEADER_KEY) === _TAB_ID) _claimLeader(); }, 5000);
 
 const SB = {
   url:   null,
