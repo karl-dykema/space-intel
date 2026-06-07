@@ -662,17 +662,18 @@ function _calOpColor(l) {
 }
 
 async function fetchCalendarData() {
+  if (!SB.init()) { addLog('Calendar: Supabase not configured', 'sys'); return; }
   try {
-    const r = await fetch('data/calendar.json?_=' + Math.floor(Date.now() / 7200000));
-    if (!r.ok) throw new Error(`calendar.json not found (HTTP ${r.status})`);
-    const d = await r.json();
-    if (!d.launches?.length) throw new Error('calendar.json empty — Action not yet run');
-    calendarCache = d.launches;
-    const ageH = d.fetchedAt ? ((Date.now() - new Date(d.fetchedAt).getTime()) / 3600000).toFixed(1) : '?';
+    const rows = await SB.select('launch_cache', { key: 'eq.upcoming' });
+    if (!rows?.length || !rows[0].launches?.length) {
+      addLog('Calendar: no data in DB yet — run the Fetch Launch Calendar Action', 'sys'); return;
+    }
+    calendarCache = rows[0].launches;
+    const ageH = rows[0].fetched_at
+      ? ((Date.now() - new Date(rows[0].fetched_at).getTime()) / 3600000).toFixed(1) : '?';
     addLog(`Calendar: ${calendarCache.length} launches · data ${ageH}h old`, 'sys');
   } catch(e) {
     addLog(`Calendar: ${e.message}`, 'err');
-    if (!calendarCache.length) calendarCache = [...missionsCache, ...pastMissionsCache];
   }
 }
 

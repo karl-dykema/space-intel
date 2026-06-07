@@ -76,3 +76,13 @@ alter table suggestions enable row level security;
 create policy "read_suggestions"   on suggestions for select using (true);
 create policy "write_suggestions"  on suggestions for insert with check (true);
 create policy "delete_suggestions" on suggestions for delete using (true);
+
+-- Launch calendar cache — written by GitHub Action (service key), read by all
+create table if not exists launch_cache (
+  key         text         primary key,
+  launches    jsonb        not null,
+  fetched_at  timestamptz  not null default now()
+);
+alter table launch_cache enable row level security;
+create policy "read_launch_cache" on launch_cache for select using (true);
+-- Writes use service_role key (GitHub Action); no anon insert policy needed.

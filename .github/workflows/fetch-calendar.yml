@@ -8,8 +8,6 @@ on:
 jobs:
   fetch:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -17,13 +15,8 @@ jobs:
         with:
           node-version: '24'
 
-      - name: Fetch all-agency launch calendar
+      - name: Fetch all-agency launch calendar → Supabase
+        env:
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: node scripts/fetch-calendar.js
-
-      - name: Commit if changed
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/calendar.json
-          git diff --cached --quiet || git commit -m "chore: update launch calendar [skip ci]"
-          git push

@@ -1,19 +1,18 @@
 'use strict';
 const https = require('https');
-const fs    = require('fs');
-const path  = require('path');
 
-function fetchUrl(url) {
+function fetchUrl(url, opts = {}) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, {
       headers: {
-        'User-Agent': 'SpaceFleetTracker/1.0 (github.com/karl-dykema/space-intel; contact via repo)',
+        'User-Agent': 'SpaceFleetTracker/1.0 (github.com/karl-dykema/space-intel)',
         'Accept': 'application/json',
+        ...opts.headers,
       },
       timeout: 20000,
     }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        fetchUrl(res.headers.location).then(resolve).catch(reject);
+        fetchUrl(res.headers.location, opts).then(resolve).catch(reject);
         return;
       }
       if (res.statusCode === 429) { reject(new Error('rate-limited-429')); return; }
@@ -27,22 +26,33 @@ function fetchUrl(url) {
   });
 }
 
-async function main() {
-  const outPath = path.join(__dirname, '..', 'data', 'calendar.json');
+function postJson(url, headers, body) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify(body);
+    const u = new URL(url);
+    const req = https.request({
+      hostname: u.hostname, path: u.pathname + u.search,
+      method: 'POST', timeout: 15000,
+      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data), ...headers },
+    }, res => {
+      let out = '';
+      res.on('data', d => out += d);
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve(out);
+        else reject(new Error(`HTTP ${res.statusCode}: ${out.slice(0,200)}`));
+      });
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.write(data);
+    req.end();
+  });
+}
 
-  // Skip if data is fresh (< 1h 45m) — Action runs every 2h so this avoids double-hit on redeploy
-  if (fs.existsSync(outPath)) {
-    try {
-      const prev = JSON.parse(fs.readFileSync(outPath, 'utf8'));
-      const ageMs = prev.fetchedAt ? Date.now() - new Date(prev.fetchedAt).getTime() : Infinity;
-      if (ageMs < 105 * 60 * 1000) {
-        prev.fetchedAt = new Date().toISOString();
-        fs.writeFileSync(outPath, JSON.stringify(prev));
-        console.log(`Data is ${(ageMs/60000).toFixed(0)}m old — skipping fetch, updated fetchedAt`);
-        return;
-      }
-    } catch(_) {}
-  }
+async function main() {
+  const SB_URL = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+  const SB_KEY = process.env.SUPABASE_SERVICE_KEY;
+  if (!SB_URL || !SB_KEY) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_KEY must be set');
 
   console.log('Fetching upcoming launches from The Space Devs API…');
   const json = await fetchUrl(
@@ -60,29 +70,19 @@ async function main() {
     pad:     l.pad?.name,
     loc:     l.pad?.location?.name,
   }));
+  console.log(`  ${launches.length} launches fetched`);
 
-  const result = { launches, fetchedAt: new Date().toISOString(), count: launches.length };
-
-  // Only write if content changed
-  let changed = true;
-  if (fs.existsSync(outPath)) {
-    try {
-      const prev = JSON.parse(fs.readFileSync(outPath, 'utf8'));
-      const strip = o => JSON.stringify(o.launches);
-      changed = strip(prev) !== strip(result);
-    } catch(_) {}
-  }
-
-  fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  if (changed) {
-    fs.writeFileSync(outPath, JSON.stringify(result));
-    console.log(`Written ${launches.length} launches → ${outPath}`);
-  } else {
-    const prev = JSON.parse(fs.readFileSync(outPath, 'utf8'));
-    prev.fetchedAt = result.fetchedAt;
-    fs.writeFileSync(outPath, JSON.stringify(prev));
-    console.log(`No content change — updated fetchedAt only`);
-  }
+  const fetchedAt = new Date().toISOString();
+  await postJson(
+    `${SB_URL}/rest/v1/launch_cache`,
+    {
+      'apikey':        SB_KEY,
+      'Authorization': `Bearer ${SB_KEY}`,
+      'Prefer':        'resolution=merge-duplicates,return=minimal',
+    },
+    { key: 'upcoming', launches, fetched_at: fetchedAt }
+  );
+  console.log(`Upserted ${launches.length} launches to Supabase launch_cache (key=upcoming)`);
 }
 
 main().catch(e => { console.error(e); process.exit(1); });
