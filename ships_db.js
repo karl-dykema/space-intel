@@ -696,6 +696,7 @@ const LS = {
   SB_AKEY:      'space_intel_sb_akey',
   MISSIONS:     'space_intel_missions_v2',
   MISSIONS_PAST:'space_intel_missions_past_v2',
+  CAL_MISSIONS: 'space_intel_cal_missions_v1',
 };
 const MAX_EVENTS = 500;
 const MAX_POS    = 10000;

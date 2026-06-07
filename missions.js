@@ -113,6 +113,9 @@ function selectVesselFromOps(mmsi) {
 
 // ── Missions (The Space Devs API) ─────────────────────────────
 let countdownTimer = null;
+let calendarCache = [], _calView = 'list';
+let _calYear = new Date().getFullYear(), _calMonth = new Date().getMonth();
+let _calSelectedDay = null, _calByDay = {};
 function startCountdowns() {
   if(countdownTimer) clearInterval(countdownTimer);
   countdownTimer = setInterval(()=>{
@@ -207,6 +210,7 @@ async function fetchMissionsBackground() {
 async function showMissions() {
   const panel = document.getElementById('missions-panel');
   panel.style.display = 'block';
+  if (_calView === 'calendar') { renderMissionsCalendar(); return; }
 
   // Serve from cache if < 30 minutes old — avoids burning rate limit on every open
   const cachedMeta = (() => { try { return JSON.parse(localStorage.getItem(LS.MISSIONS)||'null'); } catch(e){return null;} })();
@@ -635,6 +639,170 @@ function copyShareLink() {
     const msg=document.getElementById('share-link-msg');
     if(msg) msg.textContent='Copy failed — check clipboard permissions';
   });
+}
+
+// ── Calendar view ─────────────────────────────────────────────
+function _calOpColor(l) {
+  const lsp = l.launch_service_provider?.name || '';
+  const op = Object.entries(OPERATOR_MATCH).find(([k]) => lsp.includes(k))?.[1];
+  if (op) return opColor(op);
+  if (/NASA|Boeing|Northrop/i.test(lsp))    return '#3388ff';
+  if (/Roscosmos|Soyuz/i.test(lsp))         return '#cc4444';
+  if (/JAXA|Mitsubishi|MHI/i.test(lsp))     return '#dd7700';
+  if (/ISRO/i.test(lsp))                    return '#ff9933';
+  if (/ESA|Arianespace|ArianeGroup/i.test(lsp)) return '#7755ff';
+  if (/CNSA|Long March/i.test(lsp))         return '#dd2222';
+  return '#556677';
+}
+
+async function fetchCalendarData() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(LS.CAL_MISSIONS) || 'null');
+    if (cached?.ts && Date.now() - cached.ts < 7200000 && cached.data?.length) {
+      calendarCache = cached.data; return;
+    }
+    const r = await fetch('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=100&ordering=net&mode=list');
+    if (!r.ok) {
+      if (r.status === 429) { addLog('Calendar: API rate limited — using cached data', 'sys'); if (cached?.data) calendarCache = cached.data; return; }
+      throw new Error(`HTTP ${r.status}`);
+    }
+    const d = await r.json();
+    calendarCache = d.results || [];
+    localStorage.setItem(LS.CAL_MISSIONS, JSON.stringify({ ts: Date.now(), data: calendarCache }));
+    addLog(`Calendar: loaded ${calendarCache.length} launches (all agencies)`, 'sys');
+  } catch(e) {
+    addLog(`Calendar fetch: ${e.message}`, 'err');
+    if (!calendarCache.length) calendarCache = [...missionsCache, ...pastMissionsCache];
+  }
+}
+
+async function renderMissionsCalendar() {
+  const content = document.getElementById('missions-content');
+  const src     = document.getElementById('missions-src');
+  if (!calendarCache.length) {
+    content.innerHTML = '<div style="padding:24px;color:var(--t4)">Loading…</div>';
+    await fetchCalendarData();
+  }
+  src.textContent = `${calendarCache.length} launches · all agencies · The Space Devs API`;
+  _calByDay = {};
+  for (const l of calendarCache) {
+    if (!l.net) continue;
+    const d = new Date(l.net);
+    const k = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    (_calByDay[k] = _calByDay[k] || []).push(l);
+  }
+  content.innerHTML = _buildCalGrid() + _buildCalDayDetail();
+}
+
+function _buildCalGrid() {
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const y = _calYear, m = _calMonth;
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const monthName = new Date(y, m, 1).toLocaleString('default', { month: 'long' });
+  const DAYS = ['S','M','T','W','T','F','S'];
+
+  let html = `<div style="padding:10px 12px 0">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <button onclick="calNav(-1)" style="background:#1a2535;border:1px solid var(--bdr2);color:var(--t3);width:28px;height:28px;cursor:pointer;font-size:15px;border-radius:2px;line-height:1">‹</button>
+      <div style="font-size:13px;font-weight:700;color:var(--t);letter-spacing:.06em">${monthName.toUpperCase()} ${y}</div>
+      <button onclick="calNav(1)"  style="background:#1a2535;border:1px solid var(--bdr2);color:var(--t3);width:28px;height:28px;cursor:pointer;font-size:15px;border-radius:2px;line-height:1">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px">
+      ${DAYS.map(d=>`<div style="text-align:center;font-size:9px;color:var(--t5);padding:2px 0;font-weight:700;letter-spacing:.08em">${d}</div>`).join('')}`;
+
+  for (let i = 0; i < firstDay; i++)
+    html += `<div style="background:rgba(255,255,255,.015);border-radius:2px;min-height:50px"></div>`;
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const launches = _calByDay[dateStr] || [];
+    const isToday = dateStr === todayStr;
+    const isSel   = dateStr === _calSelectedDay;
+    const bg   = isSel ? 'rgba(255,136,0,.13)' : isToday ? 'rgba(255,255,255,.04)' : 'rgba(255,255,255,.015)';
+    const ring = isSel ? '1.5px solid rgba(255,136,0,.55)' : isToday ? '1px solid rgba(255,255,255,.12)' : '1px solid transparent';
+    const numCol = (isToday || isSel) ? '#ff8800' : 'var(--t5)';
+    const dots = launches.slice(0,3).map(l =>
+      `<span style="width:5px;height:5px;border-radius:50%;background:${_calOpColor(l)};display:inline-block;margin:0 1px 1px 0" title="${esc(l.name||'')}"></span>`
+    ).join('');
+    const more = launches.length > 3 ? `<span style="font-size:8px;color:var(--t5)">+${launches.length-3}</span>` : '';
+    html += `<div onclick="${launches.length?`calClickDay('${dateStr}')`:''}"
+      style="background:${bg};border:${ring};border-radius:2px;min-height:50px;padding:3px 4px;cursor:${launches.length?'pointer':'default'};box-sizing:border-box">
+      <div style="font-size:10px;color:${numCol};text-align:right;font-weight:${isToday?'700':'400'}">${day}</div>
+      <div style="display:flex;flex-wrap:wrap;margin-top:3px">${dots}${more}</div>
+    </div>`;
+  }
+
+  const trail = (7 - ((firstDay + daysInMonth) % 7)) % 7;
+  for (let i = 0; i < trail; i++)
+    html += `<div style="background:rgba(255,255,255,.015);border-radius:2px;min-height:50px"></div>`;
+
+  const legend = [
+    ['SpaceX','#00d4ff'],['Rocket Lab',opColor('Rocket Lab')],['Blue Origin',opColor('Blue Origin')],
+    ['ULA',opColor('ULA')],['NASA','#3388ff'],['ESA/Ariane','#7755ff'],['ROSCOSMOS','#cc4444'],['Other','#556677'],
+  ];
+  html += `</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;padding:8px 0 4px">
+      ${legend.map(([n,c])=>`<span style="display:flex;align-items:center;gap:3px;font-size:9px;color:var(--t5)">
+        <span style="width:6px;height:6px;border-radius:50%;background:${c};display:inline-block;flex-shrink:0"></span>${n}
+      </span>`).join('')}
+    </div>
+  </div>`;
+  return html;
+}
+
+function _buildCalDayDetail() {
+  if (!_calSelectedDay || !_calByDay[_calSelectedDay]?.length) return '<div id="cal-day-detail"></div>';
+  const launches = _calByDay[_calSelectedDay];
+  const d = new Date(_calSelectedDay + 'T12:00:00');
+  const label = d.toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  const items = launches.map(l => {
+    const col    = _calOpColor(l);
+    const lsp    = l.launch_service_provider?.abbrev || l.launch_service_provider?.name || '';
+    const net    = l.net ? fmtTime(new Date(l.net).getTime()) : 'TBD';
+    const veh    = l.rocket?.configuration?.name || '';
+    const status = l.status?.name || '';
+    const scol   = /Go|Success/i.test(status)?'#00ff88':/Hold|Delay/i.test(status)?'#ff4444':'var(--t5)';
+    return `<div style="display:flex;gap:9px;align-items:flex-start;padding:8px 14px;border-bottom:1px solid var(--bdr2)">
+      <span style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0;margin-top:3px"></span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:600;color:var(--t);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(l.name||'Unknown Mission')}</div>
+        <div style="font-size:10px;color:var(--t4);margin-top:2px">${esc(lsp)}${veh?' · '+esc(veh):''} · ${esc(net)} · <span style="color:${scol}">${esc(status)}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div id="cal-day-detail" style="border-top:2px solid rgba(255,136,0,.3);margin-top:2px">
+    <div style="padding:7px 14px;font-size:11px;font-weight:700;color:#ff8800;letter-spacing:.07em;text-transform:uppercase">${esc(label)} — ${launches.length} LAUNCH${launches.length>1?'ES':''}</div>
+    ${items}
+  </div>`;
+}
+
+function calNav(delta) {
+  _calMonth += delta;
+  if (_calMonth > 11) { _calMonth = 0; _calYear++; }
+  if (_calMonth < 0)  { _calMonth = 11; _calYear--; }
+  _calSelectedDay = null;
+  renderMissionsCalendar();
+}
+
+function calClickDay(dateStr) {
+  _calSelectedDay = _calSelectedDay === dateStr ? null : dateStr;
+  renderMissionsCalendar();
+}
+
+function setMissionsView(mode) {
+  _calView = mode;
+  const listBtn = document.getElementById('mview-list');
+  const calBtn  = document.getElementById('mview-cal');
+  if (listBtn && calBtn) {
+    const on  = { background:'#1a2535', borderColor:'#ff8800', color:'#ff8800' };
+    const off = { background:'var(--bg4)', borderColor:'var(--bdr2)', color:'var(--t4)' };
+    Object.assign(listBtn.style, mode === 'list'     ? on : off);
+    Object.assign(calBtn.style,  mode === 'calendar' ? on : off);
+  }
+  if (mode === 'calendar') renderMissionsCalendar();
+  else showMissions();
 }
 
 // ── Launch banner ─────────────────────────────────────────────
