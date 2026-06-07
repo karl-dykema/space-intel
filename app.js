@@ -746,6 +746,20 @@ window.onload=()=>{
   }
 
   SB.init();
+
+  // Hard firewall: in SHARE_MODE, block all fetch() calls that aren't to our
+  // Supabase project. Catches accidental guard omissions at runtime.
+  if (SHARE_MODE && SB.url) {
+    const _realFetch = window.fetch.bind(window);
+    const _sbBase = SB.url.replace(/\/+$/, '');
+    window.fetch = (url, opts) => {
+      const u = typeof url === 'string' ? url : (url?.url || String(url));
+      if (u.startsWith(_sbBase)) return _realFetch(url, opts);
+      const msg = `[SHARE_MODE] blocked external fetch: ${u.slice(0, 120)}`;
+      console.error(msg);
+      return Promise.reject(new Error(msg));
+    };
+  }
   initTZSelect();
   initMap();
   renderOpLegend();
