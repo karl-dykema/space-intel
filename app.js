@@ -82,6 +82,7 @@ let map=null, layers=null, zoneLayer=null, exclusionLayer=null, landmarkLayer=nu
 let orbitLayer=null, rocketLayer=null, terminatorLayer=null, missionArcLayer=null;
 let showLandmarks=true, showSpacecraft=true, showVessels=true, showAircraft=true;
 const markers={}, tracks={}, aircraftMarkers={}, aircraftTracks={}, cogArrows={};
+const aircraftDestLines={}, aircraftDestMarkers={};
 const spacecraftMarkers={}, orbitTracks={};
 let selectedMissionForArc=null;
 const _missionById={};
@@ -649,6 +650,8 @@ async function pollAircraft() {
         ts: acTs,
         _stale: false,
         _track,
+        dst: ac.dst || ac.dest_iata || null,
+        flight: ac.flight?.trim() || null,
       };
       if (moved) maybeSBAcPos(reg, ac.lat, ac.lon, ac.alt_baro, ac.gs, ac.track ?? 0, acTs);
       updateAircraftMarker(reg);
@@ -681,8 +684,9 @@ function updateAircraftMarker(reg) {
   const staleNote = ac._stale && ac._staleTs ? `<br><span style="color:#ffcc00;font-size:10px">last seen ${ageStr(ac._staleTs)}</span>` : '';
   const alt = !ac._stale && ac.alt != null ? `<br><span style="color:var(--t3);font-size:10px">${Math.round(ac.alt).toLocaleString()} ft</span>` : '';
   const spd = !ac._stale && ac.gs != null ? ` · <b style="color:#00ff88">${Math.round(ac.gs)} kn</b>` : '';
+  const destTip = !ac._stale && ac.dst ? `<br><span style="color:var(--t4);font-size:10px">→ ${esc(ac.dst.toUpperCase())}</span>` : '';
   const tooltip = `<b style="color:${col}">${esc(db.abbr)}</b>${spd}<br>
-    <span style="color:var(--t5)">${esc(db.operator)}</span><br>${esc(db.role)}${alt}${staleNote}`;
+    <span style="color:var(--t5)">${esc(db.operator)}</span><br>${esc(db.role)}${alt}${destTip}${staleNote}`;
   if(!aircraftMarkers[reg]) {
     aircraftMarkers[reg] = L.marker([ac.lat, ac.lon], {icon, zIndexOffset:500})
       .addTo(aircraftLayer)
@@ -702,6 +706,31 @@ function updateAircraftMarker(reg) {
     } else {
       aircraftTracks[reg] = L.polyline(ac._track, trackStyle).addTo(aircraftLayer).on('click', () => showAircraftDetail(reg));
     }
+  }
+
+  // Destination dashed line + airport label
+  const destCode = ac.dst ? ac.dst.toUpperCase().replace(/[^A-Z]/g, '') : null;
+  const destCoords = destCode ? (AIRPORT_COORDS[destCode] || null) : null;
+  if (destCoords && !ac._stale) {
+    const destStyle = { color: col, weight: 1.2, opacity: 0.38, dashArray: '5 9', interactive: false };
+    const pts = [[ac.lat, ac.lon], destCoords];
+    if (aircraftDestLines[reg]) {
+      aircraftDestLines[reg].setLatLngs(pts).setStyle(destStyle);
+    } else {
+      aircraftDestLines[reg] = L.polyline(pts, destStyle).addTo(aircraftLayer);
+    }
+    if (!aircraftDestMarkers[reg]) {
+      aircraftDestMarkers[reg] = L.marker(destCoords, {
+        icon: L.divIcon({
+          html: `<div style="background:#0d1a26;border:1px solid ${col}55;color:${col};font-size:9px;font-weight:700;padding:1px 5px;border-radius:2px;white-space:nowrap;letter-spacing:.05em;font-family:'Share Tech Mono',monospace">${destCode}</div>`,
+          className: '', iconAnchor: [14, 8],
+        }),
+        zIndexOffset: 200, interactive: false,
+      }).addTo(aircraftLayer);
+    }
+  } else {
+    if (aircraftDestLines[reg])   { aircraftDestLines[reg].remove();   delete aircraftDestLines[reg]; }
+    if (aircraftDestMarkers[reg]) { aircraftDestMarkers[reg].remove(); delete aircraftDestMarkers[reg]; }
   }
 }
 
