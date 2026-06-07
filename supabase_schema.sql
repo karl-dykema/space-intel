@@ -14,6 +14,19 @@ create table if not exists positions (
 );
 create index if not exists positions_mmsi_ts on positions (mmsi, ts desc);
 
+-- Aircraft position history (ADS-B, written by admin, read by share page)
+create table if not exists aircraft_positions (
+  id     bigserial   primary key,
+  reg    text        not null,
+  lat    float8      not null,
+  lon    float8      not null,
+  alt    float4,
+  gs     float4,
+  track  float4,
+  ts     timestamptz not null default now()
+);
+create index if not exists aircraft_positions_reg_ts on aircraft_positions (reg, ts desc);
+
 -- Events: zone entries/exits, underway, moored, AIS gaps, destination changes
 create table if not exists events (
   id          bigserial    primary key,
@@ -59,12 +72,16 @@ create index if not exists suggestions_ts on suggestions (ts desc);
 -- Anon key can read + insert, but NOT update or delete.
 -- Safe for a personal project with a public-facing anon key.
 
-alter table positions     enable row level security;
-alter table events        enable row level security;
-alter table news_articles enable row level security;
+alter table positions          enable row level security;
+alter table aircraft_positions enable row level security;
+alter table events             enable row level security;
+alter table news_articles      enable row level security;
 
-create policy "read_positions"  on positions     for select using (true);
-create policy "write_positions" on positions     for insert with check (true);
+create policy "read_positions"   on positions          for select using (true);
+create policy "write_positions"  on positions          for insert with check (true);
+
+create policy "read_ac_pos"      on aircraft_positions for select using (true);
+create policy "write_ac_pos"     on aircraft_positions for insert with check (true);
 
 create policy "read_events"     on events        for select using (true);
 create policy "write_events"    on events        for insert with check (true);
