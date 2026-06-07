@@ -27,6 +27,10 @@ end $$;
 `;
 
 async function ensureSchema() {
+  if (!process.env.SUPABASE_DB_URL) {
+    console.log('  SUPABASE_DB_URL not set — skipping schema check (table must exist)');
+    return;
+  }
   const client = new Client({
     connectionString: process.env.SUPABASE_DB_URL,
     ssl: { rejectUnauthorized: false },
