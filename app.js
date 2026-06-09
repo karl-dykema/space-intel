@@ -667,15 +667,16 @@ function updateAircraftMarker(reg) {
   const db = AIRCRAFT_DB[reg];
   if(!ac?.lat || !ac?.lon || !db) return;
   const col = opColor(db.operator);
-  const sz = 16;
-  const t = ac.track || 0;
   const isHelo = db.type === 'helicopter';
+  const sz = isHelo ? 24 : 16;
+  const t = ac.track || 0;
   const opacity = ac._stale ? 0.35 : 1;
   const fill = ac._stale ? 'none' : col;
   const shape = isHelo
-    ? `<circle cx="10" cy="10" r="5" fill="none" stroke="${col}" stroke-width="1.8" opacity="${opacity}"/>
-       <line x1="10" y1="4" x2="10" y2="16" stroke="${col}" stroke-width="1.5" opacity="${opacity}"/>
-       <line x1="4" y1="10" x2="16" y2="10" stroke="${col}" stroke-width="1.5" opacity="${opacity}"/>`
+    ? `<ellipse cx="10" cy="10" rx="3" ry="5.5" fill="${fill}" stroke="${col}" stroke-width="0.6" opacity="${opacity}"/>
+       <line x1="0.5" y1="7.5" x2="19.5" y2="7.5" stroke="${col}" stroke-width="2.2" opacity="${opacity}" stroke-linecap="round"/>
+       <line x1="10" y1="15.5" x2="10" y2="19.5" stroke="${col}" stroke-width="1.3" opacity="${opacity}"/>
+       <line x1="7.5" y1="19" x2="12.5" y2="19" stroke="${col}" stroke-width="1.6" opacity="${opacity}" stroke-linecap="round"/>`
     : `<polygon points="10,2 13,16 10,12 7,16" fill="${fill}" stroke="${col}" stroke-width="0.5" opacity="${opacity}"/>`;
   const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 20 20" style="transform:rotate(${t}deg);transform-origin:50% 50%;display:block">
     ${shape}
