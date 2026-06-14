@@ -58,18 +58,27 @@ async function main() {
   });
 
   // Also fetch full detailed data for operators we track — used by share page for rich mission cards
-  console.log('Fetching detailed launches for tracked operators…');
-  const detRaw = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=30&ordering=net&mode=detailed');
-  const detResults = JSON.parse(detRaw).results || [];
-  const detFiltered = detResults.filter(l =>
-    TRACKED_OPERATORS.some(op => (l.launch_service_provider?.name || '').includes(op))
-  );
-  console.log(`  ${detFiltered.length} tracked-operator launches (detailed)`);
+  const isTracked = l => TRACKED_OPERATORS.some(op => (l.launch_service_provider?.name || '').includes(op));
 
-  if (detFiltered.length > 0) {
-    await upsertCache('launches.detailed', detFiltered, {
-      source:    'll.thespacedevs.com',
-      fetchedAt: new Date().toISOString(),
+  console.log('Fetching detailed upcoming launches for tracked operators…');
+  const detRaw  = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=30&ordering=net&mode=detailed');
+  const detUp   = JSON.parse(detRaw).results || [];
+  const upFiltered = detUp.filter(isTracked);
+  console.log(`  ${upFiltered.length} upcoming (detailed)`);
+  if (upFiltered.length > 0) {
+    await upsertCache('launches.detailed', upFiltered, {
+      source: 'll.thespacedevs.com', fetchedAt: new Date().toISOString(),
+    });
+  }
+
+  console.log('Fetching detailed past launches for tracked operators…');
+  const pastRaw  = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/previous/?limit=20&ordering=-net&mode=detailed');
+  const detPast  = JSON.parse(pastRaw).results || [];
+  const pastFiltered = detPast.filter(isTracked);
+  console.log(`  ${pastFiltered.length} past (detailed)`);
+  if (pastFiltered.length > 0) {
+    await upsertCache('launches.past', pastFiltered, {
+      source: 'll.thespacedevs.com', fetchedAt: new Date().toISOString(),
     });
   }
 }

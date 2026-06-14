@@ -672,9 +672,10 @@ function _calOpColor(l) {
 async function fetchCalendarData() {
   if (!SB.init()) { addLog('Calendar: Supabase not configured', 'sys'); return; }
   try {
-    const [calRows, detRows] = await Promise.all([
+    const [calRows, detRows, pastRows] = await Promise.all([
       SB.select('app_cache', { key: 'eq.launches.upcoming' }),
       SB.select('app_cache', { key: 'eq.launches.detailed' }),
+      SB.select('app_cache', { key: 'eq.launches.past' }),
     ]);
     if (calRows?.length && calRows[0].data?.length) {
       calendarCache = calRows[0].data;
@@ -684,10 +685,15 @@ async function fetchCalendarData() {
     } else {
       addLog('Calendar: no data in DB — run Fetch Launch Calendar Action', 'sys');
     }
-    // Full detailed data → missionsCache (used for rich mission cards + booster detection)
+    // Full detailed upcoming → missionsCache (rich mission cards + booster detection)
     if (detRows?.length && detRows[0].data?.length) {
       missionsCache = detRows[0].data;
       addLog(`Missions: ${missionsCache.length} upcoming (full data from DB cache)`, 'sys');
+    }
+    // Full detailed past → pastMissionsCache (booster-aboard detection for returning ships)
+    if (pastRows?.length && pastRows[0].data?.length) {
+      pastMissionsCache = pastRows[0].data;
+      addLog(`Missions past: ${pastMissionsCache.length} recent (from DB cache)`, 'sys');
     }
   } catch(e) {
     addLog(`Calendar: ${e.message}`, 'err');
