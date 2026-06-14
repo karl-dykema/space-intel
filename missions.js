@@ -228,9 +228,17 @@ async function showMissions() {
   }
 
   if(SHARE_MODE) {
-    document.getElementById('missions-src').textContent = 'Missions data not loaded on share view';
-    document.getElementById('missions-content').innerHTML =
-      '<div style="padding:20px;color:var(--t4);font-size:13px">Launch calendar is available in the full admin view.</div>';
+    if (missionsCache.length) {
+      document.getElementById('missions-src').textContent = `${missionsCache.length} upcoming · Supabase cache`;
+      document.getElementById('missions-content').innerHTML =
+        `<div style="padding:10px 18px 6px;font-size:11px;font-weight:700;color:var(--t4);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--bdr2)">UPCOMING</div>` +
+        missionsCache.map(buildMissionCard).join('');
+      startCountdowns();
+    } else {
+      document.getElementById('missions-src').textContent = 'Loading from database…';
+      document.getElementById('missions-content').innerHTML =
+        '<div style="padding:20px;color:var(--t4);font-size:13px">Mission data loading…</div>';
+    }
     return;
   }
   document.getElementById('missions-content').innerHTML =

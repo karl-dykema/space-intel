@@ -957,6 +957,7 @@ window.onload=()=>{
         renderLaunchBanner();
         updateBoosterProjections();
         updateTrajectoryArcs();
+        renderRight(); // booster cards in event feed depend on missionsCache
       }
     }
   });
