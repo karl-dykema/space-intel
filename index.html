@@ -16,7 +16,7 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.91.576"/>
+<link rel="stylesheet" href="styles.css?v=0.91.578"/>
 </head>
 <body>
 <div id="stale-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:100000;background:#cc2200;color:#fff;text-align:center;padding:7px 12px;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer;animation:stale-blink 1s step-start infinite" onclick="location.reload(true)">
@@ -29,7 +29,7 @@
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE FLEET TRACKER <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.91.576</span></div>
+      <div class="ht">SPACE FLEET TRACKER <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.91.578</span></div>
       <div class="hs" id="hsubtitle">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -68,10 +68,38 @@
 
     <div id="mapwrap">
       <div id="map"></div>
-      <div id="replay-bar" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:1000;background:#0b1622ee;border:1px solid #ff8800;border-radius:4px;padding:8px 14px;align-items:center;gap:10px;white-space:nowrap;box-shadow:0 2px 12px #000a">
-        <button onclick="exitReplayMode()" style="background:#1a2535;border:1px solid #ff880066;color:#ff8800;font-family:'Share Tech Mono',monospace;font-size:11px;padding:4px 9px;cursor:pointer;border-radius:3px;letter-spacing:.05em">◀ LIVE</button>
-        <input type="range" id="replay-slider" min="0" max="100" value="100" style="width:300px;accent-color:#ff8800;cursor:pointer" oninput="scrubToTime(+this.value)"/>
-        <span id="replay-time" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:#ff8800;min-width:138px">—</span>
+      <div id="replay-bar" style="display:none;position:absolute;bottom:28px;left:50%;transform:translateX(-50%);z-index:1000;background:#080f1aee;border:1px solid #ff880055;border-radius:6px;padding:10px 14px;flex-direction:column;gap:7px;min-width:560px;box-shadow:0 4px 24px #000d;backdrop-filter:blur(6px)">
+        <!-- row 1: transport controls + slider + time -->
+        <div style="display:flex;align-items:center;gap:7px">
+          <button onclick="exitReplayMode()" title="Return to live" style="background:#ff880022;border:1px solid #ff880066;color:#ff8800;font-family:'Share Tech Mono',monospace;font-size:10px;padding:4px 9px;cursor:pointer;border-radius:3px;letter-spacing:.06em;white-space:nowrap">◀ LIVE</button>
+          <div style="display:flex;gap:3px;margin-left:2px">
+            <button onclick="replayJump(-1)"    title="Start"    style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-size:13px;width:26px;height:26px;cursor:pointer;border-radius:3px;padding:0;line-height:1">⏮</button>
+            <button onclick="replayStep(-1)"    title="Step back" style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-size:13px;width:26px;height:26px;cursor:pointer;border-radius:3px;padding:0;line-height:1">◀</button>
+            <button id="replay-play-btn" onclick="toggleReplayPlay()" title="Play / Pause" style="background:#ff880033;border:1px solid #ff880066;color:#ff8800;font-size:14px;width:32px;height:26px;cursor:pointer;border-radius:3px;padding:0;line-height:1">▶</button>
+            <button onclick="replayStep(1)"     title="Step forward" style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-size:13px;width:26px;height:26px;cursor:pointer;border-radius:3px;padding:0;line-height:1">▶</button>
+            <button onclick="replayJump(1)"     title="End"      style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-size:13px;width:26px;height:26px;cursor:pointer;border-radius:3px;padding:0;line-height:1">⏭</button>
+          </div>
+          <input type="range" id="replay-slider" min="0" max="100" value="100" style="flex:1;accent-color:#ff8800;cursor:pointer;height:4px" oninput="scrubToTime(+this.value)"/>
+          <span id="replay-time" style="font-family:'Share Tech Mono',monospace;font-size:10px;color:#ff8800;min-width:148px;text-align:right">—</span>
+        </div>
+        <!-- row 2: zoom + speed -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:0 2px">
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--t5);letter-spacing:.08em;margin-right:3px">ZOOM</span>
+            <button id="rz0" onclick="setReplayZoom(259200000)" style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;border-radius:3px;letter-spacing:.04em">3d</button>
+            <button id="rz1" onclick="setReplayZoom(86400000)"  style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;border-radius:3px;letter-spacing:.04em">1d</button>
+            <button id="rz2" onclick="setReplayZoom(43200000)"  style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;border-radius:3px;letter-spacing:.04em">12h</button>
+            <button id="rz3" onclick="setReplayZoom(21600000)"  style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;border-radius:3px;letter-spacing:.04em">6h</button>
+            <button id="rz4" onclick="setReplayZoom(3600000)"   style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;border-radius:3px;letter-spacing:.04em">1h</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <span style="font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--t5);letter-spacing:.08em;margin-right:3px">SPEED</span>
+            <button id="rs0" onclick="setReplaySpeed(21600000)" style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;border-radius:3px;letter-spacing:.04em">6h/s</button>
+            <button id="rs1" onclick="setReplaySpeed(3600000)"  style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;border-radius:3px;letter-spacing:.04em">1h/s</button>
+            <button id="rs2" onclick="setReplaySpeed(600000)"   style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;border-radius:3px;letter-spacing:.04em">10m/s</button>
+            <button id="rs3" onclick="setReplaySpeed(60000)"    style="background:transparent;border:1px solid var(--bdr2);color:var(--t4);font-family:'Share Tech Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;border-radius:3px;letter-spacing:.04em">1m/s</button>
+          </div>
+        </div>
       </div>
       <button id="mob-fleet-btn" onclick="toggleMobileFleet()">☰ FLEET</button>
       <button id="mob-events-btn" onclick="toggleMobileEvents()">EVENTS ≡</button>
@@ -266,15 +294,15 @@
 <script data-goatcounter="https://space-intel.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.1.4/satellite.min.js"></script>
-<script src="config.js?v=0.91.576"></script>
-<script src="ships_db.js?v=0.91.576"></script>
-<script src="aircraft_db.js?v=0.91.576"></script>
-<script src="db.js?v=0.91.576"></script>
-<script src="spacecraft.js?v=0.91.576"></script>
-<script src="missions.js?v=0.91.576"></script>
-<script src="ais.js?v=0.91.576"></script>
-<script src="ui.js?v=0.91.576"></script>
-<script src="closures.js?v=0.91.576"></script>
-<script src="app.js?v=0.91.576"></script>
+<script src="config.js?v=0.91.578"></script>
+<script src="ships_db.js?v=0.91.578"></script>
+<script src="aircraft_db.js?v=0.91.578"></script>
+<script src="db.js?v=0.91.578"></script>
+<script src="spacecraft.js?v=0.91.578"></script>
+<script src="missions.js?v=0.91.578"></script>
+<script src="ais.js?v=0.91.578"></script>
+<script src="ui.js?v=0.91.578"></script>
+<script src="closures.js?v=0.91.578"></script>
+<script src="app.js?v=0.91.578"></script>
 </body>
 </html>

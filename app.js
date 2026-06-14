@@ -4,10 +4,15 @@ let history = {};
 let events  = [];
 
 // ── Replay mode ───────────────────────────────────────────────
-let _replayMode = false;
+let _replayMode    = false;
+let _replayTime    = 0;
+let _replayDataMin = 0, _replayDataMax = 0;
+let _replayZoomMs  = 3 * 86400000;   // window the slider covers
+let _replayPlaying = false;
+let _replayTick    = null;
+let _replaySpeedMs = 3600000;         // ms of data per real second (1h/s default)
 
 function _ptAtTime(arr, t) {
-  // Binary search arr (sorted asc by .ts or [2]) for last entry ≤ t
   let lo = 0, hi = arr.length - 1, best = -1;
   while (lo <= hi) {
     const mid = (lo + hi) >> 1;
@@ -18,43 +23,133 @@ function _ptAtTime(arr, t) {
   return best >= 0 ? arr[best] : null;
 }
 
+function _replaySetWindow() {
+  const slider = document.getElementById('replay-slider');
+  if (!slider) return;
+  const half = _replayZoomMs / 2;
+  let wMin = _replayTime - half, wMax = _replayTime + half;
+  if (wMin < _replayDataMin) { wMax += _replayDataMin - wMin; wMin = _replayDataMin; }
+  if (wMax > _replayDataMax) { wMin -= wMax - _replayDataMax; wMax = _replayDataMax; }
+  slider.min   = Math.max(_replayDataMin, wMin);
+  slider.max   = Math.min(_replayDataMax, wMax);
+  slider.value = Math.max(+slider.min, Math.min(+slider.max, _replayTime));
+}
+
+function _replayHighlightBtns() {
+  const zoomVals  = [3*86400000, 86400000, 12*3600000, 6*3600000, 3600000];
+  const speedVals = [6*3600000, 3600000, 600000, 60000];
+  zoomVals.forEach((z, i) => {
+    const b = document.getElementById(`rz${i}`);
+    if (!b) return;
+    const on = _replayZoomMs === z;
+    b.style.color       = on ? '#ff8800' : 'var(--t4)';
+    b.style.borderColor = on ? '#ff880099' : 'var(--bdr2)';
+    b.style.background  = on ? '#ff880022' : 'transparent';
+  });
+  speedVals.forEach((s, i) => {
+    const b = document.getElementById(`rs${i}`);
+    if (!b) return;
+    const on = _replaySpeedMs === s;
+    b.style.color       = on ? '#ff8800' : 'var(--t4)';
+    b.style.borderColor = on ? '#ff880099' : 'var(--bdr2)';
+    b.style.background  = on ? '#ff880022' : 'transparent';
+  });
+}
+
 function enterReplayMode() {
   if (!SB.ready) return;
   _replayMode = true;
-  const bar = document.getElementById('replay-bar');
-  bar.style.display = 'flex';
-  let minTs = Date.now() - 3 * 86400000;
+  _replayDataMax = Date.now();
+  _replayDataMin = _replayDataMax - 3 * 86400000;
   for (const mmsi of Object.keys(history)) {
     const pos = history[mmsi]?.positions;
-    if (pos?.length) minTs = Math.min(minTs, pos[0].ts);
+    if (pos?.length) _replayDataMin = Math.min(_replayDataMin, pos[0].ts);
   }
   for (const reg of Object.keys(S.aircraft)) {
-    const pts = S.aircraft[reg]._replayPts;
-    if (pts?.length) minTs = Math.min(minTs, pts[0].ts);
+    const pts = S.aircraft[reg]?._replayPts;
+    if (pts?.length) _replayDataMin = Math.min(_replayDataMin, pts[0].ts);
   }
-  const now = Date.now();
-  const slider = document.getElementById('replay-slider');
-  slider.min = minTs;
-  slider.max = now;
-  slider.value = now;
-  scrubToTime(now);
+  _replayTime   = _replayDataMax;
+  _replayZoomMs = _replayDataMax - _replayDataMin;
+  document.getElementById('replay-bar').style.display = 'flex';
+  _replaySetWindow();
+  _replayHighlightBtns();
+  scrubToTime(_replayTime);
 }
 
 function exitReplayMode() {
+  _replayPause();
   _replayMode = false;
   document.getElementById('replay-bar').style.display = 'none';
   for (const mmsi of Object.keys(S.vessels)) updateMarker(S.vessels[mmsi]);
   for (const reg of Object.keys(S.aircraft)) updateAircraftMarker(reg);
 }
 
+function setReplayZoom(ms) {
+  _replayZoomMs = ms;
+  _replaySetWindow();
+  _replayHighlightBtns();
+}
+
+function setReplaySpeed(ms) {
+  _replaySpeedMs = ms;
+  _replayHighlightBtns();
+}
+
+function toggleReplayPlay() {
+  if (_replayPlaying) _replayPause(); else _replayPlay();
+}
+
+function _replayPlay() {
+  if (_replayTime >= _replayDataMax) _replayTime = _replayDataMin;
+  _replayPlaying = true;
+  document.getElementById('replay-play-btn').textContent = '⏸';
+  _replayTick = setInterval(() => {
+    _replayTime += _replaySpeedMs * 0.1; // 10 ticks/sec
+    if (_replayTime >= _replayDataMax) { _replayTime = _replayDataMax; _replayPause(); }
+    scrubToTime(_replayTime);
+    // Auto-scroll: re-center window when playhead drifts near the edge
+    const s = document.getElementById('replay-slider');
+    const edge = _replayZoomMs * 0.15;
+    if (_replayTime > +s.max - edge || _replayTime < +s.min + edge) _replaySetWindow();
+    else s.value = _replayTime;
+  }, 100);
+}
+
+function _replayPause() {
+  _replayPlaying = false;
+  clearInterval(_replayTick);
+  const btn = document.getElementById('replay-play-btn');
+  if (btn) btn.textContent = '▶';
+}
+
+function replayJump(dir) {
+  _replayPause();
+  _replayTime = dir < 0 ? _replayDataMin : _replayDataMax;
+  scrubToTime(_replayTime);
+  _replaySetWindow();
+}
+
+function replayStep(dir) {
+  _replayPause();
+  _replayTime = Math.max(_replayDataMin, Math.min(_replayDataMax, _replayTime + dir * _replaySpeedMs));
+  scrubToTime(_replayTime);
+  _replaySetWindow();
+}
+
 function scrubToTime(t) {
   if (!_replayMode) return;
   t = +t;
+  _replayTime = t;
   const d = new Date(t);
-  document.getElementById('replay-time').textContent =
-    d.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  const el = document.getElementById('replay-time');
+  if (el) el.textContent = d.toUTCString().replace(/:\d\d GMT/, ' UTC').replace(/^.{5}/, '');
+  if (!_replayPlaying) {
+    const s = document.getElementById('replay-slider');
+    if (s) s.value = t;
+  }
 
-  for (const [mmsi, v] of Object.entries(S.vessels)) {
+  for (const [mmsi] of Object.entries(S.vessels)) {
     const marker = markers[mmsi];
     if (!marker) continue;
     const pos = history[mmsi]?.positions;
