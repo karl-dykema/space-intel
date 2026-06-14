@@ -16,7 +16,7 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=0.91.574"/>
+<link rel="stylesheet" href="styles.css?v=0.91.576"/>
 </head>
 <body>
 <div id="stale-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:100000;background:#cc2200;color:#fff;text-align:center;padding:7px 12px;font-size:13px;font-weight:700;letter-spacing:.06em;cursor:pointer;animation:stale-blink 1s step-start infinite" onclick="location.reload(true)">
@@ -29,7 +29,7 @@
 
   <div id="hdr">
     <div>
-      <div class="ht">SPACE FLEET TRACKER <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.91.574</span></div>
+      <div class="ht">SPACE FLEET TRACKER <span style="font-size:11px;font-weight:400;color:var(--t4);letter-spacing:.04em">v0.91.576</span></div>
       <div class="hs" id="hsubtitle">GLOBAL FLEET · SPACEX · BLUE ORIGIN · ROCKET LAB · ULA</div>
     </div>
     <div class="hstats" id="hstats"></div>
@@ -53,6 +53,7 @@
     <button class="cbtn" id="vessels-btn"   onclick="toggleVessels()"   title="Toggle marine vessels">VESSELS</button>
     <button class="cbtn" id="aircraft-btn"  onclick="toggleAircraft()"  title="Toggle aircraft">AIRCRAFT</button>
     <button class="cbtn" id="spacecraft-btn" onclick="toggleSpacecraft()" title="Toggle ISS, Tiangong, and other long-term orbital assets">SPACECRAFT</button>
+    <button class="cbtn admin-only" onclick="enterReplayMode()" id="replay-btn" title="Scrub through historical positions">⏮ REPLAY</button>
     <button class="cbtn admin-only" onclick="clearEvents()" style="color:var(--t4);margin-left:auto">CLEAR EVENTS</button>
     <button class="cbtn share-only" onclick="showSuggestModal()" style="margin-left:auto;color:var(--grn);border-color:var(--grn)33">SUGGESTIONS</button>
     <button class="cbtn" onclick="showSources()" style="color:var(--t4)" title="Data sources, APIs, and references">SOURCES</button>
@@ -67,6 +68,11 @@
 
     <div id="mapwrap">
       <div id="map"></div>
+      <div id="replay-bar" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:1000;background:#0b1622ee;border:1px solid #ff8800;border-radius:4px;padding:8px 14px;align-items:center;gap:10px;white-space:nowrap;box-shadow:0 2px 12px #000a">
+        <button onclick="exitReplayMode()" style="background:#1a2535;border:1px solid #ff880066;color:#ff8800;font-family:'Share Tech Mono',monospace;font-size:11px;padding:4px 9px;cursor:pointer;border-radius:3px;letter-spacing:.05em">◀ LIVE</button>
+        <input type="range" id="replay-slider" min="0" max="100" value="100" style="width:300px;accent-color:#ff8800;cursor:pointer" oninput="scrubToTime(+this.value)"/>
+        <span id="replay-time" style="font-family:'Share Tech Mono',monospace;font-size:11px;color:#ff8800;min-width:138px">—</span>
+      </div>
       <button id="mob-fleet-btn" onclick="toggleMobileFleet()">☰ FLEET</button>
       <button id="mob-events-btn" onclick="toggleMobileEvents()">EVENTS ≡</button>
       <div id="mleg">
@@ -260,15 +266,15 @@
 <script data-goatcounter="https://space-intel.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/satellite.js/4.1.4/satellite.min.js"></script>
-<script src="config.js?v=0.91.574"></script>
-<script src="ships_db.js?v=0.91.574"></script>
-<script src="aircraft_db.js?v=0.91.574"></script>
-<script src="db.js?v=0.91.574"></script>
-<script src="spacecraft.js?v=0.91.574"></script>
-<script src="missions.js?v=0.91.574"></script>
-<script src="ais.js?v=0.91.574"></script>
-<script src="ui.js?v=0.91.574"></script>
-<script src="closures.js?v=0.91.574"></script>
-<script src="app.js?v=0.91.574"></script>
+<script src="config.js?v=0.91.576"></script>
+<script src="ships_db.js?v=0.91.576"></script>
+<script src="aircraft_db.js?v=0.91.576"></script>
+<script src="db.js?v=0.91.576"></script>
+<script src="spacecraft.js?v=0.91.576"></script>
+<script src="missions.js?v=0.91.576"></script>
+<script src="ais.js?v=0.91.576"></script>
+<script src="ui.js?v=0.91.576"></script>
+<script src="closures.js?v=0.91.576"></script>
+<script src="app.js?v=0.91.576"></script>
 </body>
 </html>

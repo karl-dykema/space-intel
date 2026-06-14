@@ -3,6 +3,78 @@
 let history = {};
 let events  = [];
 
+// ── Replay mode ───────────────────────────────────────────────
+let _replayMode = false;
+
+function _ptAtTime(arr, t) {
+  // Binary search arr (sorted asc by .ts or [2]) for last entry ≤ t
+  let lo = 0, hi = arr.length - 1, best = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    const mts = Array.isArray(arr[mid]) ? arr[mid][2] : arr[mid].ts;
+    if (mts <= t) { best = mid; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  return best >= 0 ? arr[best] : null;
+}
+
+function enterReplayMode() {
+  if (!SB.ready) return;
+  _replayMode = true;
+  const bar = document.getElementById('replay-bar');
+  bar.style.display = 'flex';
+  let minTs = Date.now() - 3 * 86400000;
+  for (const mmsi of Object.keys(history)) {
+    const pos = history[mmsi]?.positions;
+    if (pos?.length) minTs = Math.min(minTs, pos[0].ts);
+  }
+  for (const reg of Object.keys(S.aircraft)) {
+    const pts = S.aircraft[reg]._replayPts;
+    if (pts?.length) minTs = Math.min(minTs, pts[0].ts);
+  }
+  const now = Date.now();
+  const slider = document.getElementById('replay-slider');
+  slider.min = minTs;
+  slider.max = now;
+  slider.value = now;
+  scrubToTime(now);
+}
+
+function exitReplayMode() {
+  _replayMode = false;
+  document.getElementById('replay-bar').style.display = 'none';
+  for (const mmsi of Object.keys(S.vessels)) updateMarker(S.vessels[mmsi]);
+  for (const reg of Object.keys(S.aircraft)) updateAircraftMarker(reg);
+}
+
+function scrubToTime(t) {
+  if (!_replayMode) return;
+  t = +t;
+  const d = new Date(t);
+  document.getElementById('replay-time').textContent =
+    d.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+
+  for (const [mmsi, v] of Object.entries(S.vessels)) {
+    const marker = markers[mmsi];
+    if (!marker) continue;
+    const pos = history[mmsi]?.positions;
+    if (!pos?.length) { marker.setOpacity(0); continue; }
+    const pt = _ptAtTime(pos, t);
+    if (pt) { marker.setLatLng([pt.lat, pt.lon]); marker.setOpacity(0.85); }
+    else marker.setOpacity(0);
+  }
+
+  for (const [reg, ac] of Object.entries(S.aircraft)) {
+    const marker = aircraftMarkers[reg];
+    if (!marker) continue;
+    const pts = ac._replayPts;
+    if (!pts?.length) { marker.setOpacity(0); continue; }
+    const pt = _ptAtTime(pts, t);
+    if (pt) { marker.setLatLng([pt.lat, pt.lon]); marker.setOpacity(1); }
+    else marker.setOpacity(0);
+  }
+}
+
 const logLines = [];
 let   logUnread = 0;
 
@@ -537,6 +609,7 @@ function _splitTrack(track) {
 }
 
 function updateMarker(v) {
+  if(_replayMode) return;
   if(!map||!layers||!v.lat||!v.lon) return;
   const mmsi=v.mmsi, col=opColor(v.operator), sel=S.selected===mmsi;
   const hist=!!v._historical&&(Date.now()-v.ts>600000); // dim only if historical AND older than 10min
@@ -662,6 +735,7 @@ async function pollAircraft() {
 }
 
 function updateAircraftMarker(reg) {
+  if(_replayMode) return;
   if(!map || !aircraftLayer) return;
   const ac = S.aircraft[reg];
   const db = AIRCRAFT_DB[reg];

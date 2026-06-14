@@ -201,7 +201,7 @@ async function loadSBData() {
         if (i > 0 && new Date(rows[i].ts).getTime() - new Date(rows[i-1].ts).getTime() > GAP_AC) {
           if (cur.length) { segments.push(cur); cur = []; }
         }
-        cur.push([rows[i].lat, rows[i].lon]);
+        cur.push([rows[i].lat, rows[i].lon, new Date(rows[i].ts).getTime()]);
       }
       if (cur.length) segments.push(cur);
       const pts = segments.length === 1 ? segments[0] : segments;
@@ -211,14 +211,17 @@ async function loadSBData() {
       const freshness = Date.now() - lastTs;
       const isStale = freshness > 5 * 60000;
       // SHARE_MODE: always use Supabase (no live poll). Admin first load: apply if newer.
+      const replayPts = rows.map(r => ({ lat: r.lat, lon: r.lon, alt: r.alt, gs: r.gs, track: r.track, ts: new Date(r.ts).getTime() }));
       if (SHARE_MODE || !existing || lastTs > (existing.ts || 0)) {
         S.aircraft[reg] = {
           ...(existing || {}),
           reg, lat: last.lat, lon: last.lon,
           alt: last.alt, gs: last.gs, track: last.track ?? 0,
           ts: lastTs, _stale: isStale, _staleTs: isStale ? lastTs : undefined,
-          _track: pts,
+          _track: pts, _replayPts: replayPts,
         };
+      } else {
+        S.aircraft[reg]._replayPts = replayPts;
       }
       updateAircraftMarker(reg);
     }
