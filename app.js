@@ -311,8 +311,12 @@ function isCarryingBooster(mmsi) {
     if(!net) return false;
     const age = now - net;
     if(age < 600000 || age > 4*86400000) return false; // 10 min to 4 days
-    const op = Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
-    return vesselHintsForLaunch(op, l.pad?.name||'', l.pad?.location?.name||'').includes(mmsi);
+    // Support both full Space Devs format and lightweight calendar format
+    const lspName = l.launch_service_provider?.name || l.lsp || '';
+    const padName = typeof l.pad === 'object' ? (l.pad?.name || '') : (l.pad || '');
+    const padLoc  = typeof l.pad === 'object' ? (l.pad?.location?.name || '') : (l.loc || '');
+    const op = Object.entries(OPERATOR_MATCH).find(([k]) => lspName.includes(k))?.[1] || '';
+    return vesselHintsForLaunch(op, padName, padLoc).includes(mmsi);
   });
   if(!mission) return null;
 
@@ -357,8 +361,11 @@ function findActiveMission(mmsi) {
   return missionsCache.find(l => {
     const net = l.net ? new Date(l.net).getTime() : null;
     if(!net || Math.abs(now - net) > 12 * 3600000) return false;
-    const op = Object.entries(OPERATOR_MATCH).find(([k])=>(l.launch_service_provider?.name||'').includes(k))?.[1]||'';
-    return vesselHintsForLaunch(op, l.pad?.name||'', l.pad?.location?.name||'').includes(mmsi);
+    const lspName = l.launch_service_provider?.name || l.lsp || '';
+    const padName = typeof l.pad === 'object' ? (l.pad?.name || '') : (l.pad || '');
+    const padLoc  = typeof l.pad === 'object' ? (l.pad?.location?.name || '') : (l.loc || '');
+    const op = Object.entries(OPERATOR_MATCH).find(([k]) => lspName.includes(k))?.[1] || '';
+    return vesselHintsForLaunch(op, padName, padLoc).includes(mmsi);
   }) || null;
 }
 

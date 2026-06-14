@@ -26,11 +26,14 @@ function fetchUrl(url) {
   });
 }
 
+// Operators we track — must match OPERATOR_MATCH keys in ships_db.js
+const TRACKED_OPERATORS = ['SpaceX', 'Rocket Lab', 'Blue Origin', 'United Launch Alliance'];
+
 async function main() {
   console.log('=== fetch-calendar ===');
   await ensureSchema();
 
-  console.log('Fetching from The Space Devs API…');
+  console.log('Fetching calendar (list mode, all operators)…');
   const raw = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=100&ordering=net&mode=list');
   const results = JSON.parse(raw).results || [];
   console.log(`  ${results.length} launches received`);
@@ -53,6 +56,22 @@ async function main() {
     source:    'll.thespacedevs.com',
     fetchedAt: new Date().toISOString(),
   });
+
+  // Also fetch full detailed data for operators we track — used by share page for rich mission cards
+  console.log('Fetching detailed launches for tracked operators…');
+  const detRaw = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=30&ordering=net&mode=detailed');
+  const detResults = JSON.parse(detRaw).results || [];
+  const detFiltered = detResults.filter(l =>
+    TRACKED_OPERATORS.some(op => (l.launch_service_provider?.name || '').includes(op))
+  );
+  console.log(`  ${detFiltered.length} tracked-operator launches (detailed)`);
+
+  if (detFiltered.length > 0) {
+    await upsertCache('launches.detailed', detFiltered, {
+      source:    'll.thespacedevs.com',
+      fetchedAt: new Date().toISOString(),
+    });
+  }
 }
 
 main().catch(e => { console.error(e.message); process.exit(1); });

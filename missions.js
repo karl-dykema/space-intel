@@ -672,14 +672,23 @@ function _calOpColor(l) {
 async function fetchCalendarData() {
   if (!SB.init()) { addLog('Calendar: Supabase not configured', 'sys'); return; }
   try {
-    const rows = await SB.select('app_cache', { key: 'eq.launches.upcoming' });
-    if (!rows?.length || !rows[0].data?.length) {
-      addLog('Calendar: no data in DB — run Fetch Launch Calendar Action', 'sys'); return;
+    const [calRows, detRows] = await Promise.all([
+      SB.select('app_cache', { key: 'eq.launches.upcoming' }),
+      SB.select('app_cache', { key: 'eq.launches.detailed' }),
+    ]);
+    if (calRows?.length && calRows[0].data?.length) {
+      calendarCache = calRows[0].data;
+      const ageH = calRows[0].fetched_at
+        ? ((Date.now() - new Date(calRows[0].fetched_at).getTime()) / 3600000).toFixed(1) : '?';
+      addLog(`Calendar: ${calendarCache.length} launches · data ${ageH}h old`, 'sys');
+    } else {
+      addLog('Calendar: no data in DB — run Fetch Launch Calendar Action', 'sys');
     }
-    calendarCache = rows[0].data;
-    const ageH = rows[0].fetched_at
-      ? ((Date.now() - new Date(rows[0].fetched_at).getTime()) / 3600000).toFixed(1) : '?';
-    addLog(`Calendar: ${calendarCache.length} launches · data ${ageH}h old`, 'sys');
+    // Full detailed data → missionsCache (used for rich mission cards + booster detection)
+    if (detRows?.length && detRows[0].data?.length) {
+      missionsCache = detRows[0].data;
+      addLog(`Missions: ${missionsCache.length} upcoming (full data from DB cache)`, 'sys');
+    }
   } catch(e) {
     addLog(`Calendar: ${e.message}`, 'err');
   }
