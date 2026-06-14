@@ -18,9 +18,20 @@ const STATION_INFO = {
     fullName: 'Hubble Space Telescope',
     agency: 'NASA · ESA',
     modules: [
-      { name: 'Wide Field Camera 3',    role: 'UV/optical/IR imaging', location: 'Axial bay', col: '#ccaaff' },
-      { name: 'Cosmic Origins Spectrograph', role: 'UV spectroscopy',  location: 'Axial bay', col: '#ccaaff' },
-      { name: 'Advanced Camera for Surveys', role: 'Wide-field imaging', location: 'Radial bay', col: '#ccaaff' },
+      { name: 'Wide Field Camera 3',         role: 'UV/optical/IR imaging', location: 'Axial bay',   col: '#ccaaff' },
+      { name: 'Cosmic Origins Spectrograph', role: 'UV spectroscopy',        location: 'Axial bay',   col: '#ccaaff' },
+      { name: 'Advanced Camera for Surveys', role: 'Wide-field imaging',     location: 'Radial bay',  col: '#ccaaff' },
+    ],
+    visitingNotes: [],
+  },
+  'JWST': {
+    fullName: 'James Webb Space Telescope',
+    agency: 'NASA · ESA · CSA',
+    modules: [
+      { name: 'NIRCam',   role: 'Near-infrared camera (0.6–5 μm)',   location: 'Instrument Module', col: '#aaddff' },
+      { name: 'NIRSpec',  role: 'Near-infrared spectrograph',         location: 'Instrument Module', col: '#aaddff' },
+      { name: 'MIRI',     role: 'Mid-infrared instrument (5–28 μm)', location: 'Instrument Module', col: '#aaddff' },
+      { name: 'FGS/NIRISS', role: 'Fine guidance & near-IR imaging', location: 'Instrument Module', col: '#aaddff' },
     ],
     visitingNotes: [],
   },
@@ -324,6 +335,30 @@ function removeSatMarker(name) {
 function updateSpacecraftMarker(primary, members, layer) {
   const sc = S_spacecraft[primary];
   const col = sc.col || '#ffffff';
+
+  if (sc.isL2) {
+    // Hexagonal icon evoking Webb's 18-segment mirror; no ground track
+    const sz = 22;
+    const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 22 22">
+      <polygon points="11,1 19,5.5 19,16.5 11,21 3,16.5 3,5.5" fill="none" stroke="${col}" stroke-width="1.4" opacity="0.9"/>
+      <polygon points="11,5 15,7.5 15,12.5 11,15 7,12.5 7,7.5" fill="none" stroke="${col}" stroke-width="0.8" opacity="0.5"/>
+      <circle cx="11" cy="11" r="1.8" fill="${col}" opacity="0.85"/>
+    </svg>`;
+    const icon = L.divIcon({ html: svg, iconSize:[sz,sz], iconAnchor:[sz/2,sz/2], className:'' });
+    const tip = `<b style="color:${col}">JWST</b><br>
+      <span style="color:var(--t5)">NASA · ESA · CSA</span><br>Space Telescope · Sun-Earth L2<br>
+      <span style="color:var(--t4);font-size:10px">~1.5M km · marker shows L2 direction</span>`;
+    if (!spacecraftMarkers[primary]) {
+      spacecraftMarkers[primary] = L.marker([sc.lat, sc.lon], {icon, zIndexOffset:700})
+        .addTo(layer).on('click', () => showSpacecraftDetail(primary));
+    } else {
+      spacecraftMarkers[primary].setLatLng([sc.lat, sc.lon]);
+      spacecraftMarkers[primary].setIcon(icon);
+    }
+    spacecraftMarkers[primary].bindTooltip(tip, {className:'ltt', direction:'auto'});
+    return;
+  }
+
   const isStation = /^ISS|^CSS/.test(primary);
   const sz = isStation ? 22 : 16;
   const docked = members.filter(n => n !== primary);
@@ -385,9 +420,27 @@ function clearSatLayers() {
   for (const k in orbitTracks)       delete orbitTracks[k];
 }
 
+// ── JWST / L2 position (no TLE — computed from solar geometry) ─
+function _updateL2Craft() {
+  const now = new Date();
+  const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+  const decl = -23.45 * Math.cos(2 * Math.PI / 365 * (doy + 10));
+  const utcH = now.getUTCHours() + now.getUTCMinutes()/60 + now.getUTCSeconds()/3600;
+  const subSolarLon = (12 - utcH) * 15;
+  // L2 is directly opposite the Sun; JWST's halo orbit keeps it within ~0.3° of true L2
+  const lat = -decl;
+  const lon = ((subSolarLon + 180 + 180) % 360) - 180;
+  S_spacecraft['JWST'] = {
+    name:'JWST', abbr:'JWST', operator:'NASA · ESA · CSA',
+    role:'Space Telescope at Sun-Earth L2', col:'#aaddff',
+    lat, lon, alt:1500000, longterm:true, isL2:true,
+  };
+}
+
 function updateOrbits() {
   if (!map || !orbitLayer || !rocketLayer) return;
   const now = new Date();
+  _updateL2Craft();
   // Propagate all positions first; skip craft with implausible altitudes (re-entered or bad TLE)
   for (const [name, tle] of Object.entries(tleData)) {
     const pos = propagateSat(tle.satrec, now);
@@ -408,9 +461,9 @@ function updateOrbits() {
     updateSpacecraftMarker(cluster.primary, cluster.members, layer);
     renderedPrimaries.add(cluster.primary);
   }
-  // Remove markers for spacecraft no longer in tleData (e.g. re-entered)
+  // Remove markers for re-entered or gone spacecraft (preserve L2 craft managed above)
   Object.keys(spacecraftMarkers).forEach(name => {
-    if (!name.startsWith('__') && !renderedPrimaries.has(name)) removeSatMarker(name);
+    if (!name.startsWith('__') && !renderedPrimaries.has(name) && !S_spacecraft[name]?.isL2) removeSatMarker(name);
   });
   updateBoosterProjections();
 }
@@ -777,8 +830,8 @@ function buildSpacecraftDetail() {
   if (!name || !S_spacecraft[name]) return '<div style="padding:16px;color:var(--t4);font-size:12px">No spacecraft selected.</div>';
   const sc = S_spacecraft[name];
   const col = sc.col || '#fff';
-  const alt = sc.alt ? `${Math.round(sc.alt)} km` : '—';
-  const pos = sc.lat != null ? `${sc.lat.toFixed(2)}°, ${sc.lon.toFixed(2)}°` : '—';
+  const alt = sc.isL2 ? '~1,500,000 km' : (sc.alt ? `${Math.round(sc.alt)} km` : '—');
+  const pos = sc.lat != null ? (sc.isL2 ? `L2 direction ${sc.lat.toFixed(1)}°, ${sc.lon.toFixed(1)}°` : `${sc.lat.toFixed(2)}°, ${sc.lon.toFixed(2)}°`) : '—';
   const info = STATION_INFO[name];
 
   let modulesHtml = '';
@@ -827,18 +880,25 @@ function buildSpacecraftDetail() {
     <div style="font-size:18px;font-weight:700;color:${col};letter-spacing:.04em;margin-bottom:2px">${esc(info?.fullName || name)}</div>
     <div style="font-size:11px;color:var(--t4);margin-bottom:12px">${esc(info?.agency || sc.operator)} · ${esc(sc.role)}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-      ${stat('STATUS','IN ORBIT','#00ff88')}
-      ${stat('ALTITUDE',alt,'var(--t2)')}
-      ${stat('POSITION',pos,'var(--t2)')}
-      ${stat('INCLINATION', sc.incDeg != null ? sc.incDeg.toFixed(1)+'°' : 'LEO', 'var(--t3)')}
+      ${stat('STATUS', sc.isL2 ? 'AT L2' : 'IN ORBIT', '#00ff88')}
+      ${stat('DISTANCE', alt, 'var(--t2)')}
+      ${stat('POSITION', pos, 'var(--t2)')}
+      ${sc.isL2 ? stat('ORBIT TYPE','Halo orbit · L2','var(--t3)') : stat('INCLINATION', sc.incDeg != null ? sc.incDeg.toFixed(1)+'°' : 'LEO', 'var(--t3)')}
     </div>
+    ${sc.isL2 ? `<div style="margin-top:10px;font-size:10px;color:var(--t4);border:1px solid var(--bdr2);padding:7px 10px;border-radius:3px">
+      Map marker shows the direction toward Sun-Earth L2 — not a ground track. JWST orbits L2 at ~600,000 km radius with a ~6-month period.</div>` : ''}
     ${modulesHtml}
     ${dockedHtml}
     <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-      <a href="https://heavens-above.com/orbit.aspx" target="_blank"
-        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">HEAVENS-ABOVE ↗</a>
-      <a href="https://www.n2yo.com" target="_blank"
-        style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">N2YO ↗</a>
+      ${sc.isL2
+        ? `<a href="https://www.stsci.edu/jwst/instrumentation/observation-scheduling" target="_blank"
+            style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">OBSERVATION SCHEDULE ↗</a>
+           <a href="https://eyes.nasa.gov/apps/solar-system/#/sc_jwst" target="_blank"
+            style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">NASA EYES ↗</a>`
+        : `<a href="https://heavens-above.com/orbit.aspx" target="_blank"
+            style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">HEAVENS-ABOVE ↗</a>
+           <a href="https://www.n2yo.com" target="_blank"
+            style="font-size:11px;color:var(--acc);border:1px solid var(--acc)33;padding:3px 10px;text-decoration:none">N2YO ↗</a>`}
     </div>
   </div>`;
 }
@@ -867,8 +927,9 @@ function buildSpacecraftRow(cluster) {
     ${dockedHtml}
     <div class="vbottom">
       <div class="vdot" style="background:#00ff88;box-shadow:0 0 5px #00ff8888"></div>
-      <span style="color:#00ff88;font-size:10px;font-weight:700">IN ORBIT</span>
-      ${sc.alt ? `<span style="color:var(--t4);font-size:10px;margin-left:4px">${Math.round(sc.alt)} km${sc.incDeg != null ? ` · ${sc.incDeg.toFixed(1)}°` : ''}</span>` : ''}
+      <span style="color:#00ff88;font-size:10px;font-weight:700">${sc.isL2 ? 'AT L2' : 'IN ORBIT'}</span>
+      ${sc.isL2 ? `<span style="color:var(--t4);font-size:10px;margin-left:4px">~1.5M km · direction marker</span>`
+        : sc.alt ? `<span style="color:var(--t4);font-size:10px;margin-left:4px">${Math.round(sc.alt)} km${sc.incDeg != null ? ` · ${sc.incDeg.toFixed(1)}°` : ''}</span>` : ''}
     </div>
   </div>`;
 }

@@ -946,7 +946,20 @@ window.onload=()=>{
   }, 5000);
 
   // Single Supabase load → then realtime subscription + vapiPositions
-  loadSBData().then(() => { loadVapiPositions(); initSBRealtime(); });
+  loadSBData().then(async () => {
+    loadVapiPositions();
+    initSBRealtime();
+    if (SHARE_MODE) {
+      // Share page: load missions from app_cache (no external API calls)
+      await fetchCalendarData();
+      if (calendarCache.length) {
+        missionsCache = calendarCache;
+        renderLaunchBanner();
+        updateBoosterProjections();
+        updateTrajectoryArcs();
+      }
+    }
+  });
   setInterval(loadSBData, 15000); // poll every 15s — bulk query is cheap, matches vessel write throttle
   if(!SHARE_MODE) fetchMissionsBackground().then(()=>{ renderLaunchBanner(); updateBoosterProjections(); updateTrajectoryArcs(); });
   if(!SHARE_MODE) { pollAircraft(); setInterval(pollAircraft, AIRCRAFT_POLL_MS); }
