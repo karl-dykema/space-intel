@@ -14,6 +14,16 @@ const SPACEDEVS_STATIONS = { 'ISS (ZARYA)': 4, 'CSS (TIANHE)': 18 };
 // Static module info for space stations — permanent modules + visiting vehicle context.
 // visitingNotes: array of {match (regex), location?, note} — first match wins per spacecraft.
 const STATION_INFO = {
+  'HST': {
+    fullName: 'Hubble Space Telescope',
+    agency: 'NASA · ESA',
+    modules: [
+      { name: 'Wide Field Camera 3',    role: 'UV/optical/IR imaging', location: 'Axial bay', col: '#ccaaff' },
+      { name: 'Cosmic Origins Spectrograph', role: 'UV spectroscopy',  location: 'Axial bay', col: '#ccaaff' },
+      { name: 'Advanced Camera for Surveys', role: 'Wide-field imaging', location: 'Radial bay', col: '#ccaaff' },
+    ],
+    visitingNotes: [],
+  },
   'CSS (TIANHE)': {
     fullName: 'China Space Station (Tiangong)',
     agency: 'CNSA',
@@ -118,7 +128,7 @@ function parseTLEText(text) {
 async function fetchTLEsFromIvanAPI() {
   // Full fallback: fetch everything when local file is unavailable
   const queries = [
-    `${IVAN_BASE}/25544`, `${IVAN_BASE}/48274`,
+    `${IVAN_BASE}/25544`, `${IVAN_BASE}/48274`, `${IVAN_BASE}/20580`,
     `${IVAN_BASE}?search=SOYUZ-MS&page-size=5`,
     `${IVAN_BASE}?search=PROGRESS-MS&page-size=5`,
     `${IVAN_BASE}?search=SHENZHOU&page-size=5`,
@@ -126,6 +136,8 @@ async function fetchTLEsFromIvanAPI() {
     `${IVAN_BASE}?search=CREW+DRAGON&page-size=1`,
     `${IVAN_BASE}?search=DRAGON+CRS&page-size=1`,
     `${IVAN_BASE}?search=CYGNUS+NG&page-size=1`,
+    `${IVAN_BASE}?search=PHOTON&page-size=2`,
+    `${IVAN_BASE}?search=ORION&page-size=1`,
   ];
   const results = await Promise.allSettled(queries.map(u => fetch(u).then(r => r.ok ? r.json() : null)));
   let found = 0;
@@ -156,6 +168,7 @@ async function fetchActiveMissionTLEs() {
   // Epoch age check (14 days) filters out returned/ended missions — active docked
   // craft receive daily TLE updates; anything older means the mission ended.
   const queries = [
+    `${IVAN_BASE}/20580`,
     `${IVAN_BASE}?search=SOYUZ-MS&page-size=3`,
     `${IVAN_BASE}?search=PROGRESS-MS&page-size=3`,
     `${IVAN_BASE}?search=SHENZHOU&page-size=2`,
@@ -165,6 +178,7 @@ async function fetchActiveMissionTLEs() {
     `${IVAN_BASE}?search=CREW+DRAGON&page-size=1`,
     `${IVAN_BASE}?search=DRAGON+CRS&page-size=1`,
     `${IVAN_BASE}?search=CYGNUS+NG&page-size=1`,
+    `${IVAN_BASE}?search=PHOTON&page-size=2`,
     `${IVAN_BASE}?search=ORION&page-size=1`,
   ];
   const results = await Promise.allSettled(queries.map(u => fetch(u).then(r => r.ok ? r.json() : null)));
@@ -264,14 +278,14 @@ function clusterSpacecraft() {
   const positioned = Object.entries(S_spacecraft).filter(([,sc]) => sc.lat != null);
   const STATIONS = ['ISS (ZARYA)', 'CSS (TIANHE)'];
   const STATION_SET = new Set(STATIONS);
-  // Which abbr values belong to which station (longterm docked)
-  // Hard affinity: these craft only ever dock to one station
-  const ISS_ABBR = new Set(['Soyuz', 'Progress', 'Dragon', 'Cygnus', 'HTV', 'Orion']);
-  const CSS_ABBR = new Set(['Wentian', 'Mengtian', 'Shenzhou', 'Tianzhou']);
+  // Permanently docked craft — always nest under their home station
+  const ISS_PERM = new Set(['Soyuz', 'Progress']);
+  const CSS_PERM = new Set(['Wentian', 'Mengtian', 'Shenzhou', 'Tianzhou']);
+  // Mission craft (Dragon, Cygnus, Orion) only nest when docking manifest confirms docked
+  const issDockedAbbrs = new Set((dockedManifest['ISS (ZARYA)'] || []).map(d => d.abbr));
   const used = new Set();
   const clusters = [];
 
-  // First pass: build station clusters
   for (const stName of STATIONS) {
     const st = S_spacecraft[stName];
     if (!st?.lat) continue;
@@ -279,20 +293,18 @@ function clusterSpacecraft() {
     const members = [stName];
     const isISS = stName === 'ISS (ZARYA)';
     for (const [other, osc] of positioned) {
-      if (used.has(other)) continue;
-      if (STATION_SET.has(other)) continue;
+      if (used.has(other) || STATION_SET.has(other)) continue;
       const abbr = osc.abbr || '';
-      // Longterm docked craft: always nest under their home station
-      const alwaysISS = ISS_ABBR.has(abbr);
-      const alwaysCSS = CSS_ABBR.has(abbr);
-      if (isISS && alwaysISS) { members.push(other); used.add(other); continue; }
-      if (!isISS && alwaysCSS) { members.push(other); used.add(other); continue; }
-      if (alwaysISS || alwaysCSS) continue; // claimed by other station, skip
+      if (isISS  && ISS_PERM.has(abbr)) { members.push(other); used.add(other); continue; }
+      if (!isISS && CSS_PERM.has(abbr)) { members.push(other); used.add(other); continue; }
+      if (ISS_PERM.has(abbr) || CSS_PERM.has(abbr)) continue;
+      // Mission craft: cluster only when manifest confirms currently docked
+      if (isISS && issDockedAbbrs.has(abbr)) { members.push(other); used.add(other); continue; }
     }
     clusters.push({ primary: stName, members, longterm: true });
   }
 
-  // Second pass: remaining (departed/independent) spacecraft as standalone
+  // Remaining craft show as standalone (free-flying, departed, or not near a station)
   for (const [name] of positioned) {
     if (used.has(name)) continue;
     used.add(name);

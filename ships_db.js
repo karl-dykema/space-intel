@@ -800,6 +800,8 @@ const SPACECRAFT_PATTERNS = [
   { match:n=>/^CYGNUS NG-\d/.test(n),                    abbr:'Cygnus',   operator:'Northrop Grumman', role:'Cargo spacecraft',  col:'#dd8800', longterm:false },
   { match:n=>/^HTV-\d/.test(n),                          abbr:'HTV',      operator:'JAXA',             role:'Cargo spacecraft',  col:'#ffcc00', longterm:false },
   { match:n=>/^ORION\b/i.test(n)&&!/DEB/i.test(n),      abbr:'Orion',    operator:'NASA',             role:'Crewed capsule',     col:'#ff6600', longterm:false },
+  { match:n=>/^HST$|^HUBBLE SPACE/i.test(n),            abbr:'Hubble',   operator:'NASA · ESA',       role:'Space Telescope',     col:'#ccaaff', longterm:true  },
+  { match:n=>/^PHOTON\b/i.test(n)&&!/DEB/i.test(n),    abbr:'Photon',   operator:'Rocket Lab',       role:'Kick Stage',          col:'#ff3355', longterm:false },
 ];
 
 // ── Launch pad coordinates ────────────────────────────────────

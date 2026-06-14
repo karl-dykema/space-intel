@@ -4,13 +4,13 @@ const fs    = require('fs');
 const path  = require('path');
 
 // NORAD IDs for spacecraft matching our SPACECRAFT_PATTERNS
-const BY_ID = [25544, 48274]; // ISS (ZARYA), CSS (TIANHE)
+const BY_ID = [25544, 48274, 20580]; // ISS (ZARYA), CSS (TIANHE), HST (Hubble)
 // Docked/station craft that can have multiple active simultaneously
 const SEARCHES_MULTI = ['SOYUZ-MS', 'PROGRESS-MS', 'SHENZHOU', 'TIANZHOU'];
 // CSS modules (permanent): page-size=1
 const SEARCHES_CSS   = ['WENTIAN', 'MENGTIAN'];
 // Mission-specific craft: page-size=1 to avoid stale old missions flooding the map
-const SEARCHES_ONE   = ['CREW DRAGON', 'DRAGON CRS', 'CYGNUS NG'];
+const SEARCHES_ONE   = ['CREW DRAGON', 'DRAGON CRS', 'CYGNUS NG', 'PHOTON', 'ORION'];
 
 function get(url) {
   return new Promise((resolve, reject) => {
