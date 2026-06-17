@@ -621,6 +621,24 @@ const LANDMARKS = [
   { id:'wallops_pad',     lat:37.940,  lon:-75.466,  name:'Wallops Flight Facility (NASA/NG)',type:'launch',   desc:'NASA / Northrop Grumman Antares pad. Cygnus cargo missions to ISS. Also Minotaur small orbital launcher.' },
   { id:'wallops_visitor', lat:37.939,  lon:-75.456,  name:'NASA Wallops Visitor Center',     type:'facility', desc:'Free NASA visitor center with exhibits. Open on launch days for viewing.' },
 
+  // ── Elon Ventures (non-space) ────────────────────────────────
+  { id:'spacex_irvine',    lat:33.685,  lon:-117.778, name:'SpaceX — Irvine, CA',             type:'elon_venture', desc:'SpaceX Starlink customer equipment and satellite operations support office in Irvine, CA.' },
+  { id:'x_hq',            lat:37.776,  lon:-122.417, name:'X (formerly Twitter) HQ — SF',    type:'elon_venture', desc:'X Corp headquarters at 1355 Market St, San Francisco. Acquired by Elon Musk in 2022 and rebranded from Twitter to X in 2023.' },
+  { id:'xai_colossus',    lat:35.149,  lon:-90.048,  name:'xAI Colossus — Memphis, TN',      type:'elon_venture', desc:'xAI supercomputer cluster "Colossus" — 100,000+ NVIDIA H100/H200 GPUs. One of the world\'s largest AI compute facilities. Used to train Grok LLMs.' },
+  { id:'neuralink_austin', lat:30.413,  lon:-97.667,  name:'Neuralink — Austin, TX',          type:'elon_venture', desc:'Neuralink HQ and surgical R&D. Brain-computer interface implant development. First human implant: January 2024. FDA breakthrough device designation.' },
+  { id:'boring_pflugerville',lat:30.434,lon:-97.620,  name:'The Boring Company — Pflugerville, TX', type:'elon_venture', desc:'Boring Company HQ and R&D. Underground tunnel boring machines and the Las Vegas Loop transit system. Prufrock tunnel boring machine developed here.' },
+  { id:'boring_lvcc',     lat:36.117,  lon:-115.157, name:'Las Vegas Loop (TBC)',             type:'elon_venture', desc:'Vegas Loop: 29 miles of tunnels beneath Las Vegas. Teslas carry passengers at up to 60 mph. Serves LVCC, Resorts World, Allegiant Stadium, and more.' },
+
+  // ── Tesla ─────────────────────────────────────────────────────
+  { id:'tesla_hq',        lat:30.200,  lon:-97.635,  name:'Tesla HQ — Austin, TX',           type:'tesla', desc:'Tesla global headquarters (relocated from Palo Alto 2021). Executive leadership, design, and engineering. 1 Tesla Road, Del Valle, TX.' },
+  { id:'tesla_fremont',   lat:37.494,  lon:-121.946, name:'Tesla Factory — Fremont, CA',     type:'tesla', desc:'Primary North American production. Model S, 3, X, Y. Former NUMMI plant (Toyota/GM). ~10,000 employees. Opened 2010 as Tesla\'s first factory.' },
+  { id:'tesla_giga_nv',   lat:39.538,  lon:-119.443, name:'Gigafactory Nevada — Sparks, NV', type:'tesla', desc:'Joint venture with Panasonic. Battery cell and energy storage manufacturing. Model 3 drivetrain assembly. One of the largest buildings by footprint in the world.' },
+  { id:'tesla_giga_tx',   lat:30.221,  lon:-97.617,  name:'Gigafactory Texas — Del Valle, TX',type:'tesla', desc:'Cybertruck and Model Y Texas production. Opened April 2022. Co-located near new HQ campus. ~10,000 employees.' },
+  { id:'tesla_giga_berlin',lat:52.388, lon:13.790,   name:'Gigafactory Berlin — Grünheide, DE',type:'tesla', desc:'Model Y European production hub. Opened March 2022. Located in Brandenburg Industrial Park east of Berlin. First European Tesla factory.' },
+  { id:'tesla_giga_shanghai',lat:31.227,lon:121.582,  name:'Gigafactory Shanghai',            type:'tesla', desc:'Model 3 and Model Y for Asia and export. Opened 2020. Highest-volume Tesla factory. ~750,000 vehicles/year capacity.' },
+  { id:'tesla_energy_lathrop',lat:37.824,lon:-121.278,name:'Tesla Energy — Lathrop, CA',     type:'tesla', desc:'Megapack battery energy storage manufacturing (the "Megafactory"). 40 GWh/year capacity target. Grid-scale energy storage for utilities worldwide.' },
+  { id:'tesla_mexico',    lat:25.666,  lon:-99.944,  name:'Tesla Gigafactory México — N.L.', type:'tesla', desc:'Planned Gigafactory near Santa Catarina, Nuevo León. Announced 2023 by Gov. Samuel García. Paused pending trade/tariff review. Would produce next-gen vehicles including Cybercab.' },
+
   // ── Rocket Lab Māhia, NZ ─────────────────────────────────────
   { id:'rl_lc1',          lat:-39.262, lon:177.865,  name:'Rocket Lab LC-1 (Māhia)',        type:'launch',   desc:'Rocket Lab Electron primary launch complex. World\'s first private orbital launch site, operational since 2017.' },
   { id:'mahia_lookout',   lat:-39.200, lon:177.900,  name:'Māhia Peninsula Lookout',        type:'viewing',  desc:'Public scenic reserve with view over launch complex.' },

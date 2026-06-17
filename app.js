@@ -516,10 +516,12 @@ function initMap() {
       <div style="width:12px;height:3px;background:#ff8c00;border-radius:1px;opacity:0.7"></div>Safety Zone</div>
     <div style="margin-top:8px;padding-top:5px;border-top:1px solid var(--bdr2);font-size:9px;color:var(--t4);letter-spacing:.06em;margin-bottom:3px">LANDMARKS</div>` +
     [
-      ['#ff4400','Launch pad',   `<svg width="10" height="10" viewBox="0 0 11 11"><polygon points="5.5,1 10,10 5.5,7.5 1,10" fill="#ff4400"/></svg>`],
-      ['#ffcc00','Viewing area', `<svg width="9" height="9" viewBox="0 0 9 9"><rect x="0.5" y="0.5" width="8" height="8" rx="1" fill="#ffcc00"/></svg>`],
-      ['#00aaff','Facility',     `<svg width="9" height="9" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#00aaff"/></svg>`],
-      ['#00cc88','Port',         `<svg width="9" height="9" viewBox="0 0 10 10"><polygon points="5,1 9,5 5,9 1,5" fill="#00cc88"/></svg>`],
+      ['#ff4400','Launch pad',    `<svg width="10" height="10" viewBox="0 0 11 11"><polygon points="5.5,1 10,10 5.5,7.5 1,10" fill="#ff4400"/></svg>`],
+      ['#ffcc00','Viewing area',  `<svg width="9" height="9" viewBox="0 0 9 9"><rect x="0.5" y="0.5" width="8" height="8" rx="1" fill="#ffcc00"/></svg>`],
+      ['#00aaff','Space facility',`<svg width="9" height="9" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#00aaff"/></svg>`],
+      ['#00cc88','Port',          `<svg width="9" height="9" viewBox="0 0 10 10"><polygon points="5,1 9,5 5,9 1,5" fill="#00cc88"/></svg>`],
+      ['#ff8c00','Elon venture',  `<svg width="9" height="9" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#ff8c00"/></svg>`],
+      ['#e31937','Tesla',         `<svg width="9" height="9" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#e31937"/></svg>`],
     ].map(([c,l,icon])=>
       `<div style="display:flex;gap:6px;align-items:center;font-size:10px;color:${c};margin-bottom:2px">${icon}${l}</div>`
     ).join('');
@@ -619,16 +621,18 @@ function drawLandmarks() {
   landmarkLayer.clearLayers();
   if(!showLandmarks) return;
   const TYPE_STYLE = {
-    launch:   { col:'#ff4400' },
-    viewing:  { col:'#ffcc00' },
-    facility: { col:'#00aaff' },
-    port:     { col:'#00cc88' },
-    dsn:      { col:'#cc66ff' },
+    launch:        { col:'#ff4400' },
+    viewing:       { col:'#ffcc00' },
+    facility:      { col:'#00aaff' },
+    port:          { col:'#00cc88' },
+    dsn:           { col:'#cc66ff' },
+    elon_venture:  { col:'#ff8c00' },
+    tesla:         { col:'#e31937' },
   };
   const landmarkSvg = (type, col) => {
     if (type === 'launch')
       return `<svg width="11" height="11" viewBox="0 0 11 11"><polygon points="5.5,1 10,10 5.5,7.5 1,10" fill="${col}" stroke="none" opacity="0.9"/></svg>`;
-    if (type === 'facility')
+    if (type === 'facility' || type === 'elon_venture' || type === 'tesla')
       return `<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="${col}" stroke="none" opacity="0.85"/></svg>`;
     if (type === 'viewing')
       return `<svg width="9" height="9" viewBox="0 0 9 9"><rect x="0.5" y="0.5" width="8" height="8" rx="1" fill="${col}" stroke="none" opacity="0.85"/></svg>`;
@@ -650,9 +654,8 @@ function drawLandmarks() {
       .addTo(landmarkLayer)
       .bindTooltip(
         `<b style="color:${st.col}">${esc(lm.name)}</b><br>
-        <span style="font-size:10px;color:var(--t4);text-transform:uppercase;letter-spacing:.05em">${lm.type}</span><br>
         <span style="font-size:11px;color:var(--t3)">${esc(lm.desc)}</span>${linkHtml}`,
-        { className:'ltt ltt-wrap', direction:'auto', maxWidth:200 }
+        { className:'ltt ltt-wrap', direction:'auto', maxWidth:260 }
       );
   });
 }

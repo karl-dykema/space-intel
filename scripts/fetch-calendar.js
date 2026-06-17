@@ -61,7 +61,7 @@ async function main() {
   const isTracked = l => TRACKED_OPERATORS.some(op => (l.launch_service_provider?.name || '').includes(op));
 
   console.log('Fetching detailed upcoming launches for tracked operators…');
-  const detRaw  = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=30&ordering=net&mode=detailed');
+  const detRaw  = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=75&ordering=net&mode=detailed');
   const detUp   = JSON.parse(detRaw).results || [];
   const upFiltered = detUp.filter(isTracked);
   console.log(`  ${upFiltered.length} upcoming (detailed)`);

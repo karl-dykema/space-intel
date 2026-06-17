@@ -689,6 +689,9 @@ async function fetchCalendarData() {
     if (detRows?.length && detRows[0].data?.length) {
       missionsCache = detRows[0].data;
       addLog(`Missions: ${missionsCache.length} upcoming (full data from DB cache)`, 'sys');
+      // Refresh the panel if it's already open (user opened before data arrived)
+      const panel = document.getElementById('missions-panel');
+      if (panel && panel.style.display !== 'none' && _calView !== 'calendar') showMissions();
     }
     // Full detailed past → pastMissionsCache (booster-aboard detection for returning ships)
     if (pastRows?.length && pastRows[0].data?.length) {
