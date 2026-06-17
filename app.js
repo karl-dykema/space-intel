@@ -963,7 +963,7 @@ window.onload=()=>{
       // Share page: load missions from app_cache (no external API calls)
       await fetchCalendarData();
       if (calendarCache.length) {
-        missionsCache = calendarCache;
+        if (!missionsCache.length) missionsCache = calendarCache; // fallback only if detailed cache not yet in Supabase
         renderLaunchBanner();
         updateBoosterProjections();
         updateTrajectoryArcs();
