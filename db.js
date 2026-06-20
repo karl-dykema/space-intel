@@ -184,14 +184,16 @@ async function loadSBData() {
   }
 
   const since3d = new Date(Date.now() - 3 * 86400000).toISOString();
+  // order=ts.desc so newest rows win the 1000-row PostgREST cap — then sort asc per-reg for track drawing
   const acRows = await SB.select('aircraft_positions', {
-    ts: `gte.${since3d}`, order: 'ts.asc', limit: '6000',
+    ts: `gte.${since3d}`, order: 'ts.desc', limit: '1000',
     select: 'reg,lat,lon,alt,gs,track,ts',
   });
   if (acRows?.length) {
     const byReg = {};
     acRows.forEach(r => { (byReg[r.reg] = byReg[r.reg] || []).push(r); });
     for (const [reg, rows] of Object.entries(byReg)) {
+      rows.sort((a, b) => new Date(a.ts) - new Date(b.ts)); // restore chronological order
       if (!AIRCRAFT_DB[reg]) continue;
       // Split into segments at gaps > 4h — avoids long connector lines between flights
       const GAP_AC = 4 * 3600000;
