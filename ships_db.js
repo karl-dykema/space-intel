@@ -657,6 +657,7 @@ const LANDMARKS = [
   { id:'gsfc',            lat:38.992,  lon:-76.848,  name:'NASA Goddard — Greenbelt',        type:'facility', desc:'Goddard Space Flight Center. Earth observation, Hubble/JWST, science mission ops.' },
   { id:'armstrong',       lat:34.959,  lon:-117.883, name:'NASA Armstrong — Edwards',        type:'facility', desc:'Armstrong Flight Research Center at Edwards AFB. X-planes, hypersonics, Shuttle landings.' },
   { id:'ames',            lat:37.408,  lon:-122.064, name:'NASA Ames — Mountain View',       type:'facility', desc:'Ames Research Center. Aeronautics, planetary science, supercomputing.' },
+  { id:'swri_nlrc',      lat:29.491,  lon:-98.638,  name:'SwRI / NLRC — San Antonio, TX',   type:'facility', desc:'Southwest Research Institute & planned National Lunar Research Center (NLRC). 180-acre full-scale lunar surface test site adjacent to SwRI campus. Developed with Astroport Space Technologies and WEX Foundation to support NASA Artemis lunar base construction and rover testing.' },
 
   // ── International Launch Sites ───────────────────────────────
   { id:'baikonur',        lat:45.920,  lon:63.342,   name:'Baikonur Cosmodrome',             type:'launch',   desc:'Historic Soviet/Russian launch complex. First human spaceflight (Gagarin, 1961). Soyuz/Proton.' },
