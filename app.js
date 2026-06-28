@@ -655,7 +655,7 @@ function drawLandmarks() {
       .bindTooltip(
         `<b style="color:${st.col}">${esc(lm.name)}</b><br>
         <span style="font-size:11px;color:var(--t3)">${esc(lm.desc)}</span>${linkHtml}`,
-        { className:'ltt ltt-wrap', direction:'auto', maxWidth:260 }
+        { className:'ltt ltt-wrap', direction:'auto', minWidth:320, maxWidth:360 }
       );
   });
 }
