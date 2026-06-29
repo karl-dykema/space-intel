@@ -959,9 +959,10 @@ window.onload=()=>{
   loadSBData().then(async () => {
     loadVapiPositions();
     initSBRealtime();
+    // Load missions from DB cache in all modes — supplements the API fetch and ensures tracked
+    // launches beyond the API limit=30 window (e.g. Rocket Lab) appear in the missions list.
+    await fetchCalendarData();
     if (SHARE_MODE) {
-      // Share page: load missions from app_cache (no external API calls)
-      await fetchCalendarData();
       if (calendarCache.length) {
         if (!missionsCache.length) missionsCache = calendarCache; // fallback only if detailed cache not yet in Supabase
         renderLaunchBanner();
