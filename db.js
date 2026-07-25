@@ -307,7 +307,7 @@ function initSBRealtime() {
         if (!history[mmsi]) history[mmsi] = { positions: [], firstSeen: ts, lastSeen: ts };
         history[mmsi].positions.push({ lat: rec.lat, lon: rec.lon, ts, sog: rec.sog, cog: rec.cog });
         history[mmsi].lastSeen = ts;
-        v.track = history[mmsi].positions.map(p => [p.lat, p.lon]);
+        v.track = history[mmsi].positions.map(p => [p.lat, p.lon, p.ts]);
         updateMarker(v);
         renderFleet();
         addLog(`Realtime ← ${VESSEL_DB[mmsi]?.abbr || mmsi} ${rec.lat?.toFixed(3)},${rec.lon?.toFixed(3)}`, 'ais');
