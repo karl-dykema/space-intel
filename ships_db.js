@@ -318,6 +318,20 @@ const VESSEL_DB = {
     notes:'Primary SpaceX East Coast drone ship tug. IMO 7390765. [✓ confirmed]',
     background:true,
   },
+  '372112000': {
+    name:'Go Australis', abbr:'Go Australis',
+    operator:'SpaceX', role:'Starship LZ Support Vessel (Indian Ocean)',
+    color:'#00d4ff', homePort:'Australia',
+    imo:'9725756', flag:'Panama', built:2020, verified:true,
+    specs:{ length:'84m', beam:'18m', type:'Offshore Tug/Supply Ship (PSV)', callsign:'3FUE8' },
+    history:[
+      'Chartered offshore supply vessel serving as SpaceX Starship landing-zone support in the Indian Ocean off Western Australia',
+      'Managed by GO Offshore Pty Ltd; deploys from Exmouth region to the splashdown zone (~575nm offshore)',
+      'On-station for Flight 13 (Ship 40) splashdown July 24 2026 — the first intact Starship to survive and float on the water',
+      'Held station atypically after Flight 13 to assess safety of the floating Ship, rather than immediately returning to the LZ',
+    ],
+    notes:'Chartered Panama-flagged PSV — Starship Indian Ocean LZ support. IMO 9725756, callsign 3FUE8. [✓ MMSI confirmed]',
+  },
   // ── ULA ──────────────────────────────────────────────────────
   '338731000': {
     name:'RocketShip', abbr:'RocketShip',
