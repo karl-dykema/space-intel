@@ -126,4 +126,5 @@ function applyTFROverlays(tfrs) {
 // ── Init ──────────────────────────────────────────────────────
 function initClosures() {
   loadClosuresData();
+  if (typeof loadHazards === 'function') loadHazards();
 }

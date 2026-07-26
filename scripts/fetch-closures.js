@@ -151,6 +151,58 @@ async function fetchTFRs() {
   }
 }
 
+// ── NGA MSI maritime nav-warnings (HYDROPAC/HYDROLANT) ────────
+// Free, no API key. WAF passes with the browser-like headers in fetchUrl().
+function dmsToDec(deg, min, sec, hemi) {
+  let v = Math.abs(parseFloat(deg)) + (parseFloat(min) || 0) / 60 + (parseFloat(sec) || 0) / 3600;
+  if (hemi === 'S' || hemi === 'W') v = -v;
+  return v;
+}
+
+// Parse "DD-MM.mm[N/S] DDD-MM.mm[E/W]" (optionally with seconds) coordinate pairs → [lon,lat] points
+function parseCoordsFromText(text) {
+  const rx = /(\d{1,3})-(\d{1,2}(?:\.\d+)?)(?:-(\d{1,2}(?:\.\d+)?))?\s*([NS])[ ,]+(\d{1,3})-(\d{1,2}(?:\.\d+)?)(?:-(\d{1,2}(?:\.\d+)?))?\s*([EW])/g;
+  const pts = [];
+  let m;
+  while ((m = rx.exec(text)) !== null) {
+    const lat = dmsToDec(m[1], m[2], m[3], m[4]);
+    const lon = dmsToDec(m[5], m[6], m[7], m[8]);
+    pts.push([lon, lat]);
+  }
+  return pts;
+}
+
+const LAUNCH_RX = /rocket|launch|space vehicle|spacex|starship|missile|space debris|reentr|splashdown|hazardous operations/i;
+
+async function fetchNavWarnings() {
+  const out = [];
+  for (const navArea of ['P', 'A']) { // P=HYDROPAC (Pacific/Indian), A=HYDROLANT (Atlantic)
+    try {
+      const json = await fetchUrl(`https://msi.nga.mil/api/publications/broadcast-warn?status=active&output=json&navArea=${navArea}`);
+      const data = JSON.parse(json);
+      for (const w of (data['broadcast-warn'] || [])) {
+        const text = w.text || '';
+        if (!LAUNCH_RX.test(text)) continue;
+        const pts = parseCoordsFromText(text);
+        if (pts.length < 3) continue;
+        const first = pts[0], last = pts[pts.length - 1];
+        const ring = (first[0] === last[0] && first[1] === last[1]) ? pts : [...pts, first];
+        out.push({
+          id:        `${w.navArea}-${w.msgNumber}/${String(w.msgYear).slice(-2)}`,
+          navArea:   w.navArea,
+          subregion: w.subregion || '',
+          issueDate: w.issueDate || null,
+          cancelDate: w.cancelDate || null,
+          subject:   (text.split('\n').map(s => s.trim()).filter(Boolean)[0] || '').slice(0, 90),
+          areas:     [ring],
+        });
+      }
+      await new Promise(r => setTimeout(r, 300));
+    } catch (e) { console.warn(`  NavWarn ${navArea} failed:`, e.message); }
+  }
+  return out;
+}
+
 // ── Launch proximity check ────────────────────────────────────
 async function hoursToNextLaunch() {
   try {
@@ -229,6 +281,14 @@ async function main() {
 
   await upsertCache('closures.bocachica', payload, {
     source:    'cameroncountytx.gov',
+    fetchedAt: new Date().toISOString(),
+  });
+
+  console.log('Fetching NGA maritime nav-warnings…');
+  const navwarnings = await fetchNavWarnings();
+  console.log(`  ${navwarnings.length} launch-related nav-warnings with geometry`);
+  await upsertCache('hazards.navwarnings', { warnings: navwarnings }, {
+    source:    'msi.nga.mil',
     fetchedAt: new Date().toISOString(),
   });
 }
