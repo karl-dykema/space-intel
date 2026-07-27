@@ -227,6 +227,16 @@ async function main() {
   console.log('=== fetch-closures ===');
   await ensureSchema();
 
+  // NGA maritime nav-warnings run unconditionally — they publish ~2 weeks
+  // ahead of a launch, so they must not be gated by the 48h closures skip below.
+  console.log('Fetching NGA maritime nav-warnings…');
+  const navwarnings = await fetchNavWarnings();
+  console.log(`  ${navwarnings.length} launch-related nav-warnings with geometry`);
+  await upsertCache('hazards.navwarnings', { warnings: navwarnings }, {
+    source:    'msi.nga.mil',
+    fetchedAt: new Date().toISOString(),
+  });
+
   // Smart skip: only re-fetch Cameron County when needed
   // - launch within 48h  → always re-fetch
   // - no launch near     → skip if DB data < 20h old
@@ -281,14 +291,6 @@ async function main() {
 
   await upsertCache('closures.bocachica', payload, {
     source:    'cameroncountytx.gov',
-    fetchedAt: new Date().toISOString(),
-  });
-
-  console.log('Fetching NGA maritime nav-warnings…');
-  const navwarnings = await fetchNavWarnings();
-  console.log(`  ${navwarnings.length} launch-related nav-warnings with geometry`);
-  await upsertCache('hazards.navwarnings', { warnings: navwarnings }, {
-    source:    'msi.nga.mil',
     fetchedAt: new Date().toISOString(),
   });
 }
