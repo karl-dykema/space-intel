@@ -320,7 +320,7 @@ const VESSEL_DB = {
   },
   '372112000': {
     name:'Go Australis', abbr:'Go Australis',
-    operator:'SpaceX', role:'Starship LZ Support Vessel (Indian Ocean)',
+    operator:'SpaceX', role:'Starship Recovery Vessel (Indian Ocean)',
     color:'#00d4ff', homePort:'Australia',
     imo:'9725756', flag:'Panama', built:2020, verified:true,
     specs:{ length:'84m', beam:'18m', type:'Offshore Tug/Supply Ship (PSV)', callsign:'3FUE8' },
@@ -329,8 +329,9 @@ const VESSEL_DB = {
       'Managed by GO Offshore Pty Ltd; deploys from Exmouth region to the splashdown zone (~575nm offshore)',
       'On-station for Flight 13 (Ship 40) splashdown July 24 2026 — the first intact Starship to survive and float on the water',
       'Held station atypically after Flight 13 to assess safety of the floating Ship, rather than immediately returning to the LZ',
+      'Underway July 2026 to recover the floating Ship 40 — the first attempted at-sea recovery of an intact Starship',
     ],
-    notes:'Chartered Panama-flagged PSV — Starship Indian Ocean LZ support. IMO 9725756, callsign 3FUE8. [✓ MMSI confirmed]',
+    notes:'ACTIVE RECOVERY MISSION — en route to recover floating Ship 40 (Flight 13), the first-ever Starship at-sea recovery attempt. Chartered Panama-flagged PSV, Starship Indian Ocean LZ support. IMO 9725756, callsign 3FUE8. [✓ MMSI confirmed]',
   },
   // ── ULA ──────────────────────────────────────────────────────
   '338731000': {
