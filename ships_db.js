@@ -330,8 +330,35 @@ const VESSEL_DB = {
       'On-station for Flight 13 (Ship 40) splashdown July 24 2026 — the first intact Starship to survive and float on the water',
       'Held station atypically after Flight 13 to assess safety of the floating Ship, rather than immediately returning to the LZ',
       'Underway July 2026 to recover the floating Ship 40 — the first attempted at-sea recovery of an intact Starship',
+      'Working the recovery with AHTS Normand Ranger (tow) and PSV Skimmer Tide (support)',
     ],
     notes:'ACTIVE RECOVERY MISSION — en route to recover floating Ship 40 (Flight 13), the first-ever Starship at-sea recovery attempt. Chartered Panama-flagged PSV, Starship Indian Ocean LZ support. IMO 9725756, callsign 3FUE8. [✓ MMSI confirmed]',
+  },
+  '257587000': {
+    name:'Normand Ranger', abbr:'Normand Ranger',
+    operator:'SpaceX', role:'Starship Recovery Tow Vessel (Indian Ocean)',
+    color:'#00d4ff', homePort:'Skudeneshavn, Norway',
+    imo:'9413432', flag:'Norway', built:2010, verified:true,
+    specs:{ length:'91m', beam:'22m', type:'Anchor Handling Tug Supply (AHTS)', bollardPull:'287t' },
+    history:[
+      'Ulstein-built AHTS operated by Solstad Offshore; 287-tonne bollard pull, Multi Deck Handler and anchor recovery frame',
+      'Chartered for SpaceX Starship recovery operations in the Indian Ocean off Western Australia',
+      'Assigned as the tow vessel for the floating Ship 40 (Flight 13) recovery attempt, July 2026',
+    ],
+    notes:'ACTIVE RECOVERY MISSION — tow vessel for the Ship 40 at-sea recovery, working alongside Go Australis. Solstad AHTS, IMO 9413432.',
+  },
+  '257084000': {
+    name:'Skimmer Tide', abbr:'Skimmer Tide',
+    operator:'SpaceX', role:'Starship Recovery Support Vessel (Indian Ocean)',
+    color:'#00d4ff', homePort:'Australia',
+    imo:'9609988', flag:'Norway', built:2012, verified:true,
+    specs:{ length:'82m', beam:'18m', type:'Offshore Tug/Supply Ship (PSV)', deadweight:'4,000 t', callsign:'LANX7' },
+    history:[
+      'Large PSV built 2012, ex-Normand Skimmer; operated by Tidewater',
+      'Chartered for SpaceX Starship recovery operations off Western Australia',
+      'Part of the Ship 40 (Flight 13) at-sea recovery flotilla, July 2026',
+    ],
+    notes:'ACTIVE RECOVERY MISSION — support vessel for the Ship 40 at-sea recovery, alongside Go Australis and Normand Ranger. Ex-Normand Skimmer. IMO 9609988, callsign LANX7.',
   },
   // ── ULA ──────────────────────────────────────────────────────
   '338731000': {

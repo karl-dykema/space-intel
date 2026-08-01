@@ -7,7 +7,7 @@ const KEY = process.env.VAPI_KEY || process.argv[2];
 if (!KEY) { console.error('VAPI_KEY env var or CLI arg required'); process.exit(1); }
 
 // Only MMSIs confirmed present in VesselAPI — skipping 404s saves API calls.
-// Free plan: 150 calls/month. 11 vessels × ~10 runs/month (every 3 days) = ~110 calls.
+// Free plan: 150 calls/month. 14 vessels × ~10 runs/month (every 3 days) = ~140 calls.
 const VESSELS = [
   '368219910', // ASOG
   '368219920', // JRTI
@@ -20,6 +20,10 @@ const VESSELS = [
   '228438700', // Canopée
   '228057000', // MN Colibri
   '227278000', // MN Toucan
+  // Starship Ship 40 recovery flotilla (Indian Ocean, July 2026) — remove when the op ends
+  '372112000', // Go Australis
+  '257587000', // Normand Ranger
+  '257084000', // Skimmer Tide
 ];
 
 function get(mmsi) {
