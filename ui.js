@@ -637,6 +637,7 @@ async function loadVapiPositions() {
       }
     }
     if(added) { renderFleet(); addLog(`VesselAPI: +${added} positions from static snapshot (${new Date(fetchedTs).toLocaleTimeString()})`, 'sys'); }
+    if(typeof drawRecovery === 'function') drawRecovery();
   } catch(e) { /* vapi-positions.json not present */ }
 }
 
