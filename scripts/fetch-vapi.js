@@ -63,10 +63,12 @@ function get(mmsi) {
       let body = '';
       res.on('data', d => body += d);
       res.on('end', () => {
-        try {
-          const j = JSON.parse(body);
-          resolve(j?.vesselPosition || null);
-        } catch { resolve(null); }
+        // Keep the status: a 404 (hull unknown to VesselAPI), a 200 with no recent
+        // fix, an auth failure and a 429 quota exhaustion are all very different
+        // problems that otherwise present identically as "no data".
+        let pos = null;
+        try { pos = JSON.parse(body)?.vesselPosition || null; } catch {}
+        resolve({ status: res.statusCode, pos });
       });
     });
     req.on('error', reject);
@@ -76,9 +78,10 @@ function get(mmsi) {
 
 async function main() {
   const vessels = {};
+  const misses = [];
   for (const mmsi of VESSELS) {
     try {
-      const vp = await get(mmsi);
+      const { status, pos: vp } = await get(mmsi);
       if (vp?.latitude) {
         vessels[mmsi] = {
           lat: vp.latitude,
@@ -91,7 +94,13 @@ async function main() {
         };
         console.log(`✓ ${mmsi}  ${vp.latitude.toFixed(4)}, ${vp.longitude.toFixed(4)}  ${vp.timestamp}`);
       } else {
-        console.log(`— ${mmsi}  no data`);
+        const why = status === 404 ? 'not in VesselAPI'
+                  : status === 429 ? 'QUOTA EXCEEDED'
+                  : status === 401 || status === 403 ? 'AUTH FAILED'
+                  : status === 200 ? 'known hull, no recent fix'
+                  : `HTTP ${status}`;
+        misses.push({ mmsi, status, why });
+        console.log(`— ${mmsi}  no data (${why})`);
       }
     } catch(e) {
       console.warn(`✗ ${mmsi}  ${e.message}`);
@@ -116,6 +125,15 @@ async function main() {
 
   const carried = Object.keys(merged).length - Object.keys(vessels).length;
   console.log(`\nPolled ${Object.keys(vessels).length}/${VESSELS.length} vessels (cycle ${cycle}, ${carried} carried forward) → data/vapi-positions.json`);
+
+  if (misses.length) {
+    console.log('\nNo-data breakdown:');
+    for (const m of misses) console.log(`  ${m.mmsi}  ${m.why}`);
+    if (misses.some(m => m.status === 429))
+      console.warn('\n!! Monthly VesselAPI quota exhausted — reduce tiers in VESSELS.');
+    if (misses.some(m => m.status === 401 || m.status === 403))
+      console.warn('\n!! VAPI_KEY rejected — positions are stale until this is fixed.');
+  }
 }
 
 main();
