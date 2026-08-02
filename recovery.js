@@ -69,7 +69,11 @@ function drawRecovery() {
   if (!showRecovery) return;
 
   const proxy = _pos(RECOVERY_OP.proxy);
-  if (!proxy) return; // no escort position — nothing trustworthy to infer from
+  // No escort position means nothing trustworthy to infer from. Say so on the button
+  // rather than letting the toggle look broken — the flotilla is ~750nm offshore, far
+  // beyond terrestrial AIS range, so this is the expected state until it nears Dampier.
+  _setBtnState(!!proxy);
+  if (!proxy) return;
 
   const ship = { lat: proxy.lat, lon: proxy.lon };
   const stale = proxy.ts ? (Date.now() - proxy.ts > 7200000) : true;
@@ -128,10 +132,29 @@ function drawRecovery() {
   }
 }
 
+// ── Button state ──────────────────────────────────────────────
+// Distinguishes "layer off" from "layer on but no position available", so an
+// enabled toggle that draws nothing doesn't read as a broken button.
+function _setBtnState(hasData) {
+  const btn = document.getElementById('recovery-btn');
+  if (!btn) return;
+  if (!showRecovery) {
+    btn.style.opacity = '0.4';
+    btn.textContent = 'SHIP 40 RECOVERY';
+    btn.title = 'Toggle Starship Ship 40 at-sea recovery operation';
+    return;
+  }
+  btn.style.opacity = hasData ? '1' : '0.55';
+  btn.textContent = hasData ? 'SHIP 40 RECOVERY' : 'SHIP 40 · NO AIS';
+  btn.title = hasData
+    ? 'Starship Ship 40 at-sea recovery operation'
+    : 'Recovery flotilla is ~750nm offshore, beyond terrestrial AIS range — '
+    + 'no position available until it approaches Dampier';
+}
+
 // ── Toggle (cbar button) ──────────────────────────────────────
 function toggleRecovery() {
   showRecovery = !showRecovery;
   drawRecovery();
-  const btn = document.getElementById('recovery-btn');
-  if (btn) btn.style.opacity = showRecovery ? '1' : '0.4';
+  if (!showRecovery) _setBtnState(false);
 }
