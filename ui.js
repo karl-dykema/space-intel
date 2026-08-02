@@ -450,6 +450,7 @@ function buildVesselDetail(){
         ['DESTINATION',v.dest||'—'],
         ['ETA',      v.eta||'—'],
         ['LAST FIX', v.ts?ageStr(v.ts):'never'],
+        ['SOURCE',   srcLabel(v)],
       ])}
 
       <div class="sec">VESSEL IDENTITY</div>
@@ -599,6 +600,21 @@ function tsStr(ts){
   const d=new Date(ts);
   return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
 }
+// Where a position came from, and how current it is. Deliberately names the
+// feed rather than saying "satellite AIS" — every source here is terrestrial
+// AIS, which is exactly why deep-ocean vessels go dark.
+function srcLabel(v){
+  if(!v.lat) return 'no position';
+  if(v._historical) return 'position history (Supabase)';
+  if(v._vapi) {
+    const chk = v._vapiChecked ? ` · checked ${ageStr(v._vapiChecked)}` : '';
+    return `VesselAPI snapshot${chk}`;
+  }
+  const age = v.ts ? Date.now()-v.ts : Infinity;
+  if(age < 600000) return 'AIS live (terrestrial)';
+  return `AIS terrestrial · no signal ${ageStr(v.ts)}`;
+}
+
 function ageStr(ts){
   if(!ts)return'never';
   const s=Math.floor((Date.now()-ts)/1000);
@@ -609,7 +625,12 @@ function ageStr(ts){
 }
 
 // ── Boot ─────────────────────────────────────────────────────
-// ── VesselAPI static positions (GitHub Actions, updated every 2h) ─────────
+// ── VesselAPI static positions ────────────────────────────────────────────
+// GitHub Actions writes data/vapi-positions.json every 3 days. Vessels are
+// tiered by activity, so any given vessel may not have been polled on the most
+// recent run — hence `checked` is stored per vessel, not taken from the file's
+// `fetched` stamp. Two distinct ages matter: when the vessel last reported a
+// position (ts), and when we last looked (checked).
 async function loadVapiPositions() {
   try {
     const res = await fetch('data/vapi-positions.json?_='+Math.floor(Date.now()/7200000));
@@ -630,7 +651,9 @@ async function loadVapiPositions() {
           ts: vpTs,
           track: existing?.track || [],
           _vapi: true,
-          _vapiAge: fetchedTs,
+          // Per-vessel poll time; falls back to the file stamp for entries
+          // written before `checked` existed.
+          _vapiChecked: vp.checked ? new Date(vp.checked).getTime() : fetchedTs,
         };
         updateMarker(S.vessels[mmsi]);
         added++;

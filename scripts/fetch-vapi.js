@@ -91,6 +91,11 @@ async function main() {
           heading: vp.heading ?? null,
           ts:  vp.timestamp,
           name: vp.vessel_name || null,
+          // When WE last got this position, as distinct from when the vessel
+          // reported it. Under tiered polling a carried-forward vessel may not
+          // have been checked at the file's `fetched` time, so the file stamp
+          // cannot stand in for this.
+          checked: new Date().toISOString(),
         };
         console.log(`✓ ${mmsi}  ${vp.latitude.toFixed(4)}, ${vp.longitude.toFixed(4)}  ${vp.timestamp}`);
       } else {
