@@ -20,11 +20,30 @@ const RECOVERY_COLOR = '#ffd21f'; // recovery-operation amber, distinct from haz
 // Approximate — liftoff was 2026-07-24 22:51Z, splashdown ~T+66min.
 const SPLASHDOWN_UTC = '2026-07-24T23:57:00Z';
 
+// Operation phase. This is editorial — sourced from reporting, not telemetry — and
+// must be updated by hand as the operation progresses. It changes which vessel acts
+// as the position proxy: while adrift, Go Australis was station-keeping alongside;
+// under tow, Ship 40 rides on Normand Ranger's wire a few hundred metres astern, so
+// the tug is the better proxy.
 const RECOVERY_OP = {
-  proxy: '372112000',                       // Go Australis — station-keeping alongside Ship 40
-  inbound: ['257587000', '257084000'],      // Normand Ranger (tow), Skimmer Tide (rigging support)
+  phase: 'under_tow',                       // 'adrift' | 'under_tow' | 'complete'
+  phaseSince: '2026-08-02T00:00:00Z',       // tow connected — approximate
+  tow:     '257587000',                     // Normand Ranger — AHTS on the tow wire
+  escort:  '372112000',                     // Go Australis — LZ support, escorting
+  support: ['257084000'],                   // Skimmer Tide — rigging/crew support
   destination: { name:'Dampier, WA', lat:-20.663, lon:116.712 },
 };
+
+// Whichever vessel is currently closest to Ship 40 physically, for position proxying.
+function _proxyMmsi() {
+  return RECOVERY_OP.phase === 'under_tow' ? RECOVERY_OP.tow : RECOVERY_OP.escort;
+}
+
+// Everyone else in the flotilla, for range lines.
+function _otherMmsis() {
+  const p = _proxyMmsi();
+  return [RECOVERY_OP.tow, RECOVERY_OP.escort, ...RECOVERY_OP.support].filter(m => m !== p);
+}
 
 // ── Geo helpers (nautical miles) ──────────────────────────────
 function _nm(a, b) {
@@ -68,13 +87,16 @@ function drawRecovery() {
   _recoveryLayer.clearLayers();
   if (!showRecovery) return;
 
-  const proxy = _pos(RECOVERY_OP.proxy);
-  // No escort position means nothing trustworthy to infer from. Say so on the button
+  const proxyMmsi = _proxyMmsi();
+  const proxy = _pos(proxyMmsi);
+  // No proxy position means nothing trustworthy to infer from. Say so on the button
   // rather than letting the toggle look broken — the flotilla is ~750nm offshore, far
   // beyond terrestrial AIS range, so this is the expected state until it nears Dampier.
   _setBtnState(!!proxy);
   if (!proxy) return;
 
+  const underTow = RECOVERY_OP.phase === 'under_tow';
+  const proxyName = (typeof VESSEL_DB !== 'undefined' && VESSEL_DB[proxyMmsi]?.abbr) || 'escort';
   const ship = { lat: proxy.lat, lon: proxy.lon };
   const stale = proxy.ts ? (Date.now() - proxy.ts > 7200000) : true;
 
@@ -85,7 +107,7 @@ function drawRecovery() {
     `stroke="${RECOVERY_COLOR}" stroke-width="1.6" opacity="${stale ? 0.5 : 0.95}"/>` +
     `<circle cx="11" cy="11" r="2.4" fill="${RECOVERY_COLOR}" opacity="${stale ? 0.5 : 0.95}"/></svg>`;
 
-  const rows = RECOVERY_OP.inbound.map(mmsi => {
+  const rows = _otherMmsis().map(mmsi => {
     const p = _pos(mmsi);
     const info = (typeof VESSEL_DB !== 'undefined' && VESSEL_DB[mmsi]) || {};
     const nm = p ? _nm(p, ship) : null;
@@ -105,17 +127,28 @@ function drawRecovery() {
   };
 
   const toPort = _nm(ship, RECOVERY_OP.destination);
+  // Under tow the meaningful ETA is Ship 40's own arrival at port, at tow speed.
+  const portEta = (underTow && proxy.sog > 0.5) ? toPort / proxy.sog : null;
+  const portEtaStr = portEta != null
+    ? ` · ETA ${portEta < 24 ? portEta.toFixed(1) + 'h' : (portEta/24).toFixed(1) + 'd'}`
+    : '';
+
+  const status = underTow
+    ? `<b style="color:${RECOVERY_COLOR}">UNDER TOW</b> by ${esc(proxyName)}` +
+      (proxy.sog > 0.5 ? ` at ${proxy.sog.toFixed(1)} kn` : '')
+    : `Adrift`;
 
   L.marker([ship.lat, ship.lon], {
     icon: L.divIcon({ html: svg, iconSize:[22,22], iconAnchor:[11,11], className:'' }),
     zIndexOffset: 600,
   }).addTo(_recoveryLayer).bindTooltip(
     `<b style="color:${RECOVERY_COLOR}">SHIP 40 · STARSHIP FLIGHT 13</b>` +
-    `<br><span style="color:var(--t3);font-size:11px">Adrift &amp; afloat ${_afloatStr()} since splashdown</span>` +
-    `<br><span style="color:var(--t5);font-size:10px">Position INFERRED from Go Australis station-keeping` +
-    (stale ? ' · escort position stale' : '') + `</span>` +
-    `<div style="margin-top:5px;font-size:11px;color:var(--t3)">${rows.map(fmt).join('<br>')}</div>` +
-    `<div style="margin-top:4px;font-size:10px;color:var(--t5)">${toPort.toFixed(0)}nm to ${esc(RECOVERY_OP.destination.name)}</div>`,
+    `<br><span style="color:var(--t3);font-size:11px">${status} · afloat ${_afloatStr()} since splashdown</span>` +
+    `<br><span style="color:var(--t5);font-size:10px">Position INFERRED from ${esc(proxyName)}` +
+    (underTow ? ' on the tow wire' : ' station-keeping') +
+    (stale ? ' · position stale' : '') + `</span>` +
+    (rows.length ? `<div style="margin-top:5px;font-size:11px;color:var(--t3)">${rows.map(fmt).join('<br>')}</div>` : '') +
+    `<div style="margin-top:4px;font-size:10px;color:var(--t5)">${toPort.toFixed(0)}nm to ${esc(RECOVERY_OP.destination.name)}${portEtaStr}</div>`,
     { className:'ltt ltt-wrap', direction:'auto', maxWidth:340, sticky:true }
   );
 
@@ -144,12 +177,18 @@ function _setBtnState(hasData) {
     btn.title = 'Toggle Starship Ship 40 at-sea recovery operation';
     return;
   }
+  const towing = RECOVERY_OP.phase === 'under_tow';
   btn.style.opacity = hasData ? '1' : '0.55';
-  btn.textContent = hasData ? 'SHIP 40 RECOVERY' : 'SHIP 40 · NO AIS';
+  btn.textContent = hasData
+    ? (towing ? 'SHIP 40 · UNDER TOW' : 'SHIP 40 RECOVERY')
+    : (towing ? 'SHIP 40 · TOW · NO AIS' : 'SHIP 40 · NO AIS');
   btn.title = hasData
     ? 'Starship Ship 40 at-sea recovery operation'
-    : 'Recovery flotilla is ~750nm offshore, beyond terrestrial AIS range — '
-    + 'no position available until it approaches Dampier';
+    : (towing
+        ? 'Ship 40 is under tow by Normand Ranger per reporting, but the flotilla is '
+        + '~750nm offshore, beyond terrestrial AIS range — no live position until it nears Dampier'
+        : 'Recovery flotilla is ~750nm offshore, beyond terrestrial AIS range — '
+        + 'no position available until it approaches Dampier');
 }
 
 // ── Toggle (cbar button) ──────────────────────────────────────
