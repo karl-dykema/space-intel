@@ -31,8 +31,20 @@ const RECOVERY_OP = {
   tow:     '257587000',                     // Normand Ranger — AHTS on the tow wire
   escort:  '372112000',                     // Go Australis — LZ support, escorting
   support: ['257084000'],                   // Skimmer Tide — rigging/crew support
-  destination: { name:'Dampier, WA', lat:-20.663, lon:116.712 },
+  // Destination is not confirmed — reporting names both Pilbara ports as candidates.
+  // The readout shows whichever is nearer and flags that it is unconfirmed.
+  destinations: [
+    { name:'Dampier, WA',      lat:-20.663, lon:116.712 },
+    { name:'Port Hedland, WA', lat:-20.310, lon:118.575 },
+  ],
 };
+
+// Nearest candidate port to a given position, with distance.
+function _nearestPort(from) {
+  return RECOVERY_OP.destinations
+    .map(d => ({ ...d, nm: _nm(from, d) }))
+    .sort((a, b) => a.nm - b.nm)[0];
+}
 
 // Whichever vessel is currently closest to Ship 40 physically, for position proxying.
 function _proxyMmsi() {
@@ -126,9 +138,11 @@ function drawRecovery() {
     return `${esc(r.name)} — ${r.nm.toFixed(0)}nm brg ${String(brg).padStart(3,'0')}°${eta}`;
   };
 
-  const toPort = _nm(ship, RECOVERY_OP.destination);
+  const port = _nearestPort(ship);
+  const toPort = port.nm;
   // Under tow the meaningful ETA is Ship 40's own arrival at port, at tow speed.
-  const portEta = (underTow && proxy.sog > 0.5) ? toPort / proxy.sog : null;
+  // Tow speed is ~1-1.5kn, so accept any headway above a drift threshold.
+  const portEta = (underTow && proxy.sog > 0.3) ? toPort / proxy.sog : null;
   const portEtaStr = portEta != null
     ? ` · ETA ${portEta < 24 ? portEta.toFixed(1) + 'h' : (portEta/24).toFixed(1) + 'd'}`
     : '';
@@ -148,7 +162,8 @@ function drawRecovery() {
     (underTow ? ' on the tow wire' : ' station-keeping') +
     (stale ? ' · position stale' : '') + `</span>` +
     (rows.length ? `<div style="margin-top:5px;font-size:11px;color:var(--t3)">${rows.map(fmt).join('<br>')}</div>` : '') +
-    `<div style="margin-top:4px;font-size:10px;color:var(--t5)">${toPort.toFixed(0)}nm to ${esc(RECOVERY_OP.destination.name)}${portEtaStr}</div>`,
+    `<div style="margin-top:4px;font-size:10px;color:var(--t5)">${toPort.toFixed(0)}nm to ${esc(port.name)}` +
+    `${portEtaStr}<br>destination port not yet confirmed</div>`,
     { className:'ltt ltt-wrap', direction:'auto', maxWidth:340, sticky:true }
   );
 

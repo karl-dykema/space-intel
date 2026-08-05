@@ -348,8 +348,10 @@ const VESSEL_DB = {
       'Assigned as the tow vessel for the floating Ship 40 (Flight 13) recovery attempt, July 2026',
       'Arrived on station ~July 31 2026, roughly 750nm NW of Australia',
       'Rigged a tow to Ship 40 and took it under tow ~Aug 2 2026, bound for Western Australia — the first Starship ever taken under tow',
+      'Tow lines made fast to Ship 40\'s nose section; making ~1-1.5 kn toward port',
+      'Broadcasting AIS navigational status "restricted manoeuvrability", consistent with a vessel constrained by a tow',
     ],
-    notes:'★ UNDER TOW — currently towing Starship Ship 40 toward Dampier, the first at-sea recovery of a Starship. The bollard pull was never the problem; rigging a bridle to a hull with no designed tow points was. Solstad AHTS, IMO 9413432.',
+    notes:'★ UNDER TOW — currently towing Starship Ship 40 toward Western Australia (Dampier or Port Hedland, not yet confirmed) at ~1-1.5 kn, the first at-sea recovery of a Starship. The bollard pull was never the problem; rigging a bridle to a hull with no designed tow points was. Solstad AHTS, IMO 9413432.',
   },
   '257084000': {
     name:'Skimmer Tide', abbr:'Skimmer Tide',

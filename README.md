@@ -156,7 +156,13 @@ The layer also shows range/bearing from each inbound vessel, ETA (only when a ve
 
 **Why a tow, and why it's hard.** Heavy-lift and crane recovery are both effectively impossible in open ocean — those are millimetre-precision operations needing sheltered water and pre-built cradle blocks. That leaves a tow. The limiting factor is *not* pulling power (280 t bollard pull is ample) but **attachment**: Ship 40 has no designed tow points, so a bridle must be rigged to pull from a centre point, or the hull yaws and sheers. It also floats very high with little below the waterline, giving wind enormous leverage. The stainless-steel hull at least permits welding attachment points, though doing that from small boats alongside a pitching object at sea is the hazardous part.
 
-**Status — under tow (as of 2 August 2026).** Normand Ranger rigged a bridle and has Ship 40 under tow, bound for Western Australia. The tow is the first ever attempted on a Starship. At a tow speed of ~3 kn, arrival at Dampier lands around 11–12 August UTC.
+**Status — under tow (as of 2 August 2026).** Normand Ranger has Ship 40 under tow with lines made fast to the **nose section**, bound for Western Australia — the first tow ever attempted on a Starship. Normand Ranger is broadcasting AIS navigational status *restricted manoeuvrability*, consistent with a vessel constrained by a tow, which is independent confirmation of the hookup.
+
+The convoy is making **~1–1.5 kn**. The destination is **not confirmed**: reporting names both **Dampier** and **Port Hedland** as candidates, so the layer shows whichever Pilbara port is nearer and flags it as unconfirmed.
+
+*Note the tension in the public reporting:* an arrival of 11–12 August from ~750 nm implies an average around 3 kn, roughly double the observed 1–1.5 kn. Either the tow is expected to speed up once the rig settles, or the arrival estimate is optimistic. At a sustained 1.5 kn the transit is closer to three weeks.
+
+Satellite imagery of the hull shows **several missing tiles in the aft section** and **damage to the bottom rim** — the post-flight thermal protection data that motivates the whole recovery.
 
 The operation phase is set by hand in `recovery.js` (`RECOVERY_OP.phase`) because it comes from reporting, not telemetry. It controls which vessel proxies Ship 40's position: while adrift that was Go Australis station-keeping alongside; under tow it is Normand Ranger, with Ship 40 a few hundred metres astern on the wire.
 
