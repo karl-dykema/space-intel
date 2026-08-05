@@ -2,7 +2,7 @@
 const https = require('https');
 const { ensureSchema, upsertCache } = require('./db');
 
-function fetchUrl(url) {
+function fetchUrl(url, timeoutMs = 20000) {
   return new Promise((resolve, reject) => {
     const req = https.get(url, {
       headers: {
@@ -10,7 +10,7 @@ function fetchUrl(url) {
         'Accept': 'application/json',
         'Accept-Encoding': 'identity',
       },
-      timeout: 20000,
+      timeout: timeoutMs,
     }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         fetchUrl(res.headers.location).then(resolve).catch(reject); return;
@@ -26,6 +26,27 @@ function fetchUrl(url) {
   });
 }
 
+// ll.thespacedevs.com is a free public API and its `mode=detailed` queries are heavy
+// enough to intermittently exceed a 20s timeout. Retry transient failures with backoff
+// before giving up.
+const TRANSIENT = /timeout|rate-limited-429|HTTP 5\d\d|ECONNRESET|socket hang up|EAI_AGAIN/i;
+
+async function fetchWithRetry(url, { tries = 3, timeoutMs = 20000, label = 'fetch' } = {}) {
+  let lastErr;
+  for (let attempt = 1; attempt <= tries; attempt++) {
+    try {
+      return await fetchUrl(url, timeoutMs);
+    } catch (e) {
+      lastErr = e;
+      if (!TRANSIENT.test(e.message) || attempt === tries) break;
+      const wait = 5000 * attempt; // 5s, then 10s
+      console.log(`  ${label}: attempt ${attempt}/${tries} failed (${e.message}) — retrying in ${wait / 1000}s`);
+      await new Promise(r => setTimeout(r, wait));
+    }
+  }
+  throw lastErr;
+}
+
 // Operators we track — must match OPERATOR_MATCH keys in ships_db.js
 const TRACKED_OPERATORS = ['SpaceX', 'Rocket Lab', 'Blue Origin', 'United Launch Alliance'];
 
@@ -34,7 +55,10 @@ async function main() {
   await ensureSchema();
 
   console.log('Fetching calendar (list mode, all operators)…');
-  const raw = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=100&ordering=net&mode=list');
+  // Primary payload — a failure here is a genuine failure and should exit non-zero.
+  const raw = await fetchWithRetry(
+    'https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=100&ordering=net&mode=list',
+    { label: 'calendar list' });
   const results = JSON.parse(raw).results || [];
   console.log(`  ${results.length} launches received`);
 
@@ -60,26 +84,38 @@ async function main() {
   // Also fetch full detailed data for operators we track — used by share page for rich mission cards
   const isTracked = l => TRACKED_OPERATORS.some(op => (l.launch_service_provider?.name || '').includes(op));
 
-  console.log('Fetching detailed upcoming launches for tracked operators…');
-  const detRaw  = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=75&ordering=net&mode=detailed');
-  const detUp   = JSON.parse(detRaw).results || [];
-  const upFiltered = detUp.filter(isTracked);
-  console.log(`  ${upFiltered.length} upcoming (detailed)`);
-  if (upFiltered.length > 0) {
-    await upsertCache('launches.detailed', upFiltered, {
-      source: 'll.thespacedevs.com', fetchedAt: new Date().toISOString(),
-    });
+  // The detailed fetches enrich the share page's mission cards. They are optional:
+  // the primary calendar is already saved above, and a skipped run just leaves the
+  // previous detail cache in place until the next run 2h later. Never fail the whole
+  // job for these — a transient API blip shouldn't page a red X for healthy data.
+  const detailed = [
+    { key:'launches.detailed', label:'upcoming (detailed)',
+      url:'https://ll.thespacedevs.com/2.3.0/launches/upcoming/?limit=75&ordering=net&mode=detailed' },
+    { key:'launches.past',     label:'past (detailed)',
+      url:'https://ll.thespacedevs.com/2.3.0/launches/previous/?limit=20&ordering=-net&mode=detailed' },
+  ];
+
+  let degraded = 0;
+  for (const d of detailed) {
+    console.log(`Fetching ${d.label} for tracked operators…`);
+    try {
+      // Longer ceiling than the list query: these payloads are much larger.
+      const raw2 = await fetchWithRetry(d.url, { timeoutMs: 45000, label: d.label });
+      const filtered = (JSON.parse(raw2).results || []).filter(isTracked);
+      console.log(`  ${filtered.length} ${d.label}`);
+      if (filtered.length > 0) {
+        await upsertCache(d.key, filtered, {
+          source: 'll.thespacedevs.com', fetchedAt: new Date().toISOString(),
+        });
+      }
+    } catch (e) {
+      degraded++;
+      console.warn(`  !! ${d.label} unavailable (${e.message}) — keeping previous cache`);
+    }
   }
 
-  console.log('Fetching detailed past launches for tracked operators…');
-  const pastRaw  = await fetchUrl('https://ll.thespacedevs.com/2.3.0/launches/previous/?limit=20&ordering=-net&mode=detailed');
-  const detPast  = JSON.parse(pastRaw).results || [];
-  const pastFiltered = detPast.filter(isTracked);
-  console.log(`  ${pastFiltered.length} past (detailed)`);
-  if (pastFiltered.length > 0) {
-    await upsertCache('launches.past', pastFiltered, {
-      source: 'll.thespacedevs.com', fetchedAt: new Date().toISOString(),
-    });
+  if (degraded) {
+    console.log(`\nCompleted with ${degraded} optional fetch(es) skipped. Primary calendar saved.`);
   }
 }
 
