@@ -39,6 +39,57 @@ const RECOVERY_OP = {
   ],
 };
 
+// ── Estimated-position model ──────────────────────────────────
+// Ship 40 has no AIS and the flotilla is beyond terrestrial range, so there is no
+// position to plot. Rather than plot nothing or invent a point, model where it can
+// plausibly BE and draw that region.
+//
+// The anchor is a reported range-to-port, not a coordinate — which is fortunate,
+// because the uncertainty then decomposes cleanly:
+//   along-track : tow speed is uncertain (reported 1-3 kn), so distance covered
+//                 since the anchor is a range → two arcs at different radii
+//   cross-track : the exact route bearing is unknown → a sector of bearings
+// The result is an annulus segment: bounded by two range arcs from the port and two
+// bearing limits. It widens by itself as the speed uncertainty compounds over time,
+// so a stale estimate visibly becomes useless rather than quietly becoming wrong.
+const ESTIMATE = {
+  // Sal Mercogliano (What's Going on With Shipping), reading MarineTraffic.
+  anchor: { at: '2026-08-03T12:00:00Z', nmToPort: 852 },
+  port:   { name:'Dampier, WA', lat:-20.663, lon:116.712 },
+  speedKn: { min: 1.0, max: 3.0 },   // observed ~1-1.5; Sal's projection used 3
+  bearingDeg: { from: 288, to: 318 },// sector from the port out toward the ship
+  maxAgeDays: 14,                    // past this, the anchor is too old to mean anything
+};
+
+// Project a point: from → bearing (deg) → distance (nm).
+function _project(from, bearingDeg, nm) {
+  const r = Math.PI/180, R = 3440.065;
+  const d = nm / R, b = bearingDeg * r;
+  const lat1 = from.lat * r, lon1 = from.lon * r;
+  const lat2 = Math.asin(Math.sin(lat1)*Math.cos(d) + Math.cos(lat1)*Math.sin(d)*Math.cos(b));
+  const lon2 = lon1 + Math.atan2(Math.sin(b)*Math.sin(d)*Math.cos(lat1),
+                                 Math.cos(d) - Math.sin(lat1)*Math.sin(lat2));
+  return { lat: lat2/r, lon: ((lon2/r + 540) % 360) - 180 };
+}
+
+// Current plausible range-to-port window, or null if the estimate has expired.
+function _estimateWindow() {
+  const anchorMs = Date.parse(ESTIMATE.anchor.at);
+  const elapsedH = (Date.now() - anchorMs) / 3600000;
+  if (elapsedH < 0 || elapsedH / 24 > ESTIMATE.maxAgeDays) return null;
+
+  const { min, max } = ESTIMATE.speedKn;
+  const near = Math.max(0, ESTIMATE.anchor.nmToPort - max * elapsedH); // fastest case
+  const far  = Math.max(0, ESTIMATE.anchor.nmToPort - min * elapsedH); // slowest case
+  if (far <= 0) return null; // even the slowest case says it has arrived
+
+  return {
+    near, far, elapsedH,
+    etaEarlyH: near / max,
+    etaLateH:  far / min,
+  };
+}
+
 // Nearest candidate port to a given position, with distance.
 function _nearestPort(from) {
   return RECOVERY_OP.destinations
@@ -101,6 +152,8 @@ function drawRecovery() {
 
   const proxyMmsi = _proxyMmsi();
   const proxy = _pos(proxyMmsi);
+  // A real position always beats a model. Only estimate when we have nothing.
+  if (!proxy) { drawEstimate(); return; }
   // No proxy position means nothing trustworthy to infer from. Say so on the button
   // rather than letting the toggle look broken — the flotilla is ~750nm offshore, far
   // beyond terrestrial AIS range, so this is the expected state until it nears Dampier.
@@ -180,10 +233,46 @@ function drawRecovery() {
   }
 }
 
+// ── Estimated-position region ─────────────────────────────────
+// Drawn only when there is no real position. Deliberately a region, never a point:
+// there is nothing here precise enough to justify a marker.
+function drawEstimate() {
+  const w = _estimateWindow();
+  _setBtnState(false, !!w);
+  if (!w) return;
+
+  const { from, to } = ESTIMATE.bearingDeg;
+  const step = 2;
+  const outer = [], inner = [];
+  for (let b = from; b <= to; b += step) {
+    outer.push(_project(ESTIMATE.port, b, w.far));
+    inner.push(_project(ESTIMATE.port, b, w.near));
+  }
+  const ring = [...outer, ...inner.reverse()].map(p => [p.lat, p.lon]);
+
+  const hrs = h => h < 48 ? `${h.toFixed(0)}h` : `${(h/24).toFixed(1)}d`;
+  const band = w.far - w.near;
+
+  L.polygon(ring, {
+    color: RECOVERY_COLOR, weight: 1.2, opacity: 0.6,
+    fillColor: RECOVERY_COLOR, fillOpacity: 0.07, dashArray: '6 5',
+  }).addTo(_recoveryLayer).bindTooltip(
+    `<b style="color:${RECOVERY_COLOR}">SHIP 40 · ESTIMATED AREA</b>` +
+    `<br><span style="color:var(--t3);font-size:11px">Somewhere in here — ` +
+    `${w.near.toFixed(0)}–${w.far.toFixed(0)}nm from ${esc(ESTIMATE.port.name)}</span>` +
+    `<br><span style="color:var(--t3);font-size:11px">Arrival in ${hrs(w.etaEarlyH)} – ${hrs(w.etaLateH)}</span>` +
+    `<div style="margin-top:5px;font-size:10px;color:var(--t5)">` +
+    `NOT A POSITION. Modelled from a reported ${ESTIMATE.anchor.nmToPort}nm range ` +
+    `${hrs(w.elapsedH)} ago at ${ESTIMATE.speedKn.min}–${ESTIMATE.speedKn.max}kn.<br>` +
+    `Uncertainty spans ${band.toFixed(0)}nm and grows until a real position arrives.</div>`,
+    { className:'ltt ltt-wrap', direction:'auto', maxWidth:340, sticky:true }
+  );
+}
+
 // ── Button state ──────────────────────────────────────────────
 // Distinguishes "layer off" from "layer on but no position available", so an
 // enabled toggle that draws nothing doesn't read as a broken button.
-function _setBtnState(hasData) {
+function _setBtnState(hasData, hasEstimate) {
   const btn = document.getElementById('recovery-btn');
   if (!btn) return;
   if (!showRecovery) {
@@ -193,13 +282,17 @@ function _setBtnState(hasData) {
     return;
   }
   const towing = RECOVERY_OP.phase === 'under_tow';
-  btn.style.opacity = hasData ? '1' : '0.55';
+  btn.style.opacity = hasData ? '1' : hasEstimate ? '0.8' : '0.55';
   btn.textContent = hasData
     ? (towing ? 'SHIP 40 · UNDER TOW' : 'SHIP 40 RECOVERY')
+    : hasEstimate ? 'SHIP 40 · ESTIMATED'
     : (towing ? 'SHIP 40 · TOW · NO AIS' : 'SHIP 40 · NO AIS');
   btn.title = hasData
     ? 'Starship Ship 40 at-sea recovery operation'
-    : (towing
+    : hasEstimate
+      ? 'No AIS in range — showing a modelled area where Ship 40 plausibly is, '
+      + 'not a position. Widens as uncertainty grows.'
+      : (towing
         ? 'Ship 40 is under tow by Normand Ranger per reporting, but the flotilla is '
         + '~750nm offshore, beyond terrestrial AIS range — no live position until it nears Dampier'
         : 'Recovery flotilla is ~750nm offshore, beyond terrestrial AIS range — '

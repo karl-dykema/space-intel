@@ -164,6 +164,19 @@ The convoy is making **~1–1.5 kn**. The destination is **not confirmed**: repo
 
 Satellite imagery of the hull shows **several missing tiles in the aft section** and **damage to the bottom rim** — the post-flight thermal protection data that motivates the whole recovery.
 
+### Estimated-area model
+
+Ship 40 has no AIS and the flotilla is beyond terrestrial range, so there is no position to plot. Rather than plot nothing or invent a point, the layer models where Ship 40 can plausibly *be* and draws that region — never a marker, because nothing here is precise enough to justify one.
+
+The anchor is a reported **range to port** (852 nm from Dampier on 3 Aug), not a coordinate, which makes the uncertainty decompose cleanly:
+
+- **along-track** — tow speed is uncertain (reported 1–3 kn), so distance covered since the anchor is a range → two arcs at different radii
+- **cross-track** — the exact route bearing is unknown → a sector of bearings
+
+The result is an annulus segment bounded by two range arcs from the port and two bearing limits, with an arrival *window* rather than a single ETA. It widens on its own as the speed uncertainty compounds, and expires entirely after `ESTIMATE.maxAgeDays` — so a stale estimate becomes visibly useless rather than quietly wrong. A real AIS position always takes precedence; the model only draws when there is nothing else.
+
+Tune it via `ESTIMATE` in `recovery.js` — update `anchor` whenever a fresher range is reported.
+
 The operation phase is set by hand in `recovery.js` (`RECOVERY_OP.phase`) because it comes from reporting, not telemetry. It controls which vessel proxies Ship 40's position: while adrift that was Go Australis station-keeping alongside; under tow it is Normand Ranger, with Ship 40 a few hundred metres astern on the wire.
 
 *This layer is intentionally time-boxed. When the tow concludes, delete `recovery.js`, its `<script>` tag, and the cbar button; demote the three MMSIs in `scripts/fetch-vapi.js`.*
