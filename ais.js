@@ -24,6 +24,16 @@ function scheduleAISReconnect() {
 }
 
 function connect(key) {
+  // aisstream.io allows one concurrent connection per API key. Every open tab used
+  // to open its own socket, so each tab's connection kicked the others off and the
+  // auto-reconnect turned that into an endless flap. Only the leader tab connects.
+  if (!_isLeader()) {
+    setDot('off', 'Another tab holds the AIS connection');
+    addLog('AIS: another tab owns the live connection (aisstream allows one per key) — not connecting here', 'sys');
+    const b = document.getElementById('cbtn');
+    if (b) { b.textContent = 'CONNECT'; b.disabled = false; }
+    return;
+  }
   setDot('connecting','Connecting to aisstream.io…');
   addLog('Connecting to aisstream.io…', 'sys');
   const btn=document.getElementById('cbtn');
@@ -61,8 +71,11 @@ function connect(key) {
     clearTimeout(timeout);
     S.ws=null; btn.textContent='CONNECT'; btn.disabled=false; btn.classList.remove('on');
     const badKey = ev.code===4001||ev.code===4003;
+    // Close codes are the only diagnostic aisstream gives us — keep the reason.
+    const why = ev.reason ? ` — ${ev.reason}` : '';
     setDot('off', badKey ? 'Invalid API key — check ⚙ SETTINGS' : `Disconnected (${ev.code})`);
-    addLog(`AIS ${badKey?'invalid key':'disconnected'} (code ${ev.code})`, badKey?'err':'sys');
+    addLog(`AIS ${badKey?'invalid key':'disconnected'} (code ${ev.code}${ev.wasClean?'':', unclean'})${why}`,
+           badKey?'err':'sys');
     if (!badKey) scheduleAISReconnect();
   };
   ws.onerror=()=>{clearTimeout(timeout);setDot('off','Connection error');addLog('AIS WebSocket error','err');};

@@ -25,6 +25,27 @@ async function loadHazards() {
   } catch (e) { addLog(`Hazards: load error — ${e.message}`, 'err'); }
 }
 
+// NGA broadcast warnings date-stamp with a military DTG ("231417Z MAR 2022"),
+// which Date() cannot parse — new Date(dtg).toISOString() throws "Invalid time
+// value" and killed the whole draw. Parse the DTG, and fall back to showing the
+// raw string rather than throwing.
+function navDate(dtg) {
+  if (!dtg) return '';
+  const direct = new Date(dtg);
+  if (!isNaN(direct.getTime())) return direct.toISOString().slice(0, 10);
+
+  const m = /^(\d{2})(\d{2})(\d{2})Z\s+([A-Za-z]{3})\s+(\d{4})$/.exec(String(dtg).trim());
+  if (m) {
+    const mon = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']
+      .indexOf(m[4].toUpperCase());
+    if (mon >= 0) {
+      const d = new Date(Date.UTC(+m[5], mon, +m[1], +m[2], +m[3]));
+      if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    }
+  }
+  return String(dtg);
+}
+
 // ── Draw / clear polygons ─────────────────────────────────────
 function drawHazards() {
   if (typeof map === 'undefined' || !map) return;
@@ -45,7 +66,7 @@ function drawHazards() {
         fillOpacity: 0.10,
         dashArray:   '5 4',
       }).addTo(_hazardLayer);
-      const issued = w.issueDate ? new Date(w.issueDate).toISOString().slice(0, 10) : '';
+      const issued = navDate(w.issueDate);
       poly.bindTooltip(
         `<b style="color:${HAZARD_COLOR}">HAZARD ZONE · ${esc(w.id || 'NAVWARN')}</b>` +
         (w.subject ? `<br><span style="color:var(--t3)">${esc(w.subject)}</span>` : '') +
