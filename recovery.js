@@ -56,7 +56,11 @@ const ESTIMATE = {
   // Sal Mercogliano (What's Going on With Shipping), reading MarineTraffic.
   anchor: { at: '2026-08-03T12:00:00Z', nmToPort: 852 },
   port:   { name:'Dampier, WA', lat:-20.663, lon:116.712 },
-  speedKn: { min: 1.0, max: 3.0 },   // observed ~1-1.5; Sal's projection used 3
+  // Min must cover a stalled tow, not just a slow one. On 7 Aug the tow was making
+  // a little over 1kn, then halted at dawn and tracked north — not closing the port
+  // at all. A 1.0kn floor would put the true position outside the drawn region,
+  // which is the one failure this model exists to avoid.
+  speedKn: { min: 0.2, max: 3.0 },
   bearingDeg: { from: 288, to: 318 },// sector from the port out toward the ship
   maxAgeDays: 14,                    // past this, the anchor is too old to mean anything
 };

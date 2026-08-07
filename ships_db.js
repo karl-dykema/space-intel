@@ -350,6 +350,7 @@ const VESSEL_DB = {
       'Rigged a tow to Ship 40 and took it under tow ~Aug 2 2026, bound for Western Australia — the first Starship ever taken under tow',
       'Tow lines made fast to Ship 40\'s nose section; making ~1-1.5 kn toward port',
       'Broadcasting AIS navigational status "restricted manoeuvrability", consistent with a vessel constrained by a tow',
+      'Aug 7 2026: tow stalled — halted at dawn and tracked north, no longer closing Dampier; cause unclear',
     ],
     notes:'★ UNDER TOW — currently towing Starship Ship 40 toward Western Australia (Dampier or Port Hedland, not yet confirmed) at ~1-1.5 kn, the first at-sea recovery of a Starship. The bollard pull was never the problem; rigging a bridle to a hull with no designed tow points was. Solstad AHTS, IMO 9413432.',
   },
@@ -367,6 +368,19 @@ const VESSEL_DB = {
       'Supporting the tow to Western Australia from ~Aug 2 2026',
     ],
     notes:'ACTIVE RECOVERY MISSION — support vessel for the Ship 40 at-sea recovery, alongside Go Australis and Normand Ranger. Ex-Normand Skimmer. IMO 9609988, callsign LANX7.',
+  },
+  '636023240': {
+    name:'Dongbang Giant No.2', abbr:'Dongbang Giant 2',
+    operator:'SpaceX', role:'Heavy Lift Carrier (Starship Recovery)',
+    color:'#00d4ff', homePort:'Seoul, South Korea',
+    imo:'9481788', flag:'Liberia', built:2008, verified:true,
+    specs:{ length:'145m', beam:'38m', type:'Heavy Load Carrier', deadweight:'18,504 t', grossTonnage:'11,391 t', callsign:'5LMS4' },
+    history:[
+      'Semi-submersible-style heavy load carrier managed by Dongbang Transport Logistics, Seoul',
+      'Sailed from the east coast of India on July 24 2026; transited the Malacca Strait in early August',
+      'Reported inbound toward Dampier during the Ship 40 recovery — a heavy lift would let Starship be carried rather than towed',
+    ],
+    notes:'Heavy load carrier reported heading toward the Ship 40 operation. If Ship 40 is loaded aboard, the slow open-ocean tow becomes a carry. IMO 9481788, callsign 5LMS4. [MMSI 636023240 — Liberia-flagged; some databases still list a stale 441xxxxxx Korean MMSI]',
   },
   // ── ULA ──────────────────────────────────────────────────────
   '338731000': {
