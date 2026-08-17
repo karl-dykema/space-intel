@@ -11,7 +11,7 @@ if (!KEY) { console.error('VAPI_KEY env var or CLI arg required'); process.exit(
 // often they actually move: hot vessels every run, idle ones at half cadence, and
 // ones VesselAPI has no coverage for get an occasional cheap probe.
 //
-// Budget: 9×10 (A) + 4×5 (B) + 1×2.5 (C) ≈ 113 of 150 calls/month.
+// Budget: 6×10 (A) + 7×5 (B) + 1×2.5 (C) ≈ 98 of 150 calls/month.
 //
 // Skipped tiers keep their last known fix — main() merges onto the existing file
 // rather than replacing it, and the app already renders VesselAPI fixes as hollow
@@ -26,10 +26,6 @@ const TIER_A = [
   '228438700', // Canopée       — Ariane 6 transport, near-continuous
   '228057000', // MN Colibri    — Arianespace transport, near-continuous
   '227278000', // MN Toucan     — Arianespace transport, near-continuous
-  // Starship Ship 40 recovery flotilla (Indian Ocean, July 2026) — demote when the op ends
-  '372112000', // Go Australis
-  '257587000', // Normand Ranger
-  '257084000', // Skimmer Tide
 ];
 
 // Tier B — idle between infrequent missions. Every 2nd run (~6 days).
@@ -39,6 +35,12 @@ const TIER_B = [
   '368368960', // Jacklyn       — New Glenn platform, idle between flights
   '512440000', // Seaworker     — Electron recovery, rarely tasked
   '369045000', // Harvey Stone  — support tug, moves with ASOG
+  // Ex-Ship 40 recovery flotilla (Indian Ocean, Jul–Aug 2026). VesselAPI returned null
+  // for all three every run of the operation — no coverage that far offshore — so Tier A
+  // was spending ~30 calls/month on nothing. Kept at half cadence in case coverage returns.
+  '372112000', // Go Australis
+  '257587000', // Normand Ranger
+  '257084000', // Skimmer Tide
 ];
 
 // Tier C — no VesselAPI coverage as of July 2026. Every 4th run (~12 days) purely to

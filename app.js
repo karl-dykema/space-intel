@@ -473,7 +473,6 @@ function handleAIS(msg) {
   updateMarker(v);
   updateHeaderStats();
   renderFleet();
-  if(typeof drawRecovery==='function'&&(mmsi===RECOVERY_OP.proxy||RECOVERY_OP.inbound.includes(mmsi))) drawRecovery();
   if(S.selected===mmsi&&S.tab==='vessel') renderRight();
 }
 
