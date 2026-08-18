@@ -21,7 +21,7 @@ const DRY  = FLAGS.includes('--dry');
 // often they actually move: hot vessels every run, idle ones at half cadence, and
 // ones VesselAPI has no coverage for get an occasional cheap probe.
 //
-// Budget: 6×10 (A) + 4×5 (B) + 1×2.5 (C) ≈ 83 of 150 calls/month.
+// Budget: 6×10 (A) + 5×5 (B) + 3×2.5 (C) ≈ 93 of 150 calls/month.
 //
 // Skipped tiers keep their last known fix — main() merges onto the existing file
 // rather than replacing it, and the app already renders VesselAPI fixes as hollow
@@ -45,20 +45,22 @@ const TIER_B = [
   '368368960', // Jacklyn       — New Glenn platform, idle between flights
   '512440000', // Seaworker     — Electron recovery, rarely tasked
   '369045000', // Harvey Stone  — support tug, moves with ASOG
+  '257084000', // Skimmer Tide  — ex-Ship 40 flotilla; VesselAPI added this hull on
+               //                 2026-08-16 and it now returns fixes near Dampier
 ];
 
-// Not polled at all. The Ship 40 recovery flotilla — Go Australis (372112000), Normand
-// Ranger (257587000), Skimmer Tide (257084000) — returned nothing on every run of the
-// August 2026 operation. A targeted probe (--only=257587000 --dry) showed the reason is
-// HTTP 404: the hulls are absent from VesselAPI's database entirely, not merely out of
-// coverage. No tier can fix that, so polling them is guaranteed waste. They stay in
-// VESSEL_DB and remain subscribed on AISStream; only VesselAPI gives up on them.
-// If VesselAPI ever adds these hulls, re-add here — the probe flag makes that one call.
+// A 404 means "absent from VesselAPI's database right now", NOT "absent forever". Skimmer
+// Tide 404'd at 06:39Z on 2026-08-16 and returned a real fix stamped 11:50Z the same day —
+// the hull was added within hours. So 404s belong in Tier C (cheap periodic re-probe),
+// never deleted outright. Check the `misses` block in data/vapi-positions.json for why a
+// vessel has no fix; a 404 there is a candidate for promotion once it starts resolving.
 
 // Tier C — no VesselAPI coverage as of July 2026. Every 4th run (~12 days) purely to
 // detect if coverage returns; costs ~2-3 calls/month instead of 10 for nothing.
 const TIER_C = [
   '368219920', // JRTI          — returns no data; probe for restored coverage
+  '372112000', // Go Australis  — HTTP 404, hull absent from VesselAPI
+  '257587000', // Normand Ranger— HTTP 404, hull absent from VesselAPI
 ];
 
 const VESSELS = ONLY.length ? ONLY : [
@@ -138,7 +140,19 @@ async function main() {
   } catch { /* first run, or unreadable — start clean */ }
 
   const merged = { ...prev, ...vessels };
-  const out = { fetched: new Date().toISOString(), vessels: merged };
+
+  // Record WHY each polled vessel has no fix, not just that it doesn't. Successes alone
+  // make an absent hull (404) and a covered-but-quiet one indistinguishable from the repo
+  // side, which sent us chasing a phantom "no coverage offshore" theory for two weeks while
+  // the real reason sat in the Actions log. Keyed by MMSI, replaced each run for the
+  // vessels actually polled, so a stale reason can't outlive the condition.
+  const prevMisses = (() => {
+    try { return JSON.parse(fs.readFileSync(outPath, 'utf8'))?.misses || {}; } catch { return {}; }
+  })();
+  for (const mmsi of VESSELS) delete prevMisses[mmsi];
+  for (const m of misses) prevMisses[m.mmsi] = { status: m.status, why: m.why, at: new Date().toISOString() };
+
+  const out = { fetched: new Date().toISOString(), vessels: merged, misses: prevMisses };
   if (DRY) {
     console.log('\n(--dry) not writing data/vapi-positions.json');
   } else {
