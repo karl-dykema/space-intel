@@ -4,6 +4,16 @@ on:
   schedule:
     - cron: '0 6 */3 * *'   # every 3 days; script tiers vessels by cadence (~114 of 150 free calls/month)
   workflow_dispatch:          # manual trigger
+    inputs:
+      only:
+        description: 'Poll only these MMSIs (comma-separated), ignoring the tier schedule'
+        required: false
+        type: string
+      dry:
+        description: 'Probe only — do not write or commit data/vapi-positions.json'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   fetch:
@@ -20,7 +30,16 @@ jobs:
       - name: Fetch VesselAPI positions
         env:
           VAPI_KEY: ${{ secrets.VAPI_KEY }}
-        run: node scripts/fetch-vapi.js
+          ONLY: ${{ inputs.only }}
+          DRY:  ${{ inputs.dry }}
+        # Inputs go through env rather than straight into the run line, so a value
+        # containing shell metacharacters can't break out. Empty on schedule runs,
+        # which then behave exactly as before.
+        run: |
+          args=()
+          if [ -n "$ONLY" ]; then args+=("--only=$ONLY"); fi
+          if [ "$DRY" = "true" ]; then args+=("--dry"); fi
+          node scripts/fetch-vapi.js ${args[@]+"${args[@]}"}
 
       - name: Commit if changed
         run: |
