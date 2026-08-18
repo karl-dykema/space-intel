@@ -3,8 +3,18 @@ const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
 
-const KEY = process.env.VAPI_KEY || process.argv[2];
+// Flags are stripped before the positional key, so `--only` can precede or follow it.
+const ARGV  = process.argv.slice(2);
+const FLAGS = ARGV.filter(a => a.startsWith('--'));
+const KEY   = process.env.VAPI_KEY || ARGV.find(a => !a.startsWith('--'));
 if (!KEY) { console.error('VAPI_KEY env var or CLI arg required'); process.exit(1); }
+
+// --only=MMSI[,MMSI...] polls just those hulls, ignoring the tier schedule. For probing
+// whether coverage exists for one vessel without spending a call on the whole roster.
+// --dry skips the file write, so a probe can't stamp `fetched` on a file it barely touched.
+const ONLY = (FLAGS.find(a => a.startsWith('--only=')) || '').slice(7)
+  .split(',').map(s => s.trim()).filter(Boolean);
+const DRY  = FLAGS.includes('--dry');
 
 // Free plan: 150 calls/month. The workflow runs every 3 days (~10 runs/month), so
 // polling every vessel every run costs ~10 calls each. Vessels are tiered by how
@@ -49,7 +59,7 @@ const TIER_C = [
   '368219920', // JRTI          — returns no data; probe for restored coverage
 ];
 
-const VESSELS = [
+const VESSELS = ONLY.length ? ONLY : [
   ...TIER_A,
   ...(cycle % 2 === 0 ? TIER_B : []),
   ...(cycle % 4 === 0 ? TIER_C : []),
@@ -127,8 +137,12 @@ async function main() {
 
   const merged = { ...prev, ...vessels };
   const out = { fetched: new Date().toISOString(), vessels: merged };
-  fs.mkdirSync(path.dirname(outPath), { recursive: true });
-  fs.writeFileSync(outPath, JSON.stringify(out, null, 2));
+  if (DRY) {
+    console.log('\n(--dry) not writing data/vapi-positions.json');
+  } else {
+    fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    fs.writeFileSync(outPath, JSON.stringify(out, null, 2));
+  }
 
   const carried = Object.keys(merged).length - Object.keys(vessels).length;
   console.log(`\nPolled ${Object.keys(vessels).length}/${VESSELS.length} vessels (cycle ${cycle}, ${carried} carried forward) → data/vapi-positions.json`);
