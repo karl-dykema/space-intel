@@ -7,3 +7,8 @@ test-vapi.js
 /package.json
 /package-lock.json
 "dark_vessel_intel (1).html"
+
+# secrets — never commit
+.env
+.env.*
+*.key
