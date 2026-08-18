@@ -718,7 +718,7 @@ function updateMarker(v) {
   if(!map||!layers||!v.lat||!v.lon) return;
   const mmsi=v.mmsi, col=opColor(v.operator), sel=S.selected===mmsi;
   const hist=!!v._historical&&(Date.now()-v.ts>600000); // dim only if historical AND older than 10min
-  const vapi=v._vapi&&!SHARE_MODE;
+  const vapi=(v._vapi||v._manual)&&!SHARE_MODE; // both render hollow: not our own reception
   const stale=!hist&&!vapi&&!!v.ts&&(Date.now()-v.ts>7200000); // >2h old and not already flagged
   const hollow=hist||vapi||stale;
   const docked=!hist&&!vapi&&!stale&&!!v.ts&&(Date.now()-v.ts<600000)&&(v.sog==null||v.sog<=0.1);
@@ -958,6 +958,7 @@ window.onload=()=>{
   // Single Supabase load → then realtime subscription + vapiPositions
   loadSBData().then(async () => {
     loadVapiPositions();
+    loadManualPositions();
     initSBRealtime();
     // Load missions from DB cache in all modes — supplements the API fetch and ensures tracked
     // launches beyond the API limit=30 window (e.g. Rocket Lab) appear in the missions list.

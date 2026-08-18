@@ -1,0 +1,14 @@
+{
+  "note": "Hand-entered fixes for vessels no free feed reaches. Newest ts wins across all sources, so a live AIS report always supersedes a paste automatically — no need to delete stale entries. Add with: node scripts/add-fix.js --mmsi=... --lat=... --lon=...",
+  "vessels": {
+    "257587000": {
+      "lat": -10.50142,
+      "lon": 105.21284,
+      "sog": 2.5,
+      "cog": 79,
+      "ts": "2026-08-17T13:12:24Z",
+      "source": "ShipInfo.net",
+      "note": "30nm W of Flying Fish Cove, closing Christmas Island. A later report (2026-08-18T03:37Z) showed 0.0kn / 109.1 deg but carried no coordinates, so it is not recorded here."
+    }
+  }
+}

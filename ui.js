@@ -42,7 +42,7 @@ function updateHeaderStats(){
       [orbitingSC2,'SPACE ASSETS','#00d4ff','cycleSpacecraft()'],
     ];
   } else {
-    const live=Object.values(S.vessels).filter(v=>v.lat&&!v._vapi&&v.ts&&(now-v.ts<600000));
+    const live=Object.values(S.vessels).filter(v=>v.lat&&!v._vapi&&!v._manual&&v.ts&&(now-v.ts<600000));
     const moving=live.filter(v=>v.sog>0.5).length;
     const liveMMSIs    =live.map(v=>v.mmsi);
     const underwayMMSIs=live.filter(v=>v.sog>0.5).map(v=>v.mmsi);
@@ -84,7 +84,7 @@ function renderFleet(){
 
   const vesselRank=v=>{
     // In share mode treat fresh Supabase positions as live (ignore _historical flag)
-    const isLive=!!v.lat&&!!v.ts&&(now-v.ts<600000)&&!v._vapi;
+    const isLive=!!v.lat&&!!v.ts&&(now-v.ts<600000)&&!v._vapi&&!v._manual;
     const hasPos=!!v.lat&&!!v.ts;
     const carrying=!!isCarryingBooster(v.mmsi);
     if(carrying&&isLive) return 0;
@@ -131,7 +131,7 @@ function renderFleet(){
   // isNearPort guards against slow harbour maneuvering.
   const isVesselActive = v => {
     const age = v.ts ? now - v.ts : Infinity;
-    const isLive = !!v.lat && !!v.ts && age < 600000 && !v._vapi;
+    const isLive = !!v.lat && !!v.ts && age < 600000 && !v._vapi && !v._manual;
     const moving = isLive && (v.sog || 0) > 0.5;
     const carrying = !!isCarryingBooster(v.mmsi);
     return moving || (carrying && isLive);
@@ -445,8 +445,8 @@ function buildVesselDetail(){
       <div class="sec">LIVE STATUS</div>
       ${frows([
         ['POSITION', v.lat?`${v.lat.toFixed(4)}°  ${v.lon.toFixed(4)}°`:'—'],
-        ['SPEED',    v.sog!=null&&!v._historical&&!v._offline&&!v._vapi&&v.ts&&(Date.now()-v.ts<600000)?v.sog.toFixed(1)+' kn':'—'],
-        ['COURSE',   v.cog!=null&&!v._historical&&!v._offline&&!v._vapi&&v.ts&&(Date.now()-v.ts<600000)?Math.round(v.cog)+'°':'—'],
+        ['SPEED',    v.sog!=null&&!v._historical&&!v._offline&&!v._vapi&&!v._manual&&v.ts&&(Date.now()-v.ts<600000)?v.sog.toFixed(1)+' kn':'—'],
+        ['COURSE',   v.cog!=null&&!v._historical&&!v._offline&&!v._vapi&&!v._manual&&v.ts&&(Date.now()-v.ts<600000)?Math.round(v.cog)+'°':'—'],
         ['DESTINATION',v.dest||'—'],
         ['ETA',      v.eta||'—'],
         ['LAST FIX', v.ts?ageStr(v.ts):'never'],
@@ -610,6 +610,9 @@ function srcLabel(v){
     const chk = v._vapiChecked ? ` · checked ${ageStr(v._vapiChecked)}` : '';
     return `VesselAPI snapshot${chk}`;
   }
+  // Hand-entered. Always names the site it was read from and how old the reading
+  // is, so it can never be mistaken for something the app received itself.
+  if(v._manual) return `hand-entered from ${v._manualSource} · read ${ageStr(v.ts)}`;
   const age = v.ts ? Date.now()-v.ts : Infinity;
   if(age < 600000) return 'AIS live (terrestrial)';
   return `AIS terrestrial · no signal ${ageStr(v.ts)}`;
@@ -661,6 +664,40 @@ async function loadVapiPositions() {
     }
     if(added) { renderFleet(); addLog(`VesselAPI: +${added} positions from static snapshot (${new Date(fetchedTs).toLocaleTimeString()})`, 'sys'); }
   } catch(e) { /* vapi-positions.json not present */ }
+}
+
+// ── Hand-entered positions ────────────────────────────────────────────────
+// For vessels no free feed reaches: absent from VesselAPI's database and outside
+// any AISStream receiver's range. Read off a tracking site by hand and committed
+// via scripts/add-fix.js. Merged by timestamp like every other source, so a real
+// AIS report supersedes a paste the moment one arrives.
+async function loadManualPositions() {
+  try {
+    const res = await fetch('data/manual-positions.json?_='+Math.floor(Date.now()/300000));
+    if(!res.ok) return;
+    const { vessels } = await res.json();
+    let added = 0;
+    for(const [mmsi, mp] of Object.entries(vessels||{})) {
+      if(!VESSEL_DB[mmsi] || mp.lat==null || mp.lon==null) continue;
+      const existing = S.vessels[mmsi];
+      const mpTs = mp.ts ? new Date(mp.ts).getTime() : 0;
+      if(!existing?.lat || mpTs > (existing.ts||0)) {
+        S.vessels[mmsi] = {
+          mmsi, ...VESSEL_DB[mmsi],
+          lat: mp.lat, lon: mp.lon,
+          sog: mp.sog||0, cog: mp.cog||0,
+          ts: mpTs,
+          track: existing?.track || [],
+          _manual: true,
+          _manualSource: mp.source || 'manual',
+          _manualNote: mp.note || '',
+        };
+        updateMarker(S.vessels[mmsi]);
+        added++;
+      }
+    }
+    if(added) { renderFleet(); addLog(`Manual: +${added} hand-entered position${added>1?'s':''}`, 'sys'); }
+  } catch(e) { /* manual-positions.json not present */ }
 }
 
 function toggleMobileFleet() {
