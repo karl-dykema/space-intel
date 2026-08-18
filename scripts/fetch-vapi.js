@@ -21,7 +21,7 @@ const DRY  = FLAGS.includes('--dry');
 // often they actually move: hot vessels every run, idle ones at half cadence, and
 // ones VesselAPI has no coverage for get an occasional cheap probe.
 //
-// Budget: 6×10 (A) + 5×5 (B) + 3×2.5 (C) ≈ 93 of 150 calls/month.
+// Budget: 6×10 (A) + 5×5 (B) + 4×2.5 (C) ≈ 95 of 150 calls/month.
 //
 // Skipped tiers keep their last known fix — main() merges onto the existing file
 // rather than replacing it, and the app already renders VesselAPI fixes as hollow
@@ -61,6 +61,9 @@ const TIER_C = [
   '368219920', // JRTI          — returns no data; probe for restored coverage
   '372112000', // Go Australis  — HTTP 404, hull absent from VesselAPI
   '257587000', // Normand Ranger— HTTP 404, hull absent from VesselAPI
+  '636023240', // Dongbang Giant No.2 — HTTP 404; the Ship 40 heavy-lift carrier, so
+               //                 worth re-probing: this is the hull that decides how
+               //                 the recovery ends, and no free feed we have reaches it
 ];
 
 const VESSELS = ONLY.length ? ONLY : [
