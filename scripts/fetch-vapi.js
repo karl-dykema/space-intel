@@ -21,7 +21,7 @@ const DRY  = FLAGS.includes('--dry');
 // often they actually move: hot vessels every run, idle ones at half cadence, and
 // ones VesselAPI has no coverage for get an occasional cheap probe.
 //
-// Budget: 6×10 (A) + 7×5 (B) + 1×2.5 (C) ≈ 98 of 150 calls/month.
+// Budget: 6×10 (A) + 4×5 (B) + 1×2.5 (C) ≈ 83 of 150 calls/month.
 //
 // Skipped tiers keep their last known fix — main() merges onto the existing file
 // rather than replacing it, and the app already renders VesselAPI fixes as hollow
@@ -45,13 +45,15 @@ const TIER_B = [
   '368368960', // Jacklyn       — New Glenn platform, idle between flights
   '512440000', // Seaworker     — Electron recovery, rarely tasked
   '369045000', // Harvey Stone  — support tug, moves with ASOG
-  // Ex-Ship 40 recovery flotilla (Indian Ocean, Jul–Aug 2026). VesselAPI returned null
-  // for all three every run of the operation — no coverage that far offshore — so Tier A
-  // was spending ~30 calls/month on nothing. Kept at half cadence in case coverage returns.
-  '372112000', // Go Australis
-  '257587000', // Normand Ranger
-  '257084000', // Skimmer Tide
 ];
+
+// Not polled at all. The Ship 40 recovery flotilla — Go Australis (372112000), Normand
+// Ranger (257587000), Skimmer Tide (257084000) — returned nothing on every run of the
+// August 2026 operation. A targeted probe (--only=257587000 --dry) showed the reason is
+// HTTP 404: the hulls are absent from VesselAPI's database entirely, not merely out of
+// coverage. No tier can fix that, so polling them is guaranteed waste. They stay in
+// VESSEL_DB and remain subscribed on AISStream; only VesselAPI gives up on them.
+// If VesselAPI ever adds these hulls, re-add here — the probe flag makes that one call.
 
 // Tier C — no VesselAPI coverage as of July 2026. Every 4th run (~12 days) purely to
 // detect if coverage returns; costs ~2-3 calls/month instead of 10 for nothing.
