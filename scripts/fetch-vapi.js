@@ -45,8 +45,6 @@ const TIER_B = [
   '368368960', // Jacklyn       — New Glenn platform, idle between flights
   '512440000', // Seaworker     — Electron recovery, rarely tasked
   '369045000', // Harvey Stone  — support tug, moves with ASOG
-  '257084000', // Skimmer Tide  — ex-Ship 40 flotilla; VesselAPI added this hull on
-               //                 2026-08-16 and it now returns fixes near Dampier
 ];
 
 // A 404 means "absent from VesselAPI's database right now", NOT "absent forever". Skimmer
@@ -61,9 +59,15 @@ const TIER_C = [
   '368219920', // JRTI          — returns no data; probe for restored coverage
   '372112000', // Go Australis  — HTTP 404, hull absent from VesselAPI
   '257587000', // Normand Ranger— HTTP 404, hull absent from VesselAPI
-  '636023240', // Dongbang Giant No.2 — HTTP 404; the Ship 40 heavy-lift carrier, so
-               //                 worth re-probing: this is the hull that decides how
-               //                 the recovery ends, and no free feed we have reaches it
+  '257084000', // Skimmer Tide  — resolved 2026-08-16 and was promoted to Tier B, but
+               //                 regressed to no-data by 2026-08-29. Demoted back here
+               //                 rather than deleted; coverage on this hull flaps.
+  '636023240', // Dongbang Giant No.2 — HTTP 404. Superseded: it never loaded Ship 40.
+               //                 Kept only as a cheap coverage probe, not a live lead.
+  '249364000', // Forte         — HTTP 404. Boskalis semi-sub carrying Ship 40 from
+               //                 Christmas Island to Brownsville, ETA 2026-10-08. This
+               //                 is now the hull that matters; re-probe for coverage,
+               //                 and hand-enter fixes via add-fix.js until it resolves.
 ];
 
 const VESSELS = ONLY.length ? ONLY : [

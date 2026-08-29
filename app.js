@@ -490,9 +490,12 @@ setInterval(()=>{
 
 // ── Map ───────────────────────────────────────────────────────
 function initMap() {
-  map=L.map('map',{zoomControl:true,attributionControl:true,minZoom:2,maxZoom:19,maxBounds:[[-90,-180],[90,180]],maxBoundsViscosity:1.0,worldCopyJump:false});
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-    attribution:'© CARTO © OSM',subdomains:'abcd',maxZoom:19,noWrap:true,bounds:[[-90,-180],[90,180]],
+  map=L.map('map',{zoomControl:true,attributionControl:true,minZoom:2,maxZoom:18,maxBounds:[[-90,-180],[90,180]],maxBoundsViscosity:1.0,worldCopyJump:false});
+  // Esri Dark Gray Canvas: keyless. CARTO's basemaps now require an API key and
+  // serve tiles watermarked "API KEY REQUIRED" instead of failing, so the old
+  // cartocdn layer degraded silently. Esri caps at z18, hence maxZoom above.
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'© Esri © OSM',maxZoom:18,noWrap:true,bounds:[[-90,-180],[90,180]],
   }).addTo(map);
   terminatorLayer=L.layerGroup().addTo(map);
   exclusionLayer=L.layerGroup().addTo(map);
